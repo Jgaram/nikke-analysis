@@ -1,0 +1,39 @@
+# enikk Solo Raid collector configuration.
+#
+# STATUS: endpoint_template and mapping are intentionally blank. They are filled
+# in from the output of `nikke probe enikk`, which records the site's real
+# responses under data/raw/enikk_probe/. Running the probe once is the only
+# manual step in the whole pipeline; after that, collecting a new season is
+# `nikke collect enikk --seasons 42`.
+#
+# See docs/enikk-setup.md for the walkthrough.
+
+base_url: https://enikk.app
+
+# URL path (relative to base_url) for one season/boss of rankings.
+# {season} and {boss} are substituted. Example shapes to expect:
+#   /api/soloraid?season={season}&boss={boss}
+#   /_next/data/<buildId>/soloraid/ranker.json?season={season}
+endpoint_template: ""
+
+# Seasons to collect by default. Solo Raid seasons are numbered; back-filling
+# needs whatever range the site still serves.
+seasons: []
+
+# Boss identifiers within a season. Leave empty if one response covers them all.
+bosses: []
+
+# Any fixed query parameters the endpoint needs (region, mode, limit...).
+extra_params: {}
+
+# Where each field lives inside one response. Dotted paths; "[]" means "iterate".
+mapping:
+  entries: ""      # list of ranking records, e.g. data.rankers[]
+  rank: ""         # e.g. rank
+  score: ""        # e.g. damage  (raid score / total damage)
+  player: ""       # e.g. nickname
+  team: ""         # list of units in the record, e.g. team[]
+  unit_name: ""    # name field inside a team element, e.g. name
+  unit_id: ""      # in-game unit id inside a team element, if the site exposes one
+  boss: ""         # boss identifier, if carried inside the record
+  season: ""       # season identifier, if carried inside the record

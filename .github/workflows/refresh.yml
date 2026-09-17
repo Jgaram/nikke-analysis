@@ -1,0 +1,70 @@
+name: refresh
+
+# The project's point is that a new patch or a new Solo Raid season is picked up
+# by running code, not by anyone interpreting a patch note. This workflow is what
+# makes that literal: it runs the same `nikke refresh` a developer would run, and
+# commits the resulting tables.
+#
+# It also solves a practical problem. Cloud dev sessions run behind a network
+# allowlist that does not include the ranking site, so collection cannot happen
+# there. GitHub Actions runners have open egress, so this is where the fetching
+# lives.
+
+on:
+  schedule:
+    # Weekly, after a Solo Raid season has had time to settle.
+    - cron: "0 3 * * 2"
+  workflow_dispatch:
+    inputs:
+      seasons:
+        description: "Season numbers to collect (space separated). Empty = config default."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Test
+        run: pytest -q
+
+      - name: Refresh
+        run: nikke -v refresh --seasons ${{ inputs.seasons }}
+
+      - name: Commit updated tables
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/processed data/manual
+          if git diff --staged --quiet; then
+            echo "nothing changed"
+          else
+            git commit -m "data: refresh roster, patches and metrics"
+            git push
+          fi
+
+      - name: Upload charts
+        uses: actions/upload-artifact@v4
+        with:
+          name: charts
+          path: reports/
+          if-no-files-found: ignore

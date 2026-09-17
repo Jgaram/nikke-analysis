@@ -1,0 +1,748 @@
+unit_id,alias,language,kind
+010,Rapi,en,full
+010,라피,ko,full
+010,ラピ,ja,full
+011,Neon,en,full
+011,네온,ko,full
+011,ネオン,ja,full
+012,Anis,en,full
+012,아니스,ko,full
+012,アニス,ja,full
+014,Neon: Blue Ocean,en,full
+014,Blue Ocean,en,variant_suffix
+014,네온 : 블루 오션,ko,full
+014,블루 오션,ko,variant_suffix
+014,ネオン：ブルーオーシャン,ja,full
+014,ブルーオーシャン,ja,variant_suffix
+015,Anis: Sparkling Summer,en,full
+015,Sparkling Summer,en,variant_suffix
+015,아니스 : 스파클링 서머,ko,full
+015,스파클링 서머,ko,variant_suffix
+015,アニス：スパークリングサマー,ja,full
+015,スパークリングサマー,ja,variant_suffix
+016,Rapi: Red Hood,en,full
+016,Red Hood,en,variant_suffix
+016,라피 : 레드 후드,ko,full
+016,레드 후드,ko,variant_suffix
+016,ラピ：レッドフード,ja,full
+016,レッドフード,ja,variant_suffix
+017,Anis: Star,en,full
+017,Star,en,variant_suffix
+017,아니스 : 스타,ko,full
+017,스타,ko,variant_suffix
+017,アニス：スター,ja,full
+017,スター,ja,variant_suffix
+018,Neon: Vision Eye,en,full
+018,Vision Eye,en,variant_suffix
+018,네온 : 비전 아이,ko,full
+018,비전 아이,ko,variant_suffix
+018,ネオン：ビジョン・アイ,ja,full
+018,ビジョン・アイ,ja,variant_suffix
+020,Delta,en,full
+020,델타,ko,full
+020,デルタ,ja,full
+022,Signal,en,full
+022,시그널,ko,full
+022,シグナル,ja,full
+023,Delta: Ninja Thief,en,full
+023,Ninja Thief,en,variant_suffix
+023,델타 : 닌자 시프,ko,full
+023,닌자 시프,ko,variant_suffix
+023,デルタ：ニンジャシーフ,ja,full
+023,ニンジャシーフ,ja,variant_suffix
+030,Poli,en,full
+030,폴리,ko,full
+030,ポリ,ja,full
+032,Miranda,en,full
+032,미란다,ko,full
+032,ミランダ,ja,full
+033,Quiry,en,full
+033,키리,ko,full
+033,キリ,ja,full
+040,D,en,full
+040,D,ko,full
+040,D,ja,full
+041,K,en,full
+041,K,ko,full
+041,K,ja,full
+043,D: Killer Wife,en,full
+043,Killer Wife,en,variant_suffix
+043,D : 킬러 와이프,ko,full
+043,킬러 와이프,ko,variant_suffix
+043,D：キラーワイフ,ja,full
+043,キラーワイフ,ja,variant_suffix
+060,Belorta,en,full
+060,벨로타,ko,full
+060,ベロータ,ja,full
+061,Mica,en,full
+061,미카,ko,full
+061,ミカ,ja,full
+062,Mica: Snow Buddy,en,full
+062,Snow Buddy,en,variant_suffix
+062,미카 : 스노우 버디,ko,full
+062,스노우 버디,ko,variant_suffix
+062,ミカ：スノーバディ,ja,full
+062,スノーバディ,ja,variant_suffix
+070,Brid,en,full
+070,브리드,ko,full
+070,ブリッド,ja,full
+071,Soline,en,full
+071,솔린,ko,full
+071,ソリン,ja,full
+072,Diesel,en,full
+072,디젤,ko,full
+072,ディーゼル,ja,full
+073,Brid: Silent Track,en,full
+073,Silent Track,en,variant_suffix
+073,브리드 : 사일런트 트랙,ko,full
+073,사일런트 트랙,ko,variant_suffix
+073,ブリッド：サイレントトラック,ja,full
+073,サイレントトラック,ja,variant_suffix
+074,Soline: Frost Ticket,en,full
+074,Frost Ticket,en,variant_suffix
+074,솔린 : 프로스트 티켓,ko,full
+074,프로스트 티켓,ko,variant_suffix
+074,ソリン：フロストチケット,ja,full
+074,フロストチケット,ja,variant_suffix
+075,Diesel: Winter Sweets,en,full
+075,Winter Sweets,en,variant_suffix
+075,디젤 : 윈터 스위츠,ko,full
+075,윈터 스위츠,ko,variant_suffix
+075,ディーゼル：ウィンタースイーツ,ja,full
+075,ウィンタースイーツ,ja,variant_suffix
+080,Centi,en,full
+080,센티,ko,full
+080,センチ,ja,full
+082,Liter,en,full
+082,리타,ko,full
+082,リター,ja,full
+090,Emma,en,full
+090,엠마,ko,full
+090,エマ,ja,full
+091,Vesti,en,full
+091,베스티,ko,full
+091,ベスティー,ja,full
+092,Eunhwa,en,full
+092,은화,ko,full
+092,ウンファ,ja,full
+093,Emma: Tactical Upgrade,en,full
+093,Tactical Upgrade,en,variant_suffix
+093,엠마 : 택티컬 업,ko,full
+093,택티컬 업,ko,variant_suffix
+093,エマ：タクティカル・アップ,ja,full
+093,タクティカル・アップ,ja,variant_suffix
+094,Vesti: Tactical Upgrade,en,full
+094,Tactical Upgrade,en,variant_suffix
+094,베스티 : 택티컬 업,ko,full
+094,택티컬 업,ko,variant_suffix
+094,ベスティー：タクティカル・アップ,ja,full
+094,タクティカル・アップ,ja,variant_suffix
+095,Eunhwa: Tactical Upgrade,en,full
+095,Tactical Upgrade,en,variant_suffix
+095,은화 : 택티컬 업,ko,full
+095,택티컬 업,ko,variant_suffix
+095,ウンファ：タクティカル・アップ,ja,full
+095,タクティカル・アップ,ja,variant_suffix
+100,Laplace,en,full
+100,라플라스,ko,full
+100,ラプラス,ja,full
+101,Drake,en,full
+101,드레이크,ko,full
+101,ドレイク,ja,full
+102,Maxwell,en,full
+102,맥스웰,ko,full
+102,マクスウェル,ja,full
+103,Laplace: Ultimate Hero,en,full
+103,Ultimate Hero,en,variant_suffix
+103,라플라스 : 얼티밋 히어로,ko,full
+103,얼티밋 히어로,ko,variant_suffix
+103,ラプラス：アルティメットヒーロー,ja,full
+103,アルティメットヒーロー,ja,variant_suffix
+104,Drake: Great Villain,en,full
+104,Great Villain,en,variant_suffix
+104,드레이크 : 그레이트 빌런,ko,full
+104,그레이트 빌런,ko,variant_suffix
+104,ドレイク：グレイトヴィラン,ja,full
+104,グレイトヴィラン,ja,variant_suffix
+105,Maxwell: Ordinary Mechanic,en,full
+105,Ordinary Mechanic,en,variant_suffix
+105,맥스웰 : 오디너리 미케닉,ko,full
+105,오디너리 미케닉,ko,variant_suffix
+105,マクスウェル：オーディナリーメカニック,ja,full
+105,オーディナリーメカニック,ja,variant_suffix
+110,Crow,en,full
+110,크로우,ko,full
+110,クロウ,ja,full
+111,Jackal,en,full
+111,자칼,ko,full
+111,ジャッカル,ja,full
+112,Viper,en,full
+112,바이퍼,ko,full
+112,バイパー,ja,full
+113,E.H.,en,full
+113,E.H.,ko,full
+113,E.H.,ja,full
+120,N102,en,full
+120,N102,ko,full
+120,N102,ja,full
+121,Anne: Miracle Fairy,en,full
+121,Miracle Fairy,en,variant_suffix
+121,앤 : 미라클 페어리,ko,full
+121,미라클 페어리,ko,variant_suffix
+121,エヌ : ミラクルフェアリー,ja,full
+121,ミラクルフェアリー,ja,variant_suffix
+130,Mary,en,full
+130,메어리,ko,full
+130,メアリー,ja,full
+131,Pepper,en,full
+131,페퍼,ko,full
+131,ペッパー,ja,full
+132,Mary: Bay Goddess,en,full
+132,Bay Goddess,en,variant_suffix
+132,메어리 : 베이 갓데스,ko,full
+132,베이 갓데스,ko,variant_suffix
+132,メアリー：ベイゴッデス,ja,full
+132,ベイゴッデス,ja,variant_suffix
+140,Sugar,en,full
+140,슈가,ko,full
+140,シュガー,ja,full
+141,Milk,en,full
+141,밀크,ko,full
+141,ミルク,ja,full
+142,Frima,en,full
+142,프림,ko,full
+142,プリム,ja,full
+143,Milk: Blooming Bunny,en,full
+143,Blooming Bunny,en,variant_suffix
+143,밀크 : 블루밍 바니,ko,full
+143,블루밍 바니,ko,variant_suffix
+143,ミルク：ブルーミングバニー,ja,full
+143,ブルーミングバニー,ja,variant_suffix
+150,Julia,en,full
+150,율리아,ko,full
+150,ジュリア,ja,full
+160,Yuni,en,full
+160,유니,ko,full
+160,ユニ,ja,full
+161,Mihara,en,full
+161,미하라,ko,full
+161,ミハラ,ja,full
+162,Mihara: Bonding Chain,en,full
+162,Bonding Chain,en,variant_suffix
+162,미하라 : 본딩 체인,ko,full
+162,본딩 체인,ko,variant_suffix
+162,ミハラ：ボンディングチェーン,ja,full
+162,ボンディングチェーン,ja,variant_suffix
+170,Privaty,en,full
+170,프리바티,ko,full
+170,プリバティ,ja,full
+171,Yulha,en,full
+171,율하,ko,full
+171,ユルハ,ja,full
+172,Admi,en,full
+172,애드미,ko,full
+172,アドミ,ja,full
+180,Guillotine,en,full
+180,길로틴,ko,full
+180,ギロチン,ja,full
+181,Maiden,en,full
+181,메이든,ko,full
+181,メイデン,ja,full
+182,Guillotine: Winter Slayer,en,full
+182,Winter Slayer,en,variant_suffix
+182,길로틴 : 윈터 슬레이어,ko,full
+182,윈터 슬레이어,ko,variant_suffix
+182,ギロチン：ウィンタースレイヤー,ja,full
+182,ウィンタースレイヤー,ja,variant_suffix
+183,Maiden: Ice Rose,en,full
+183,Ice Rose,en,variant_suffix
+183,메이든 : 아이스 로즈,ko,full
+183,아이스 로즈,ko,variant_suffix
+183,メイデン：アイスローズ,ja,full
+183,アイスローズ,ja,variant_suffix
+190,Ludmilla,en,full
+190,루드밀라,ko,full
+190,ルドミラ,ja,full
+191,Alice,en,full
+191,앨리스,ko,full
+191,アリス,ja,full
+192,Tove,en,full
+192,토브,ko,full
+192,トーブ,ja,full
+193,Neve,en,full
+193,네베,ko,full
+193,ネヴェ,ja,full
+194,Ludmilla: Winter Owner,en,full
+194,Winter Owner,en,variant_suffix
+194,루드밀라 : 윈터 오너,ko,full
+194,윈터 오너,ko,variant_suffix
+194,ルドミラ：ウィンターオーナー,ja,full
+194,ウィンターオーナー,ja,variant_suffix
+195,Alice: Wonderland Bunny,en,full
+195,Wonderland Bunny,en,variant_suffix
+195,앨리스 : 원더랜드 바니,ko,full
+195,원더랜드 바니,ko,variant_suffix
+195,アリス：ワンダーランドバニー,ja,full
+195,ワンダーランドバニー,ja,variant_suffix
+200,Rupee,en,full
+200,루피,ko,full
+200,ルピー,ja,full
+201,Yan,en,full
+201,얀,ko,full
+201,ヤン,ja,full
+202,Dolla,en,full
+202,도라,ko,full
+202,ドラー,ja,full
+203,Rupee: Winter Shopper,en,full
+203,Winter Shopper,en,variant_suffix
+203,루피 : 윈터 쇼퍼,ko,full
+203,윈터 쇼퍼,ko,variant_suffix
+203,ルピー：ウィンターショッパー,ja,full
+203,ウィンターショッパー,ja,variant_suffix
+210,Exia,en,full
+210,엑시아,ko,full
+210,エクシア,ja,full
+212,Novel,en,full
+212,노벨,ko,full
+212,ノベル,ja,full
+220,Snow White,en,full
+220,스노우 화이트,ko,full
+220,スノーホワイト,ja,full
+221,Rapunzel,en,full
+221,라푼젤,ko,full
+221,ラプンツェル,ja,full
+222,Scarlet,en,full
+222,홍련,ko,full
+222,紅蓮,ja,full
+223,Nayuta,en,full
+223,나유타,ko,full
+223,ナユタ,ja,full
+224,Snow White: Innocent Days,en,full
+224,Innocent Days,en,variant_suffix
+224,스노우 화이트 : 이노센트 데이즈,ko,full
+224,이노센트 데이즈,ko,variant_suffix
+224,スノーホワイト：イノセントデイズ,ja,full
+224,イノセントデイズ,ja,variant_suffix
+225,Scarlet: Black Shadow,en,full
+225,Black Shadow,en,variant_suffix
+225,홍련 : 흑영,ko,full
+225,흑영,ko,variant_suffix
+225,紅蓮：ブラックシャドウ,ja,full
+225,ブラックシャドウ,ja,variant_suffix
+226,Rapunzel: Pure Grace,en,full
+226,Pure Grace,en,variant_suffix
+226,라푼젤 : 퓨어 그레이스,ko,full
+226,퓨어 그레이스,ko,variant_suffix
+226,ラプンツェル：ピュアグレイス,ja,full
+226,ピュアグレイス,ja,variant_suffix
+230,Harran,en,full
+230,하란,ko,full
+230,ハラン,ja,full
+231,Isabel,en,full
+231,이사벨,ko,full
+231,イサベル,ja,full
+232,Noah,en,full
+232,노아,ko,full
+232,ノア,ja,full
+233,Dorothy,en,full
+233,도로시,ko,full
+233,ドロシー,ja,full
+234,Dorothy: Serendipity,en,full
+234,Serendipity,en,variant_suffix
+234,도로시 : 세렌디피티,ko,full
+234,세렌디피티,ko,variant_suffix
+234,ドロシー：セレンディピティ,ja,full
+234,セレンディピティ,ja,variant_suffix
+240,Rumani,en,full
+240,루마니,ko,full
+240,ルマニ,ja,full
+241,Epinel,en,full
+241,에피넬,ko,full
+241,エピネル,ja,full
+242,Folkwang,en,full
+242,폴크방,ko,full
+242,フォルクヴァン,ja,full
+260,Modernia,en,full
+260,모더니아,ko,full
+260,モダニア,ja,full
+261,Nihilister,en,full
+261,니힐리스타,ko,full
+261,ニヒリスター,ja,full
+262,Liberalio,en,full
+262,리버렐리오,ko,full
+262,リバーレリオ,ja,full
+270,Blanc,en,full
+270,블랑,ko,full
+270,ブラン,ja,full
+271,Noir,en,full
+271,누아르,ko,full
+271,ノワール,ja,full
+272,Rouge,en,full
+272,루주,ko,full
+272,ルージュ,ja,full
+280,Rosanna,en,full
+280,로산나,ko,full
+280,ロザンナ,ja,full
+281,Moran,en,full
+281,목단,ko,full
+281,モラン,ja,full
+282,Sakura,en,full
+282,사쿠라,ko,full
+282,サクラ,ja,full
+283,Rosanna: Chic Ocean,en,full
+283,Chic Ocean,en,variant_suffix
+283,로산나 : 시크 오션,ko,full
+283,시크 오션,ko,variant_suffix
+283,ロザンナ：シックオーシャン,ja,full
+283,シックオーシャン,ja,variant_suffix
+284,Sakura: Bloom in Summer,en,full
+284,Bloom in Summer,en,variant_suffix
+284,사쿠라 : 블룸 인 서머,ko,full
+284,블룸 인 서머,ko,variant_suffix
+284,サクラ：ブルーム・イン・サマー,ja,full
+284,ブルーム・イン・サマー,ja,variant_suffix
+290,Mana,en,full
+290,마나,ko,full
+290,マナ,ja,full
+291,Ether,en,full
+291,에테르,ko,full
+291,エーテル,ja,full
+300,Soldier EG,en,full
+300,솔져 E.G.,ko,full
+300,ソルジャーE.G.,ja,full
+301,Soldier FA,en,full
+301,솔져 F.A.,ko,full
+301,ソルジャーF.A.,ja,full
+302,Product 08,en,full
+302,프로덕트 08,ko,full
+302,プロダクト08,ja,full
+303,Product 12,en,full
+303,프로덕트 12,ko,full
+303,プロダクト12,ja,full
+304,iDoll Flower,en,full
+304,iDoll 플라워,ko,full
+304,I-DOLL・フラワー,ja,full
+305,iDoll Ocean,en,full
+305,iDoll 오션,ko,full
+305,I-DOLL・オーシャン,ja,full
+306,Soldier OW,en,full
+306,솔져 O.W.,ko,full
+306,ソルジャーO.W.,ja,full
+307,Product 23,en,full
+307,프로덕트 23,ko,full
+307,プロダクト23,ja,full
+308,iDoll Sun,en,full
+308,iDoll 썬,ko,full
+308,I-DOLL・サン,ja,full
+310,Ade,en,full
+310,에이드,ko,full
+310,エード,ja,full
+311,Cocoa,en,full
+311,코코아,ko,full
+311,ココア,ja,full
+312,Soda,en,full
+312,소다,ko,full
+312,ソーダ,ja,full
+313,Privaty: Unkind Maid,en,full
+313,Unkind Maid,en,variant_suffix
+313,프리바티 : 언카인드 메이드,ko,full
+313,언카인드 메이드,ko,variant_suffix
+313,プリバティ：アンカインド・メイド,ja,full
+313,アンカインド・メイド,ja,variant_suffix
+314,Soda: Twinkling Bunny,en,full
+314,Twinkling Bunny,en,variant_suffix
+314,소다 : 트윙클링 바니,ko,full
+314,트윙클링 바니,ko,variant_suffix
+314,ソーダ：トゥインクルバニー,ja,full
+314,トゥインクルバニー,ja,variant_suffix
+315,Ade: Agent Bunny,en,full
+315,Agent Bunny,en,variant_suffix
+315,에이드 : 에이전트 바니,ko,full
+315,에이전트 바니,ko,variant_suffix
+315,エード：エージェントバニー,ja,full
+315,エージェントバニー,ja,variant_suffix
+316,Velvet,en,full
+316,벨벳,ko,full
+316,ベルベット,ja,full
+321,Marciana,en,full
+321,마르차나,ko,full
+321,マルチャーナ,ja,full
+322,Marciana: Marine Study,en,full
+322,Marine Study,en,variant_suffix
+322,마르차나 : 마린 스터디,ko,full
+322,마린 스터디,ko,variant_suffix
+322,マルチャーナ：マリンスタディ,ja,full
+322,マリンスタディ,ja,variant_suffix
+330,Crown,en,full
+330,크라운,ko,full
+330,クラウン,ja,full
+331,Chime,en,full
+331,차임,ko,full
+331,チャイム,ja,full
+350,Mast,en,full
+350,마스트,ko,full
+350,マスト,ja,full
+351,Anchor,en,full
+351,앵커,ko,full
+351,アンカー,ja,full
+352,Helm,en,full
+352,헬름,ko,full
+352,ヘルム,ja,full
+353,Helm: Aquamarine,en,full
+353,Aquamarine,en,variant_suffix
+353,헬름 : 아쿠아마린,ko,full
+353,아쿠아마린,ko,variant_suffix
+353,ヘルム：アクアマリン,ja,full
+353,アクアマリン,ja,variant_suffix
+354,Mast: Romantic Maid,en,full
+354,Romantic Maid,en,variant_suffix
+354,마스트 : 로망틱 메이드,ko,full
+354,로망틱 메이드,ko,variant_suffix
+354,マスト：ロマンチックメイド,ja,full
+354,ロマンチックメイド,ja,variant_suffix
+355,Anchor: Innocent Maid,en,full
+355,Innocent Maid,en,variant_suffix
+355,앵커 : 이노센트 메이드,ko,full
+355,이노센트 메이드,ko,variant_suffix
+355,アンカー：イノセントメイド,ja,full
+355,イノセントメイド,ja,variant_suffix
+361,Kilo,en,full
+361,킬로,ko,full
+361,キロ,ja,full
+380,Nero,en,full
+380,네로,ko,full
+380,ネロ,ja,full
+381,Biscuit,en,full
+381,비스킷,ko,full
+381,ビスケット,ja,full
+382,Leona,en,full
+382,레오나,ko,full
+382,レオナ,ja,full
+390,Zwei,en,full
+390,츠바이,ko,full
+390,ツバイ,ja,full
+391,Ein,en,full
+391,아인,ko,full
+391,アイン,ja,full
+392,Rei,en,full
+392,라이,ko,full
+392,ライ,ja,full
+400,Guilty,en,full
+400,길티,ko,full
+400,ギルティ,ja,full
+401,Sin,en,full
+401,신,ko,full
+401,シン,ja,full
+402,Quency,en,full
+402,퀀시,ko,full
+402,クエンシー,ja,full
+403,Quency: Escape Queen,en,full
+403,Escape Queen,en,variant_suffix
+403,퀀시 : 이스케이프 퀸,ko,full
+403,이스케이프 퀸,ko,variant_suffix
+403,クエンシー：エスケープクイーン,ja,full
+403,エスケープクイーン,ja,variant_suffix
+404,Guilty: Mighty Bunny,en,full
+404,Mighty Bunny,en,variant_suffix
+404,길티 : 마이티 바니,ko,full
+404,마이티 바니,ko,variant_suffix
+404,ギルティ：マイティバニー,ja,full
+404,マイティバニー,ja,variant_suffix
+405,Sin: Swift Bunny,en,full
+405,Swift Bunny,en,variant_suffix
+405,신 : 스위프트 바니,ko,full
+405,스위프트 바니,ko,variant_suffix
+405,シン：スウィフトバニー,ja,full
+405,スウィフトバニー,ja,variant_suffix
+411,Flora,en,full
+411,플로라,ko,full
+411,フローラ,ja,full
+412,Trina,en,full
+412,트리나,ko,full
+412,トリナ,ja,full
+430,Noise,en,full
+430,노이즈,ko,full
+430,ノイズ,ja,full
+431,Volume,en,full
+431,볼륨,ko,full
+431,ボリューム,ja,full
+432,Aria,en,full
+432,아리아,ko,full
+432,アリア,ja,full
+441,Avistar,en,full
+441,아비스타,ko,full
+441,アビスタ,ja,full
+450,Naga,en,full
+450,나가,ko,full
+450,ナガ,ja,full
+451,Tia,en,full
+451,티아,ko,full
+451,ティア,ja,full
+470,Red Hood,en,full
+470,레드 후드,ko,full
+470,レッドフード,ja,full
+471,Snow White: Heavy Arms,en,full
+471,Heavy Arms,en,variant_suffix
+471,스노우 화이트 : 헤비암즈,ko,full
+471,헤비암즈,ko,variant_suffix
+471,スノーホワイト：ヘビーアームズ,ja,full
+471,ヘビーアームズ,ja,variant_suffix
+500,Elegg,en,full
+500,일레그,ko,full
+500,エレグ,ja,full
+501,Trony,en,full
+501,트로니,ko,full
+501,トロニー,ja,full
+502,Elegg: Boom and Shock,en,full
+502,Boom and Shock,en,variant_suffix
+502,일레그 : 붐 앤 쇼크,ko,full
+502,붐 앤 쇼크,ko,variant_suffix
+502,エレグ：ブーム・アンド・ショック,ja,full
+502,ブーム・アンド・ショック,ja,variant_suffix
+511,Cinderella,en,full
+511,신데렐라,ko,full
+511,シンデレラ,ja,full
+513,Little Mermaid,en,full
+513,리틀 머메이드,ko,full
+513,リトルマーメイド,ja,full
+514,Grave,en,full
+514,그레이브,ko,full
+514,グレイブ,ja,full
+515,Cinderella: Crystal Wave,en,full
+515,Crystal Wave,en,variant_suffix
+515,신데렐라 : 크리스탈 웨이브,ko,full
+515,크리스탈 웨이브,ko,variant_suffix
+515,シンデレラ：クリスタルウェーブ,ja,full
+515,クリスタルウェーブ,ja,variant_suffix
+520,Bready,en,full
+520,브래디,ko,full
+520,ブレッディ,ja,full
+521,Crust,en,full
+521,크러스트,ko,full
+521,クラスト,ja,full
+532,Sora,en,full
+532,소라,ko,full
+532,ソラ,ja,full
+550,Bay,en,full
+550,베이,ko,full
+550,ベイ,ja,full
+551,Clay,en,full
+551,클레이,ko,full
+551,クレイ,ja,full
+570,Ark Ranger Black,en,full
+570,아크레인저 블랙,ko,full
+570,アークレンジャー・ブラック,ja,full
+580,Phantom,en,full
+580,팬텀,ko,full
+580,ファントム,ja,full
+581,Arcana,en,full
+581,아르카나,ko,full
+581,アルカナ,ja,full
+582,Label,en,full
+582,레이블,ko,full
+582,レーベル,ja,full
+583,Arcana: Fortune Mate,en,full
+583,Fortune Mate,en,variant_suffix
+583,아르카나 : 포츈 메이트,ko,full
+583,포츈 메이트,ko,variant_suffix
+583,アルカナ：フォーチュンメイト,ja,full
+583,フォーチュンメイト,ja,variant_suffix
+590,Mori,en,full
+590,모리,ko,full
+590,モリー,ja,full
+600,Mint,en,full
+600,민트,ko,full
+600,ミント,ja,full
+601,Prika,en,full
+601,프리카,ko,full
+601,プリカ,ja,full
+620,Snow Crane,en,full
+620,백학,ko,full
+620,シラツル,ja,full
+800,Makima,en,full
+800,마키마,ko,full
+800,マキマ,ja,full
+801,Power,en,full
+801,파워,ko,full
+801,パワー,ja,full
+802,Himeno,en,full
+802,히메노,ko,full
+802,姫野,ja,full
+810,2B,en,full
+810,2B,ko,full
+810,2B,ja,full
+811,A2,en,full
+811,A2,ko,full
+811,A2,ja,full
+812,Pascal,en,full
+812,파스칼,ko,full
+812,パスカル,ja,full
+820,Rem,en,full
+820,렘,ko,full
+820,レム,ja,full
+821,Emilia,en,full
+821,에밀리아,ko,full
+821,エミリア,ja,full
+822,Ram,en,full
+822,람,ko,full
+822,ラム,ja,full
+830,Asuka,en,full
+830,아스카,ko,full
+830,アスカ,ja,full
+831,Rei,en,full
+831,레이,ko,full
+831,レイ,ja,full
+832,Mari,en,full
+832,마리,ko,full
+832,マリ,ja,full
+833,Misato,en,full
+833,미사토,ko,full
+833,ミサト,ja,full
+834,Rei (Tentative Name),en,full
+834,레이 (가칭),ko,full
+834,レイ（仮称）,ja,full
+835,Asuka: WILLE,en,full
+835,WILLE,en,variant_suffix
+835,아스카 : WILLE,ko,full
+835,WILLE,ko,variant_suffix
+835,アスカ：WILLE,ja,full
+835,WILLE,ja,variant_suffix
+836,Sakura,en,full
+836,사쿠라,ko,full
+836,サクラ,ja,full
+840,Ada,en,full
+840,에이다,ko,full
+840,エイダ,ja,full
+841,Jill,en,full
+841,질,ko,full
+841,ジル,ja,full
+842,Claire,en,full
+842,클레어,ko,full
+842,クレア,ja,full
+850,EVE,en,full
+850,이브,ko,full
+850,イヴ,ja,full
+851,Raven,en,full
+851,레이븐,ko,full
+851,レイヴン,ja,full
+852,Lily,en,full
+852,릴리,ko,full
+852,リリー,ja,full
+860,Chisato,en,full
+860,치사토,ko,full
+860,千束,ja,full
+861,Takina,en,full
+861,타키나,ko,full
+861,たきな,ja,full
+862,Kurumi,en,full
+862,쿠루미,ko,full
+862,クルミ,ja,full
+870,Queen (Makoto),en,full
+870,퀸(마코토),ko,full
+870,クイーン（真）,ja,full
+871,Yukiko,en,full
+871,유키코,ko,full
+871,雪子,ja,full
+872,Aigis,en,full
+872,아이기스,ko,full
+872,アイギス,ja,full

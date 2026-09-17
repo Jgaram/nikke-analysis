@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nikke-analysis"
+version = "0.1.0"
+description = "Deterministic pipeline for tracking NIKKE meta and tier shifts across patches, driven by Solo Raid ranking data."
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.31",
+    "beautifulsoup4>=4.12",
+    "lxml>=5.0",
+    "pandas>=2.1",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[project.scripts]
+nikke = "nikke_analysis.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]

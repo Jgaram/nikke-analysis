@@ -1,0 +1,25 @@
+# Tier scoring parameters.
+#
+# These are the only judgement calls in the pipeline, which is why they live in
+# a config file: changing them is a reviewable diff, and re-running reproduces
+# the whole history under the new definition.
+
+weights:
+  # Rank-weighted pick rate: how much of the top-50's evidence a unit carries.
+  usage: 0.55
+  # Score delta: do teams with this unit out-score teams without it?
+  performance: 0.30
+  # Breadth: across how many of the season's bosses does it show up?
+  breadth: 0.15
+
+# Minimum teams in a season before its tiers are considered meaningful.
+min_teams: 10
+
+# Composite score (0-100) required to reach each tier. Ordered best to worst.
+cuts:
+  - { label: SS, min_score: 92 }
+  - { label: S,  min_score: 80 }
+  - { label: A,  min_score: 62 }
+  - { label: B,  min_score: 42 }
+  - { label: C,  min_score: 20 }
+  - { label: D,  min_score: 0 }

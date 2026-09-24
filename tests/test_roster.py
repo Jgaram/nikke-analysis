@@ -108,3 +108,73 @@ def test_pre_launch_datafile_dates_are_clamped_to_the_global_launch():
     # A post-launch date is left alone.
     assert by_id["016"].release_date == "2023-11-16"
     assert by_id["016"].release_date_source == "datafile"
+
+
+COLLAB_YAML = textwrap.dedent(
+    """
+    ---
+    836_name:
+      en: Sakura
+      ko: 사쿠라
+      ja: サクラ
+    c836_description:
+      en: |-
+        Her full name is Sakura Suzuhara.
+        She holds the rank of second lieutenant.
+      ko: |-
+        풀네임은 스즈하라 사쿠라.
+        카츠라기 미사토가 이끄는 조직 [WILLE]의 소위이면서 의무관이다.
+    """
+).encode()
+
+
+def test_a_collaboration_unit_keeps_its_full_name():
+    row = parse_gamefiles_role("roledata/[836] Sakura.yaml", COLLAB_YAML)
+    assert row["full_name_ko"] == "스즈하라 사쿠라"
+    assert row["full_name_en"] == "Sakura Suzuhara"
+
+
+def test_full_names_become_aliases_including_expanded_variants():
+    roster = merge_roster(
+        [
+            {"unit_id": "831", "name_ko": "레이", "full_name_ko": "아야나미 레이"},
+            {"unit_id": "834", "name_ko": "레이 (가칭)"},
+            {"unit_id": "870", "name_ko": "퀸(마코토)", "full_name_ko": "니지마 마코토"},
+        ],
+        [],
+    )
+    aliases = {(r["unit_id"], r["alias"], r["kind"]) for r in build_alias_rows(roster)}
+    assert ("831", "아야나미 레이", "full_name") in aliases
+    # How the update notices name them.
+    assert ("834", "아야나미 레이 (가칭)", "full_name_variant") in aliases
+    assert ("870", "퀸(니지마 마코토)", "full_name_variant") in aliases
+
+
+def test_launch_units_need_notice_coverage_of_the_launch():
+    gamefiles = [{"unit_id": "010", "name_en": "Rapi"}, {"unit_id": "016", "name_en": "Rapi: Red Hood"}]
+    covered = {u.unit_id: u for u in merge_roster(gamefiles, parse_nikkeutils(CHARACTERS_JS), launch_covered=True)}
+    assert (covered["010"].release_date, covered["010"].release_date_source) == ("2022-11-04", "launch")
+    assert covered["010"].release_date_confidence == "medium"
+    # A post-launch unit no notice introduced stays a low-confidence data-file date.
+    assert covered["016"].release_date_source == "datafile"
+
+
+def test_patch_note_release_carries_its_instant():
+    roster = merge_roster(
+        [{"unit_id": "016", "name_en": "Rapi: Red Hood"}],
+        parse_nikkeutils(CHARACTERS_JS),
+        patch_releases={"016": "2025-01-01"},
+        release_times={"016": "2025-01-01T00:00:00+09:00"},
+    )
+    by_id = {u.unit_id: u for u in roster}
+    assert by_id["016"].release_at == "2025-01-01T00:00:00+09:00"
+    assert by_id["016"].release_date_confidence == "high"
+
+
+def test_enikk_fills_what_nikkeutils_does_not_have_yet():
+    enikk = [{"unit_id": "404", "name_en": "Guilty: Mighty Bunny", "rarity": "SSR", "burst": "III",
+              "element": "Water", "manufacturer": "Missilis Industry", "unit_class": "Attacker",
+              "weapon": "Sniper Rifle", "squad": "Real Kindness"}]
+    roster = merge_roster([{"unit_id": "404", "name_ko": "길티 : 마이티 바니"}], [], enikk=enikk)
+    unit = roster[0]
+    assert (unit.element, unit.burst, unit.weapon, unit.in_enikk) == ("Water", "III", "Sniper Rifle", 1)

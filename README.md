@@ -4,8 +4,13 @@
 솔로레이드 상위 랭킹 데이터를 지표화해서 "지금 뭐가 강한가"가 아니라
 **"무엇이, 언제, 왜 바뀌었는가"** 를 답하는 것이 목표.
 
-핵심 제약 하나: **런타임에 AI를 쓰지 않는다.** 새 패치와 새 시즌은 사람이
-읽고 판단해서가 아니라 `nikke refresh` 한 번으로 반영된다.
+지표보다 먼저 필요한 것이 **시간축**이다. "2주년 당시 메타"를 분석하려면 그때
+어떤 솔로 레이드가 열려 있었고, 어떤 니케가 존재했는지를 먼저 정확히 알아야 한다.
+그래서 지금 단계는 공지를 자동으로 모아 **시점별 니케 풀과 솔로 레이드 일정**을
+복원하는 데 집중한다.
+
+핵심 제약 하나: **런타임에 AI를 쓰지 않는다.** 새 패치, 새 니케, 새 시즌, 시즌
+중단·재오픈은 사람이 읽고 판단해서가 아니라 `nikke refresh` 한 번으로 반영된다.
 
 ---
 
@@ -13,15 +18,16 @@
 
 | 단계 | 상태 |
 |---|---|
-| 로스터(니케 202명 + 출시일 + EN/KO/JA 이름) | ✅ 동작, 데이터 커밋됨 |
-| 패치노트 수집·파싱 | ✅ 코드·테스트 완료 / ⚠️ 수집은 네트워크 필요 |
-| enikk 솔로레이드 수집 | ⚙️ probe 도구 완료, 엔드포인트 1회 확인 필요 |
-| 지표·티어 엔진 | ✅ 동작, 합성 데이터로 검증 (테스트 65개) |
-| 시각화 | ✅ 라이트/다크 차트 5종 |
-| CI 자동 갱신 | ✅ `.github/workflows/refresh.yml` |
+| 공지 수집 (공식 사이트 + 네이버 라운지) | ✅ 1,070건 (2022-06 ~), 새 공지·수정된 공지만 증분 수집 |
+| 로스터 (니케 202명, EN/KO/JA 이름, 속성) | ✅ 게임 파일 + nikke-utils + enikk, 신캐는 다음 갱신 때 자동 추가 |
+| 캐릭터별 출시일 | ✅ 공지 기반 134명 · 런칭 로스터 62명 · 데이터 파일 날짜 6명 |
+| 솔로 레이드 달력 | ✅ 시즌 1–41 실제 운영 구간 (연기·중단·재오픈·연장 반영), enikk와 교차검증 |
+| 시점 조회 `nikke asof` | ✅ 시즌 상태, 니케 풀, 진행 중 모집, 공지됐지만 미출시 니케 |
+| enikk 랭킹 수집 | ⏸ 보류 — API(GraphQL)는 확인됨, 지표 단계에서 연결 |
+| 지표·티어 엔진, 시각화 | ⏸ 보류 — 합성 데이터로 검증된 상태 유지 |
+| CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 
-`data/processed/roster.csv` 는 실제로 생성된 데이터다. 나머지 지표 테이블은
-솔로레이드 데이터가 들어오면 같은 명령으로 채워진다.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 104개.
 
 ---
 
@@ -31,90 +37,168 @@
 python -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
 
-nikke refresh          # 수집 → 빌드 → 분석 → 차트, 의존 순서대로 전부
-nikke status           # 지금 디스크에 뭐가 있는지
-pytest -q              # 65 tests
+nikke asof 2주년           # 2024-11-04 정오(KST) 기준 게임 상태
+nikke asof 2025-06-22      # 아무 날짜나, 2025-06-22T09:00 처럼 시각까지도
+nikke seasons              # 솔로 레이드 전 시즌 일람
+nikke refresh              # 수집 → 빌드, 의존 순서대로 전부
+pytest -q
 ```
 
-개별 단계로 돌릴 수도 있다:
+### 시점 조회
+
+```
+$ nikke asof 2주년
+2024-11-04 12:00 KST 기준 · 글로벌 출시 +731일
+
+솔로 레이드
+  현재 시즌 19 · Behemoth · 보스 수냉(Water) / 약점 전격(Electric) · 일시 중단 중
+    운영 구간  2024-10-31 12:00 ~ 11/01 22:00 (중단)
+               11/08 12:00 ~ 11/12 18:00 (중단)
+               11/13 12:00 ~ 11/17 05:00 (연장)
+    처음 공지된 일정  2024-10-31 12:00 ~ 11/07 04:59 (이후 변경)
+    챌린지 기록 초기화 있음
+  직전 시즌 18 · Land Eater · 보스 작열(Fire) / 약점 수냉(Water) · 종료
+  다음 시즌 20 · White Ice Dragon · 보스 수냉(Water) / 약점 전격(Electric) · 오픈 예정
+
+니케 풀  137명 (SSR 113 · SR 15 · R 9)
+  속성별  작열 30 · 수냉 28 · 풍압 24 · 철갑 27 · ▶전격 28   (▶ = 솔로 레이드 약점 속성)
+  최근 30일 출시  팬텀 (10/10) · 루마니 (10/17) · 라푼젤 : 퓨어 그레이스 (10/31) · 신데렐라 (10/31)
+  공지됐지만 미출시  그레이브 (11/07 05:00)
+  ...
+```
+
+`--units` 는 그 시점의 니케 전체 목록, `--json` 은 기계가 읽는 형식이다.
+분석 코드에서는 같은 것을 파이썬으로 쓴다:
+
+```python
+from nikke_analysis.timeline import Timeline
+
+timeline = Timeline.load()
+view = timeline.at("2주년")
+view.season.number, view.season.status_at(view.moment)   # (19, "suspended")
+[u.unit_id for u in view.units]                          # 그때 존재한 니케
+timeline.season(26).periods                              # 26시즌이 실제로 열려 있던 구간들
+```
+
+개별 단계:
 
 ```bash
 nikke collect roster            # 게임 파일 + nikke-utils
-nikke collect patchnotes        # Steam 공지 API
-nikke probe enikk               # 랭킹 사이트 API 정찰 (최초 1회)
-nikke collect enikk --seasons 40 41
-nikke build roster              # → roster.csv, unit_aliases.csv
-nikke build patches             # → patches.csv, patch_events.csv, unit_releases.csv
-nikke build raids               # → raid_entries.csv
-nikke analyze                   # → metrics_*.csv
-nikke viz                       # → reports/*.png
+nikke collect notices           # 공식 공지 + 네이버 라운지 (새 것/수정된 것만)
+nikke collect enikk-meta        # enikk 시즌 메타·수집 시계열·캐릭터 표
+nikke build timeline            # → roster, unit_releases, banners, soloraid_*, season_calendar
+nikke status                    # 지금 디스크에 뭐가 있는지
 ```
 
-> **네트워크**: 클라우드 세션의 기본 `Trusted` 정책은 GitHub·패키지 레지스트리만
-> 허용해서 enikk와 공식 공지에 닿지 못한다. 여는 방법은
+> **네트워크**: 공식 공지 CMS, 네이버 라운지 API, enikk 에 닿아야 한다. 환경별 설정은
 > [docs/network-policy.md](docs/network-policy.md).
 
 ---
 
 ## 구조
 
-네 단계가 한 방향으로만 흐른다. 각 단계의 입력은 항상 **디스크 위의 파일**이고,
+단계가 한 방향으로만 흐른다. 각 단계의 입력은 항상 **디스크 위의 파일**이고,
 같은 입력이면 같은 출력이 나온다.
 
 ```
-collect/   네트워크 → data/raw/        가져오기만 한다. 해석하지 않는다.
-build/     raw      → data/processed/  순수 파싱·조인
-analyze/   processed → metrics_*.csv   순수 계산
-viz/       metrics  → reports/*.png    렌더링
+collect/     네트워크 → data/raw/          가져오기만 한다. 해석하지 않는다.
+build/       raw      → data/processed/    순수 파싱·조인 (공지 해석, 달력 복원)
+timeline.py  processed → 시점 조회          nikke asof / nikke seasons
+analyze/     processed → metrics_*.csv     순수 계산 (보류)
+viz/         metrics  → reports/*.png      렌더링 (보류)
 ```
 
 `collect` 가 아무것도 해석하지 않는 게 중요한 이유:
 
 - 사이트 마크업은 예고 없이 바뀐다. 파서가 깨져도 **이미 받아둔 스냅샷**으로
   고쳐서 다시 돌리면 된다.
-- 솔로레이드 랭킹은 **휘발성**이다. 시즌이 넘어가면 이전 top-50은 사이트에서
-  사라진다. 시즌 중에 찍어둔 스냅샷이 유일한 사본이 된다. 그래서
-  `data/raw/` 는 기본적으로 gitignore 대상이지만 **`data/raw/enikk_soloraid/`
-  만은 예외로 커밋한다** — 다시 받을 수 없는 유일본이기 때문이다.
+- 공지는 수정되거나 내려갈 수 있다. 출시일과 시즌 일정의 근거가 공지이므로
+  **공지 스냅샷은 커밋한다** (`data/raw/notices_*`). 수집은 증분이라 새 공지와
+  수정된 공지만 쌓인다. 솔로레이드 랭킹(`enikk_soloraid`)과 enikk 시즌 메타
+  (`enikk_seasons`)도 같은 이유로 커밋한다.
 - 파서가 `bytes → records` 순수 함수가 되어 네트워크 없이 테스트된다.
 
-### 데이터 흐름의 두 개 축
+### 데이터 흐름
 
 ```
-      게임 파일 (EN/KO/JA 이름) ─┐
-                                 ├→ roster.csv ─┐
-      nikke-utils (속성/날짜) ───┘               │
-                                                 ├→ 지표 → 티어 → 차트
-      Steam 공지 → patches.csv ──┐               │
-                                 ├→ 출시일 ──────┘
-      enikk → raid_entries.csv ──┘
+   게임 파일 (ID·EN/KO/JA 이름·풀네임) ─┐
+   nikke-utils (속성·데이터 등재일) ─────┼→ 로스터(이름) ─→ 별칭 표
+   enikk /characters (속성 보충) ────────┘                    │
+                                                              ▼
+   공식 사이트 공지 ───┐                              출시일·모집 기간
+                       ├→ 공지 표 ─────────────────→ (unit_releases, banners)
+   네이버 라운지 공지 ─┘      │                                │
+                              │                                ▼
+                              └→ 솔로 레이드 이벤트 ──→ 시즌·운영 구간 ←─ enikk 수집 시계열
+                                 (오픈·중단·재오픈·연장·연기)      (교차검증, 번호 매기기)
+                                                                   │
+                                                  로스터(출시일) ──┴─→ nikke asof
 ```
 
-로스터를 **두 번** 빌드한다. 출시일은 패치노트에서 오는데, 패치노트에서 니케
-이름을 찾으려면 로스터가 만든 별칭 테이블이 필요하다. 순환 의존을 만드는 대신
-싼 패스를 두 번 돈다: 로스터(이름) → 패치(날짜) → 로스터(날짜 반영).
+로스터를 **두 번** 빌드한다. 공지에서 니케 이름을 찾으려면 로스터가 만든 별칭
+표가 필요하고, 로스터의 출시일은 그 공지에서 온다. 순환 의존 대신 싼 패스를 두 번.
 
 ---
 
-## 왜 unit_id 로 조인하는가
+## 출시일은 어떻게 정하나
 
-소스마다 표기가 다 다르다. 게임 파일은 `Rapi: Red Hood` / `라피 : 레드 후드`,
-패치노트는 `Red Hood`, 랭킹 사이트는 커뮤니티 약칭을 쓴다. 이름이 어긋나면
-채용률 자체가 무의미해진다.
+**그 니케가 처음 소개된 업데이트 공지의 모집 시작 시각**이다. 공지 게시일도,
+점검일도 아니다. 한 패치의 두 번째 신캐는 보통 일주일 뒤에 열린다:
 
-그래서 모든 것은 **게임 내부 ID** 로 모인다 (`c016_00` → `016`). 언어와 무관하고,
-바뀌지 않고, 이미 원본과 파생형을 구분한다 — `010` 라피와 `016` 레드후드는
-메타에서도 별개 유닛이므로 그게 맞는 단위다.
+```
+1.2 SSR 니케 [신 : 스위프트 바니]
+*특수 모집 기간: 2026년 9월 24일 5:00:00 ~ 2026년 10월 15일 4:59:59 (UTC+9)
+```
 
-이름 해석은 **절대 추측하지 않는다.** 모르는 표기는 조용히 버리는 대신
-`raid_unresolved_names.csv` 에 남는다. 잘못 합쳐진 이름 하나가 그 위에 쌓인
-모든 지표를 오염시키기 때문이다.
+재모집(선택 모집, 재합류)은 모집 기간 표(`banners.csv`)에는 남지만 출시일이 되지
+않는다. 모집 없이 이벤트·로그인·해방 보상으로 들어온 니케(킬로, 라이, 니힐리스타…)는
+그 업데이트 날짜를 쓴다. 근거가 약한 순서로:
+
+| 출처 | 신뢰도 | 인원 | 의미 |
+|---|---|---|---|
+| `patchnote` | high | 134 | 공지의 모집 시작 시각 |
+| `launch` | medium | 62 | 어떤 공지도 소개한 적 없고 출시 전부터 게임 데이터에 있던 니케 |
+| `datafile` | low | 6 | 공지 원문이 없음 (2022-12-08 공지 누락 3명, 해방 시스템 3명) |
+
+이름이 어긋나면 날짜가 엉뚱한 니케에 붙으므로 **추측하지 않는다.** 공지는 콜라보
+니케를 풀네임으로 부르는데("스즈하라 사쿠라"), 이 풀네임은 게임 파일의 설명문에서
+자동으로 별칭이 된다. 두 니케가 같은 이름을 쓰는 경우(사쿠라 2명)는 공지 시점에
+존재하던 쪽으로만 판별하고, 그래도 둘이면 `release_unresolved.csv` 에 남긴다.
+
+## 솔로 레이드 일정은 어떻게 정하나
+
+업데이트 공지의 일정은 **계획**일 뿐이다. 실제로는 연기(8시즌), 중단 후 재오픈(19·
+26·38), 몇 시간 중단 후 연장(28)이 있었고, 그 사실은 네이버 라운지 공지에만 있다.
+그래서 모든 공지에서 오픈·재오픈·일정 변경·중단·연장·연기·기록 초기화 문장을
+이벤트로 뽑고, 시즌별로 시간순 재생해서 **실제로 열려 있던 구간**을 만든다.
+
+enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭킹을 수집한 시각은
+실제 플레이의 증거이므로, 복원한 구간 밖에서 수집됐거나 보스 속성이 다르면
+`soloraid_seasons.csv` 의 `checks` 열에 남는다. 공지에 시즌 번호가 없는 초기 시즌
+(1–25)은 enikk 수집 시각과 맞춰 번호를 붙인다. 자세한 규칙은
+[docs/timeline.md](docs/timeline.md).
 
 ---
 
-## 지표
+## 산출물
 
-자세한 정의와 근거는 [docs/metrics.md](docs/metrics.md). 요약하면:
+| 파일 | 한 행 | 내용 |
+|---|---|---|
+| `roster.csv` | 니케 | 이름·속성·풀네임, 출시일(`release_date`, `release_at`)과 그 출처·신뢰도 |
+| `unit_releases.csv` | 니케 | 출시를 정한 공지와 그 문장 |
+| `banners.csv` | 모집 기간 | 신규/재모집, 특수/한정/선택/이벤트 획득, 근거 문장 |
+| `soloraid_seasons.csv` | 시즌 | 보스(EN/KO)·속성·약점, 처음 공지된 일정, 실제 시작·종료, 교란 여부, 그 시점 니케 수·신규 니케, enikk 대조 결과 |
+| `soloraid_periods.csv` | 운영 구간 | 시즌별로 실제 열려 있던 구간과 끝난 이유(종료/중단/연장) |
+| `soloraid_events.csv` | 공지 문장 | 일정의 근거 (오픈·중단·재오픈·연장·연기·초기화·이슈) |
+| `season_calendar.csv` | 시즌 | 분석 단계가 읽는 시즌 달력 (자동 생성) |
+| `notices.csv` | 공지 | 공식·네이버 공지 목록과 분류 |
+| `unit_aliases.csv` | 표기 | 니케마다 알려진 모든 표기 |
+
+---
+
+## 지표 (보류)
+
+솔로레이드 랭킹이 들어오면 채울 지표. 정의와 근거는 [docs/metrics.md](docs/metrics.md).
 
 | 지표 | 답하는 질문 |
 |---|---|
@@ -123,43 +207,44 @@ viz/       metrics  → reports/*.png    렌더링
 | `score_delta` | 이 니케를 쓴 팀이 **실제로** 점수가 높은가 |
 | `tier_score` / `tier` | 위 세 축의 합성 점수와 등급 |
 | `total_variation` | 시즌 사이 메타가 몇 % 움직였는가 |
-| `newcomer_share` | 그 움직임 중 신규 니케 몫 |
-| `top_k_churn` | 티어표를 얼마나 다시 써야 하는가 |
 | `pmi` (synergy) | 우연 이상으로 같이 쓰이는 조합 |
-| `retention` | 전성기 대비 지금 얼마나 남았는가 (파워 크리프) |
 
-**출시일이 지표의 핵심 부품인 이유**: 존재하지 않던 시즌에 "안 뽑혔다"고
-세면 오래된 니케일수록 부당하게 나빠 보인다. 그래서 각 시즌은 **그때 출시돼
-있던 유닛만** 분모로 쓴다.
+각 시즌은 **그때 출시돼 있던 유닛만** 분모로 쓴다. 이번 단계에서 만든 출시일과
+시즌 달력이 그 분모다.
 
 ---
 
 ## 조정 가능한 것
 
-판단이 들어가는 값은 전부 설정 파일에 있다. 코드를 고칠 일이 아니다.
+판단이 들어가는 값은 코드가 아니라 파일에 있다.
 
 | 파일 | 내용 |
 |---|---|
+| `data/manual/release_overrides.csv` | 출시일 수동 보정 (사유 필수, 공지 기반 날짜보다 우선) |
+| `data/manual/unit_aliases.csv` | 자동으로 못 찾는 표기의 수동 별칭 |
 | `config/tiers.yaml` | 티어 가중치와 컷 |
-| `config/enikk.yaml` | 랭킹 사이트 엔드포인트와 JSON 필드 매핑 |
-| `data/manual/release_overrides.csv` | 출시일 수동 보정 (사유 필수) |
-| `data/manual/season_calendar.csv` | 시즌별 기간 |
+| `config/enikk.yaml` | 랭킹 수집 엔드포인트와 JSON 필드 매핑 |
 
 ---
 
 ## 출처
 
-| 소스 | 쓰는 것 | 접근 |
+| 소스 | 쓰는 것 | 수집 |
 |---|---|---|
-| [nikke-forbidden-library](https://github.com/LiviaMedeiros/nikke-forbidden-library) | 유닛 ID, EN/KO/JA 공식 표기 | GitHub (항상 가능) |
-| [`@sancti0n/nikke-utils`](https://www.npmjs.com/package/@sancti0n/nikke-utils) | 버스트/클래스/속성/제조사, 데이터파일 등재일 | npm (항상 가능) |
-| Steam 공지 API | 패치노트·이벤트·출시일 | 도메인 허용 필요 |
-| [enikk](https://enikk.app/soloraid) | 솔로레이드 상위 랭킹과 편성 | 도메인 허용 필요 |
+| [nikke-kr.com](https://www.nikke-kr.com) 공지 (Level Infinite CMS) | 업데이트 공지: 신규 니케·모집 기간·솔로 레이드 일정 | `collect notices` |
+| [네이버 게임 라운지](https://game.naver.com/lounge/nikke/board/11) 공지 게시판 | 운영 공지: 솔로 레이드 중단·재오픈·연장·연기 | `collect notices` |
+| [enikk](https://enikk.app/soloraid) (GraphQL) | 시즌 보스·속성, 랭킹 수집 시계열, 캐릭터 속성 | `collect enikk-meta` |
+| [nikke-forbidden-library](https://github.com/LiviaMedeiros/nikke-forbidden-library) | 유닛 ID, EN/KO/JA 공식 표기, 풀네임 | `collect roster` |
+| [`@sancti0n/nikke-utils`](https://www.npmjs.com/package/@sancti0n/nikke-utils) | 속성, 데이터 등재일 | `collect roster` |
+
+니케 본편은 Steam 에 없다(Steam 에는 스텔라 블레이드 콜라보 DLC 만 있다). 그래서
+공지는 공식 채널에서 직접 받는다.
 
 ---
 
 ## 문서
 
+- [docs/timeline.md](docs/timeline.md) — 출시일·솔로 레이드 달력 복원 규칙, 알려진 공백
 - [docs/metrics.md](docs/metrics.md) — 지표 정의, 공식, 한계
 - [docs/network-policy.md](docs/network-policy.md) — 네트워크 정책 여는 법
 - [docs/enikk-setup.md](docs/enikk-setup.md) — 랭킹 사이트 연결 절차

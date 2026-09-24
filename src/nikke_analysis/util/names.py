@@ -68,34 +68,48 @@ def variant_suffix(display_name: str) -> str | None:
 class NameIndex:
     """Deterministic name -> unit id lookup with a two-tier fallback.
 
-    Primary tier: full names from the game files plus curated aliases. A
-    collision here is a data bug and raises at build time.
+    Primary tier: full names from the game files plus curated aliases.
 
     Secondary tier: auto-derived variant suffixes (``Red Hood`` from
     ``Rapi: Red Hood``). Only consulted when the primary tier misses, and only
     when the suffix maps to exactly one unit - ambiguous suffixes such as
     ``Summer`` are dropped instead of guessed.
+
+    A name two different units really share resolves to neither. The game has
+    two of those: a 2023 SSR and a 2025 collaboration SR are both 사쿠라 /
+    Sakura, and 라이 and 레이 are both "Rei" in English. Picking one would
+    silently mis-join; :meth:`candidates` hands the choice to a caller that has
+    the context to make it (a notice's date, say).
     """
 
     primary: dict[str, str] = field(default_factory=dict)
     secondary: dict[str, str] = field(default_factory=dict)
     _ambiguous: set[str] = field(default_factory=set)
+    _claims: dict[str, set[str]] = field(default_factory=dict)
 
     def add_primary(self, name: str, unit_id: str, *, origin: str = "") -> None:
         key = normalize_name(name)
         if not key:
             return
-        existing = self.primary.get(key)
-        if existing is not None and existing != unit_id:
-            raise ValueError(
-                f"name collision on {name!r} ({origin}): "
-                f"already mapped to unit {existing}, now unit {unit_id}"
-            )
+        self._claims.setdefault(key, set()).add(unit_id)
+        if len(self._claims[key]) > 1:
+            self.primary.pop(key, None)
+            self.secondary.pop(key, None)
+            self._ambiguous.add(key)
+            return
         self.primary[key] = unit_id
+
+    def candidates(self, name: str) -> set[str]:
+        """Every unit that answers to ``name``, ambiguous or not."""
+        key = normalize_name(name)
+        if key in self._claims:
+            return set(self._claims[key])
+        hit = self.secondary.get(key)
+        return {hit} if hit else set()
 
     def add_secondary(self, name: str, unit_id: str) -> None:
         key = normalize_name(name)
-        if not key or key in self.primary:
+        if not key or key in self.primary or len(self._claims.get(key, ())) > 1:
             return
         existing = self.secondary.get(key)
         if existing is not None and existing != unit_id:

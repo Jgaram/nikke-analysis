@@ -1,23 +1,30 @@
 """Build the unit roster: one row per Nikke, with names, attributes and a date.
 
-The roster is the spine of the whole project. Pick rates are meaningless without
-it, because a unit that did not exist yet must not be counted as "not picked" -
-it has to be excluded from the denominator. That makes the release date a
-load-bearing number rather than a nice-to-have, so this module is explicit about
-where each date came from and how much to trust it.
+The roster is the spine of the whole project. "Which units existed at the time"
+is meaningless without it, and pick rates later on are too, because a unit that
+did not exist yet must not be counted as "not picked". That makes the release
+date a load-bearing number rather than a nice-to-have, so this module is
+explicit about where each date came from and how much to trust it.
 
 Date provenance, strongest first:
 
 ``manual``      an entry in data/manual/release_overrides.csv, with a reason.
-``patchnote``   the update that announced the unit (see build/patches.py).
+``patchnote``   the start of the unit's first recruitment window in the update
+                notice that introduced it (see build/releases.py).
+``launch``      no notice ever introduced the unit and it was already in the
+                game's data before the global launch: it shipped with the game.
+                Only claimed when the notice history reaches back past launch.
 ``datafile``    the ``dateAdded`` field from the nikke-utils dataset.
 
 ``datafile`` is the weakest by a wide margin: it records when a unit turned up in
 the game's data, which for launch units is a beta build months before release
 (Rapi reads 2022-04-11, half a year before the game shipped) and for later units
-is usually the datamine, one or two patches early. It is a placeholder that keeps
-the pipeline runnable, and every row using it is flagged ``low`` confidence so
-the gap is visible in the output rather than buried.
+is usually the datamine, one or two patches early. Every row using it is flagged
+``low`` confidence so the gap is visible in the output rather than buried.
+
+Names come from the game files, attributes from nikke-utils with enikk's copy of
+the game tables filling whatever nikke-utils has not caught up with yet - a unit
+released this week has a row, a name and its attributes on the next refresh.
 """
 
 from __future__ import annotations
@@ -32,7 +39,7 @@ from typing import Any, Iterable
 import yaml
 
 from ..paths import manual_dir, processed_dir
-from ..util.names import normalize_unit_id, variant_suffix
+from ..util.names import NameIndex, build_name_index, normalize_name, normalize_unit_id, variant_suffix
 from ..util.snapshot import SnapshotRun, latest_run
 from .jsobj import extract_array_literal
 
@@ -41,9 +48,19 @@ log = logging.getLogger(__name__)
 ROSTER_CSV = "roster.csv"
 ALIAS_CSV = "unit_aliases.csv"
 OVERRIDES_CSV = "release_overrides.csv"
+MANUAL_ALIAS_CSV = "unit_aliases.csv"
 
 _NAME_KEY_RE = re.compile(r"^(\d+)_name$")
+_DESCRIPTION_KEY_RE = re.compile(r"^c?(\d+)_description$")
 _FILENAME_ID_RE = re.compile(r"^\[(\d+)\]")
+
+# Collaboration units carry their full name in the unit description ("풀네임은
+# 스즈하라 사쿠라."), and that full name is what update notices call them.
+_FULL_NAME_PATTERNS = {
+    "ko": re.compile(r"(?:풀네임|본명)[은는]\s*([^.。\n]+?)\s*[.。]"),
+    "en": re.compile(r"(?:full|real) name is\s+([^.\n]+?)\s*\.", re.IGNORECASE),
+    "ja": re.compile(r"(?:フルネーム|本名)は\s*([^。\n]+?)\s*。"),
+}
 
 # The game shipped globally on this date, so nothing can have released before
 # it. The data-file dates for the launch roster are beta-build dates from April
@@ -54,10 +71,13 @@ GLOBAL_LAUNCH_DATE = "2022-11-04"
 CONFIDENCE_BY_SOURCE = {
     "manual": "high",
     "patchnote": "high",
+    "launch": "medium",
     "datafile": "low",
     "datafile_floored": "low",
     "": "none",
 }
+
+ATTRIBUTES = ("rarity", "burst", "element", "manufacturer", "unit_class", "weapon", "squad")
 
 
 @dataclass
@@ -75,12 +95,17 @@ class RosterRow:
     squad: str = ""
     is_variant: int = 0
     base_name_en: str = ""
+    full_name_en: str = ""
+    full_name_ko: str = ""
+    full_name_ja: str = ""
     datafile_added: str = ""
     release_date: str = ""
+    release_at: str = ""
     release_date_source: str = ""
     release_date_confidence: str = "none"
     in_gamefiles: int = 0
     in_nikkeutils: int = 0
+    in_enikk: int = 0
 
 
 # --------------------------------------------------------------------------
@@ -93,6 +118,8 @@ def parse_gamefiles_role(filename: str, payload: bytes) -> dict[str, str] | None
     The unit id comes from the filename's ``[NNN]`` prefix, which is the only
     part of these files guaranteed to be present; the in-file key drops leading
     zeros (``16_name`` for unit ``016``) so it is used only as a cross-check.
+    A full name stated in the unit's description is returned too, as
+    ``full_name_<lang>``, when there is one.
     """
     stem = Path(filename).name
     match = _FILENAME_ID_RE.match(stem)
@@ -109,22 +136,31 @@ def parse_gamefiles_role(filename: str, payload: bytes) -> dict[str, str] | None
         return None
 
     names: dict[str, str] = {}
+    descriptions: dict[str, str] = {}
     for key, value in document.items():
+        if not isinstance(value, dict):
+            continue
         key_match = _NAME_KEY_RE.match(str(key))
-        if key_match and isinstance(value, dict):
-            if normalize_unit_id(key_match.group(1)) != unit_id:
-                continue
+        if key_match and not names and normalize_unit_id(key_match.group(1)) == unit_id:
             names = {lang: str(text) for lang, text in value.items() if text}
-            break
+            continue
+        desc_match = _DESCRIPTION_KEY_RE.match(str(key))
+        if desc_match and not descriptions and normalize_unit_id(desc_match.group(1)) == unit_id:
+            descriptions = {lang: str(text) for lang, text in value.items() if text}
     if not names:
         return None
 
-    return {
+    row = {
         "unit_id": unit_id,
         "name_en": names.get("en", ""),
         "name_ko": names.get("ko", ""),
         "name_ja": names.get("ja", ""),
     }
+    for lang, pattern in _FULL_NAME_PATTERNS.items():
+        found = pattern.search(descriptions.get(lang, ""))
+        if found and normalize_name(found.group(1)) != normalize_name(row[f"name_{lang}"]):
+            row[f"full_name_{lang}"] = found.group(1).strip()
+    return row
 
 
 def parse_gamefiles_run(run: SnapshotRun) -> list[dict[str, str]]:
@@ -199,41 +235,47 @@ def merge_roster(
     *,
     overrides: dict[str, dict[str, str]] | None = None,
     patch_releases: dict[str, str] | None = None,
+    release_times: dict[str, str] | None = None,
+    enikk: Iterable[dict[str, Any]] | None = None,
+    launch_covered: bool = False,
 ) -> list[RosterRow]:
     """Full outer join on ``unit_id``, then resolve one release date per unit.
 
     A unit present in only one source is still emitted: units appear in the game
     files before the community tables catch up, and dropping them would make the
     roster silently lag every new release.
+
+    ``launch_covered`` says the notice history reaches back past the global
+    launch, which is what makes "never introduced by any notice" evidence of
+    having shipped with the game rather than of a gap in the history.
     """
     overrides = overrides or {}
     patch_releases = patch_releases or {}
+    release_times = release_times or {}
 
     merged: dict[str, RosterRow] = {}
     for row in gamefiles:
         unit = merged.setdefault(row["unit_id"], RosterRow(unit_id=row["unit_id"]))
-        unit.name_en = row.get("name_en") or unit.name_en
-        unit.name_ko = row.get("name_ko") or unit.name_ko
-        unit.name_ja = row.get("name_ja") or unit.name_ja
+        for field_name in ("name_en", "name_ko", "name_ja", "full_name_en", "full_name_ko", "full_name_ja"):
+            setattr(unit, field_name, row.get(field_name) or getattr(unit, field_name))
         unit.in_gamefiles = 1
 
     for row in nikkeutils:
         unit = merged.setdefault(row["unit_id"], RosterRow(unit_id=row["unit_id"]))
         # Game files win on names: they are the game's own localisation table.
         unit.name_en = unit.name_en or row.get("name_en", "")
-        for attribute in (
-            "rarity",
-            "burst",
-            "element",
-            "manufacturer",
-            "unit_class",
-            "weapon",
-            "squad",
-            "datafile_added",
-        ):
+        for attribute in (*ATTRIBUTES, "datafile_added"):
             if row.get(attribute):
                 setattr(unit, attribute, row[attribute])
         unit.in_nikkeutils = 1
+
+    for row in enikk or []:
+        unit = merged.setdefault(row["unit_id"], RosterRow(unit_id=row["unit_id"]))
+        unit.name_en = unit.name_en or row.get("name_en", "")
+        for attribute in ATTRIBUTES:
+            if row.get(attribute) and not getattr(unit, attribute):
+                setattr(unit, attribute, row[attribute])
+        unit.in_enikk = 1
 
     for unit_id, unit in merged.items():
         display = unit.name_en or unit.name_ko
@@ -246,7 +288,11 @@ def merge_roster(
             unit.release_date_source = "manual"
         elif unit_id in patch_releases:
             unit.release_date = patch_releases[unit_id]
+            unit.release_at = release_times.get(unit_id, "")
             unit.release_date_source = "patchnote"
+        elif launch_covered and unit.datafile_added and unit.datafile_added <= GLOBAL_LAUNCH_DATE:
+            unit.release_date = GLOBAL_LAUNCH_DATE
+            unit.release_date_source = "launch"
         elif unit.datafile_added:
             if unit.datafile_added < GLOBAL_LAUNCH_DATE:
                 unit.release_date = GLOBAL_LAUNCH_DATE
@@ -262,31 +308,112 @@ def merge_roster(
     return [merged[key] for key in sorted(merged)]
 
 
+def _name_tail(name: str, base: str) -> str | None:
+    """What follows ``base`` in ``name`` when ``name`` is ``base`` plus a qualifier."""
+    if not base or not name.startswith(base) or name == base:
+        return None
+    tail = name[len(base):]
+    return tail if tail[:1] in (" ", ":", "：", "(", "（") else None
+
+
 def build_alias_rows(roster: Iterable[RosterRow]) -> list[dict[str, str]]:
     """Every spelling we know for each unit, as a reviewable table.
 
-    Emitted so that a name appearing in ranking data can be traced to a unit by
-    reading a CSV, without running the resolver.
+    Kinds: ``full`` (the game's name), ``variant_suffix`` (``Red Hood`` for
+    ``Rapi: Red Hood``), ``full_name`` (a collaboration unit's full name from
+    its description) and ``full_name_variant`` (that full name carried over to
+    a later version of the character: the notice calls ``레이 (가칭)``
+    "아야나미 레이 (가칭)").
     """
+    units = list(roster)
     rows: list[dict[str, str]] = []
-    for unit in roster:
-        for field_name, language in (("name_en", "en"), ("name_ko", "ko"), ("name_ja", "ja")):
-            value = getattr(unit, field_name)
+    for unit in units:
+        for language in ("en", "ko", "ja"):
+            value = getattr(unit, f"name_{language}")
             if value:
-                rows.append(
-                    {"unit_id": unit.unit_id, "alias": value, "language": language, "kind": "full"}
-                )
+                rows.append({"unit_id": unit.unit_id, "alias": value, "language": language, "kind": "full"})
                 suffix = variant_suffix(value)
                 if suffix:
                     rows.append(
+                        {"unit_id": unit.unit_id, "alias": suffix, "language": language, "kind": "variant_suffix"}
+                    )
+            full = getattr(unit, f"full_name_{language}")
+            if full:
+                rows.append({"unit_id": unit.unit_id, "alias": full, "language": language, "kind": "full_name"})
+
+    for owner in units:
+        for language in ("en", "ko", "ja"):
+            full = getattr(owner, f"full_name_{language}")
+            base = getattr(owner, f"name_{language}")
+            if not full or not base:
+                continue
+            # "퀸(마코토)" is announced as "퀸(니지마 마코토)": the short name
+            # inside the game name expands to the full name.
+            tokens = full.split()
+            for token in {tokens[0], tokens[-1]} if len(tokens) > 1 else ():
+                expanded = base.replace(token, full, 1)
+                if token in base and full not in base and expanded != full:
+                    rows.append(
+                        {"unit_id": owner.unit_id, "alias": expanded, "language": language, "kind": "full_name_variant"}
+                    )
+            for other in units:
+                if other.unit_id == owner.unit_id:
+                    continue
+                tail = _name_tail(getattr(other, f"name_{language}"), base)
+                if tail is not None:
+                    rows.append(
                         {
-                            "unit_id": unit.unit_id,
-                            "alias": suffix,
+                            "unit_id": other.unit_id,
+                            "alias": f"{full}{tail}",
                             "language": language,
-                            "kind": "variant_suffix",
+                            "kind": "full_name_variant",
                         }
                     )
     return rows
+
+
+def load_manual_aliases(path: Path | None = None) -> list[dict[str, str]]:
+    """Curated spellings from data/manual/unit_aliases.csv (unit_id, alias, reason)."""
+    target = path or (manual_dir() / MANUAL_ALIAS_CSV)
+    if not target.is_file():
+        return []
+    with target.open(encoding="utf-8", newline="") as handle:
+        return [
+            {"unit_id": normalize_unit_id(row["unit_id"]), "alias": row["alias"].strip()}
+            for row in csv.DictReader(handle)
+            if row.get("unit_id") and row.get("alias")
+        ]
+
+
+def load_alias_index(path: Path | None = None) -> NameIndex | None:
+    """The name index behind every name lookup, built from ``unit_aliases.csv``.
+
+    Game names and full names go in the primary tier, together with the curated
+    aliases; variant suffixes are re-derived as the secondary tier by
+    :func:`build_name_index` itself.
+    """
+    target = path or (processed_dir() / ALIAS_CSV)
+    if not target.is_file():
+        return None
+    with target.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if not rows:
+        return None
+    by_unit: dict[str, dict[str, str]] = {}
+    aliases: list[dict[str, str]] = []
+    for row in rows:
+        unit_id = row["unit_id"]
+        record = by_unit.setdefault(unit_id, {"unit_id": unit_id})
+        kind = row.get("kind")
+        if kind == "full" and row.get("language"):
+            record[f"name_{row['language']}"] = row["alias"]
+        elif kind in ("full_name", "full_name_variant"):
+            aliases.append({"unit_id": unit_id, "alias": row["alias"]})
+    aliases.extend(load_manual_aliases())
+    index = build_name_index(list(by_unit.values()), aliases=aliases)
+    if index.ambiguous:
+        log.info("names shared by more than one unit (resolved by context only): %s", sorted(index.ambiguous))
+    return index
 
 
 # --------------------------------------------------------------------------
@@ -299,6 +426,9 @@ def build(
     nikkeutils_run: SnapshotRun | None = None,
     out_dir: Path | None = None,
     patch_releases: dict[str, str] | None = None,
+    release_times: dict[str, str] | None = None,
+    enikk: list[dict[str, Any]] | None = None,
+    launch_covered: bool = False,
 ) -> dict[str, Any]:
     """Build roster.csv and unit_aliases.csv from the newest snapshots."""
     gamefiles_run = gamefiles_run or latest_run("roster_gamefiles")
@@ -313,6 +443,9 @@ def build(
         nikkeutils_rows,
         overrides=load_release_overrides(),
         patch_releases=patch_releases,
+        release_times=release_times,
+        enikk=enikk,
+        launch_covered=launch_covered,
     )
 
     target_dir = out_dir or processed_dir()
@@ -320,7 +453,7 @@ def build(
     roster_path = target_dir / ROSTER_CSV
     alias_path = target_dir / ALIAS_CSV
 
-    fieldnames = list(asdict(roster[0]).keys()) if roster else [f.name for f in RosterRow.__dataclass_fields__.values()]
+    fieldnames = list(RosterRow.__dataclass_fields__)
     with roster_path.open("w", encoding="utf-8", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
@@ -337,11 +470,17 @@ def build(
         "units": len(roster),
         "from_gamefiles": sum(u.in_gamefiles for u in roster),
         "from_nikkeutils": sum(u.in_nikkeutils for u in roster),
+        "from_enikk": sum(u.in_enikk for u in roster),
         "variants": sum(u.is_variant for u in roster),
+        "release_date_source": {
+            source: sum(1 for u in roster if u.release_date_source == source)
+            for source in ("manual", "patchnote", "launch", "datafile", "datafile_floored", "")
+        },
         "release_date_confidence": {
             level: sum(1 for u in roster if u.release_date_confidence == level)
-            for level in ("high", "low", "none")
+            for level in ("high", "medium", "low", "none")
         },
+        "missing_attributes": [u.unit_id for u in roster if not (u.element and u.unit_class)],
         "roster_csv": str(roster_path),
         "alias_csv": str(alias_path),
         "alias_rows": len(alias_rows),

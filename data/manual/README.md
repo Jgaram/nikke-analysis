@@ -1,40 +1,48 @@
 # Hand-maintained data
 
 This is the only directory a human is expected to edit. Everything else is
-either fetched (`data/raw/`) or derived (`data/processed/`).
+either fetched (`data/raw/`) or derived (`data/processed/`), and nothing here is
+needed for the pipeline to run - these files exist for the rare case the
+automated sources get something wrong.
 
 Two rules keep it from turning into an unauditable pile:
 
-1. **Every override carries a reason.** Without one there is no way to know,
-   six months later, whether the row is still needed.
-2. **An override is temporary by default.** When the patch-note collector starts
-   producing the right date for a unit, delete its row rather than leaving two
-   sources of truth in play.
+1. **Every row carries a reason.** Without one there is no way to know, six
+   months later, whether the row is still needed.
+2. **A row is temporary by default.** When the automated sources start producing
+   the right answer, delete the row rather than leaving two sources of truth.
 
 ## `release_overrides.csv`
 
-Pins a unit's release date, beating both the patch-note date and the data-file
-date. Use it when a unit's real release is known and the automated sources
-disagree.
+Pins a unit's release date, beating the notice-derived date and everything
+weaker. Use it when a unit's real release is known and the notices cannot give
+it - today that is the three units of the 2022-12-08 update, whose notice is no
+longer published anywhere (see docs/timeline.md, "알려진 공백").
 
 ```csv
 unit_id,release_date,reason
-016,2023-11-16,"Red Hood banner; confirmed against the 2023-11-16 update notice"
+203,2022-12-08,"Winter Shopper banner; 2022-12-08 update notice (no longer online)"
 ```
 
 `unit_id` is the three-digit id from `data/processed/roster.csv` (`016`), and
 `c016_00` or `16` are accepted too.
 
-## `season_calendar.csv`
+## `unit_aliases.csv`
 
-Maps each Solo Raid season to the dates it ran. Optional but worth filling in:
-without it the pipeline can only *infer* which units existed in a season from
-who was picked, which under-counts the roster and slightly inflates every pick
-rate. It is also what makes `metrics_patch_impact.csv` possible - attributing a
-meta shift to the patches inside a window needs to know where the window is.
+Extra spellings for the name index, for a name the notices use that the game
+files and their full-name descriptions do not cover. A name listed in
+`data/processed/release_unresolved.csv` is the signal that one is needed.
 
 ```csv
-season,start_date,end_date
-40,2026-08-27,2026-09-03
-41,2026-09-24,2026-10-01
+unit_id,alias,reason
+836,스즈하라 사쿠라,"how the 2025-02-20 notice names her"
 ```
+
+(That particular alias is not needed: it is derived automatically from the unit
+description in the game files.)
+
+## `season_calendar.csv`
+
+Superseded. The Solo Raid calendar is now rebuilt from the notices into
+`data/processed/season_calendar.csv`, which the analysis stage reads first; this
+file is only a fallback when no processed calendar exists.

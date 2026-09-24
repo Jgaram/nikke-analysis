@@ -1,23 +1,25 @@
 name: refresh
 
-# The project's point is that a new patch or a new Solo Raid season is picked up
-# by running code, not by anyone interpreting a patch note. This workflow is what
-# makes that literal: it runs the same `nikke refresh` a developer would run, and
-# commits the resulting tables.
+# The project's point is that a new patch, a new unit or a new Solo Raid season
+# - and a season suspended or reopened mid-way - is picked up by running code,
+# not by anyone interpreting a notice. This workflow is what makes that literal:
+# it runs the same `nikke refresh` a developer would run, and commits the notice
+# snapshots and the rebuilt tables.
 #
-# It also solves a practical problem. Cloud dev sessions run behind a network
-# allowlist that does not include the ranking site, so collection cannot happen
-# there. GitHub Actions runners have open egress, so this is where the fetching
-# lives.
+# It also solves a practical problem. Cloud dev sessions may run behind a
+# network allowlist that does not include the notice APIs or the ranking site.
+# GitHub Actions runners have open egress, so this is where the fetching lives.
 
 on:
   schedule:
-    # Weekly, after a Solo Raid season has had time to settle.
-    - cron: "0 3 * * 2"
+    # Monday and Thursday, 06:00 UTC (15:00 KST): update notices go up early in
+    # the week and updates land on Thursday mornings KST, so both a new notice
+    # and the maintenance that follows it are caught within a few days.
+    - cron: "0 6 * * 1,4"
   workflow_dispatch:
     inputs:
       seasons:
-        description: "Season numbers to collect (space separated). Empty = config default."
+        description: "Season numbers to collect rankings for (space separated). Empty = config default."
         required: false
         default: ""
 
@@ -50,18 +52,22 @@ jobs:
       - name: Refresh
         run: nikke -v refresh --seasons ${{ inputs.seasons }}
 
-      - name: Commit updated tables and raid snapshots
+      - name: Solo Raid calendar
+        run: nikke seasons
+
+      - name: Commit notice snapshots and rebuilt tables
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # data/raw/enikk_soloraid is deliberately not ignored: a rotated-out
-          # season cannot be re-fetched, so the snapshot has to land in the repo
-          # on the run that collected it or it is lost.
+          # data/raw is ignored except for what cannot be re-fetched reliably:
+          # the notices every date is derived from, enikk's season record and
+          # Solo Raid ranking snapshots. Collection is incremental, so a quiet
+          # week adds nothing.
           git add data/processed data/manual data/raw
           if git diff --staged --quiet; then
             echo "nothing changed"
           else
-            git commit -m "data: refresh roster, patches and metrics"
+            git commit -m "data: refresh notices, roster and Solo Raid calendar"
             git push
           fi
 

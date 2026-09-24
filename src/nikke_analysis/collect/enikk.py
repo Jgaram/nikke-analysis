@@ -6,7 +6,7 @@ with each ranker's five-unit team, which is the single richest public signal for
 season rotates the previous top-50 is no longer served, so the collector's job is
 to snapshot aggressively and ask questions later.
 
-Two entry points:
+Entry points:
 
 ``probe``    - one-off reconnaissance. Walks the app's own asset graph looking
                for the JSON the page renders from, saves every response (404s
@@ -17,6 +17,12 @@ Two entry points:
                them over the requested seasons/bosses, and snapshots the raw
                responses without interpreting them.
 
+``collect_seasons`` / ``collect_characters`` - season metadata and the unit
+               table, from the site's GraphQL endpoint and its /characters page.
+               These feed the timeline, not the rankings: which boss each season
+               had, when enikk actually saw it being played, and attributes for
+               units the community tables have not caught up with yet.
+
 Keeping endpoint shape in config rather than code is the point: when enikk
 changes its API, the fix is a config edit plus a re-run, and every previously
 captured season stays parseable from its snapshot.
@@ -24,6 +30,7 @@ captured season stays parseable from its snapshot.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import re
@@ -31,13 +38,33 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
 from urllib.parse import urljoin, urlparse
 
-from ..util.http import Fetcher
-from ..util.snapshot import SnapshotWriter
+from ..util.http import Fetcher, Response
+from ..util.nextjs import find_objects, flight_payload
+from ..util.snapshot import SnapshotWriter, list_runs
+from .base import CollectorError
 
 log = logging.getLogger(__name__)
 
 SOURCE = "enikk_soloraid"
 PROBE_SOURCE = "enikk_probe"
+SEASONS_SOURCE = "enikk_seasons"
+CHARACTERS_SOURCE = "enikk_characters"
+
+GRAPHQL_PATH = "/api/graphql"
+CHARACTERS_PATH = "/characters"
+
+SUMMARIES_QUERY = (
+    "query soloRaidSummaries { soloRaidSummaries "
+    "{ wave_name wave_description monster_image raid_number weakness data } }"
+)
+SEASON_QUERY = (
+    "query SoloRaid($raid: Float!) { soloRaid(raid: $raid) "
+    "{ wave_name raid_number monster_image monster_obj data } }"
+)
+DAMAGE_CHART_QUERY = "query SRDamageChart($raid: Float!) { SRDamageChart(raid: $raid) }"
+
+# The keys that identify a unit record inside the /characters page payload.
+CHARACTER_KEYS = ("resource_id", "name_localkey", "class", "element_id")
 
 DEFAULT_BASE_URL = "https://enikk.app"
 
@@ -258,3 +285,154 @@ def collect(
     )
     log.info("enikk snapshot: %s/%s responses -> %s", saved, requested, writer.dir)
     return str(writer.dir)
+
+
+# --------------------------------------------------------------------------
+# season metadata and the unit table
+# --------------------------------------------------------------------------
+
+def graphql(fetcher: Fetcher, base_url: str, query: str, variables: Mapping[str, Any] | None = None) -> Response:
+    """One GraphQL POST. A response carrying ``errors`` is a failure, not data."""
+    response = fetcher.post_json(
+        urljoin(base_url, GRAPHQL_PATH),
+        {"query": query, "variables": dict(variables or {})},
+        headers={"Content-Type": "application/json"},
+    )
+    payload = response.json()
+    if payload.get("errors"):
+        raise CollectorError(f"enikk GraphQL error: {payload['errors']}")
+    return response
+
+
+def _stored_meta(source: str) -> list[dict[str, Any]]:
+    return [entry.get("meta") or {} for run in list_runs(source) for entry in run.entries]
+
+
+def collect_seasons(
+    *,
+    base_url: str = DEFAULT_BASE_URL,
+    full: bool = False,
+    fetcher: Fetcher | None = None,
+) -> dict[str, Any]:
+    """Snapshot the season list and, per season, its boss record and damage chart.
+
+    The damage chart is what makes enikk useful for the schedule. It is the time
+    series of enikk's own hourly collections, so its first and last points bound
+    when a season was actually being played - independently of the dates a patch
+    note promised. A season suspended and reopened shows up there on the dates it
+    really ran.
+
+    Finished seasons never change, so a season is only re-read when its
+    ``lastupdated`` stamp differs from the copy already on disk.
+    """
+    fetcher = fetcher or Fetcher(delay=1.0)
+    stored = _stored_meta(SEASONS_SOURCE)
+    known_charts = {
+        str(meta.get("raid")): str(meta.get("lastupdated", ""))
+        for meta in stored
+        if meta.get("kind") == "damage_chart"
+    }
+    last_summary_digest = next(
+        (meta.get("digest") for meta in reversed(stored) if meta.get("kind") == "summaries"), None
+    )
+
+    writer = SnapshotWriter(SEASONS_SOURCE)
+    endpoint = urljoin(base_url, GRAPHQL_PATH)
+    summaries = graphql(fetcher, base_url, SUMMARIES_QUERY)
+    rows = (summaries.json().get("data") or {}).get("soloRaidSummaries") or []
+    if not rows:
+        writer.discard()
+        raise CollectorError("enikk returned no Solo Raid seasons")
+
+    digest = hashlib.sha256(summaries.content).hexdigest()
+    if full or digest != last_summary_digest:
+        writer.write(
+            "summaries.json",
+            summaries.content,
+            url=endpoint,
+            status=summaries.status,
+            content_type=summaries.content_type,
+            meta={"kind": "summaries", "digest": digest, "seasons": len(rows)},
+        )
+
+    refreshed: list[int] = []
+    failed: dict[int, str] = {}
+    for row in sorted(rows, key=lambda r: int(r.get("raid_number") or 0)):
+        raid = int(row.get("raid_number") or 0)
+        if raid <= 0:
+            continue
+        lastupdated = str((row.get("data") or {}).get("lastupdated") or "")
+        if not full and known_charts.get(str(raid)) == lastupdated:
+            continue
+        try:
+            season = graphql(fetcher, base_url, SEASON_QUERY, {"raid": raid})
+            chart = graphql(fetcher, base_url, DAMAGE_CHART_QUERY, {"raid": raid})
+        except (RuntimeError, CollectorError) as exc:
+            # One unreachable season must not cost the others. It has no chart
+            # on disk yet, so the next run asks for it again.
+            log.warning("enikk season %s skipped: %s", raid, exc)
+            failed[raid] = str(exc)
+            continue
+        for kind, response, filename in (
+            ("season", season, f"season-{raid:03d}.json"),
+            ("damage_chart", chart, f"damage-chart-{raid:03d}.json"),
+        ):
+            writer.write(
+                filename,
+                response.content,
+                url=endpoint,
+                status=response.status,
+                content_type=response.content_type,
+                meta={"kind": kind, "raid": raid, "lastupdated": lastupdated},
+            )
+        refreshed.append(raid)
+
+    result: dict[str, Any] = {"seasons": len(rows), "refreshed": refreshed, "failed": failed}
+    if writer.entry_count == 0:
+        writer.discard()
+        log.info("enikk seasons: %s listed, nothing new", len(rows))
+        return {"snapshot_dir": "", **result}
+    writer.seal({"base_url": base_url, "full": full, **result})
+    log.info("enikk seasons: %s listed, %s refreshed -> %s", len(rows), len(refreshed), writer.dir)
+    return {"snapshot_dir": str(writer.dir), **result}
+
+
+def extract_characters(html: str) -> list[dict[str, Any]]:
+    """Unit records embedded in the /characters page, one per unit id."""
+    by_id: dict[Any, dict[str, Any]] = {}
+    for record in find_objects(flight_payload(html), CHARACTER_KEYS):
+        by_id.setdefault(record["resource_id"], record)
+    return [by_id[key] for key in sorted(by_id, key=lambda k: int(k))]
+
+
+def collect_characters(*, base_url: str = DEFAULT_BASE_URL, fetcher: Fetcher | None = None) -> dict[str, Any]:
+    """Snapshot the /characters page when the unit table on it has changed.
+
+    The page is a few hundred KB and its markup changes on every deploy, so the
+    change test is on the unit records it carries, not on the bytes.
+    """
+    fetcher = fetcher or Fetcher(delay=1.0)
+    url = urljoin(base_url, CHARACTERS_PATH)
+    response = fetcher.get(url)
+    characters = extract_characters(response.text)
+    if not characters:
+        raise CollectorError(f"no unit records found in {url}; the page layout may have changed")
+
+    digest = hashlib.sha256(json.dumps(characters, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+    previous = next((meta.get("digest") for meta in reversed(_stored_meta(CHARACTERS_SOURCE))), None)
+    if digest == previous:
+        log.info("enikk characters: %s units, unchanged", len(characters))
+        return {"snapshot_dir": "", "units": len(characters), "changed": False}
+
+    writer = SnapshotWriter(CHARACTERS_SOURCE)
+    writer.write(
+        "characters.html",
+        response.content,
+        url=response.url,
+        status=response.status,
+        content_type=response.content_type,
+        meta={"digest": digest, "units": len(characters)},
+    )
+    writer.seal({"url": url, "units": len(characters)})
+    log.info("enikk characters: %s units -> %s", len(characters), writer.dir)
+    return {"snapshot_dir": str(writer.dir), "units": len(characters), "changed": True}

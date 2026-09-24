@@ -9,18 +9,30 @@ __pycache__/
 
 # Data.
 #
-# Raw snapshots are ignored by default: the roster sources and the patch-note
-# feed can be re-fetched at any time, and committing them would bloat the repo
-# for no gain.
+# Raw snapshots are ignored by default: the roster sources are current-state
+# tables that can be re-fetched at any time, and committing a copy per run would
+# bloat the repo for no gain.
 #
-# Solo Raid rankings are the exception, and it is not a small one. Once a season
-# rotates out, the site stops serving its top-50 and no amount of re-running
-# brings it back - the snapshot taken during the season is the only copy that
-# will ever exist. Those are committed on purpose.
+# Three kinds are committed on purpose, because they are the evidence the
+# timeline is built from and nothing guarantees they stay online:
+#
+# * Solo Raid rankings. Once a season rotates out, the game stops serving its
+#   top-50; the snapshot taken during the season may be the only copy left.
+# * Official notices (site and Naver lounge). Every release date and every
+#   Solo Raid schedule traces back to one; a notice deleted upstream must not
+#   take a unit's release date with it. Collection is incremental, so a run adds
+#   only the notices that are new or were edited.
+# * enikk's season metadata, the record of when each season was actually played.
 data/raw/**
 !data/raw/.gitkeep
 !data/raw/enikk_soloraid/
 !data/raw/enikk_soloraid/**
+!data/raw/notices_official/
+!data/raw/notices_official/**
+!data/raw/notices_naver/
+!data/raw/notices_naver/**
+!data/raw/enikk_seasons/
+!data/raw/enikk_seasons/**
 data/interim/**
 !data/interim/.gitkeep
 data/cache/

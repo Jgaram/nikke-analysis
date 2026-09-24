@@ -1,23 +1,25 @@
 name: refresh
 
-# The project's point is that a new patch or a new Solo Raid season is picked up
-# by running code, not by anyone interpreting a patch note. This workflow is what
-# makes that literal: it runs the same `nikke refresh` a developer would run, and
-# commits the resulting tables.
+# The project's point is that a new patch, a new unit or a new Solo Raid season
+# - and a season suspended or reopened mid-way - is picked up by running code,
+# not by anyone interpreting a notice. This workflow is what makes that literal:
+# it runs the same `nikke refresh` a developer would run, and commits the notice
+# snapshots and the rebuilt tables.
 #
-# It also solves a practical problem. Cloud dev sessions run behind a network
-# allowlist that does not include the ranking site, so collection cannot happen
-# there. GitHub Actions runners have open egress, so this is where the fetching
-# lives.
+# It also solves a practical problem. Cloud dev sessions may run behind a
+# network allowlist that does not include the notice APIs or the ranking site.
+# GitHub Actions runners have open egress, so this is where the fetching lives.
 
 on:
   schedule:
-    # Weekly, after a Solo Raid season has had time to settle.
-    - cron: "0 3 * * 2"
+    # Monday and Thursday, 06:00 UTC (15:00 KST): update notices go up early in
+    # the week and updates land on Thursday mornings KST, so both a new notice
+    # and the maintenance that follows it are caught within a few days.
+    - cron: "0 6 * * 1,4"
   workflow_dispatch:
     inputs:
       seasons:
-        description: "Season numbers to collect (space separated). Empty = config default."
+        description: "Season numbers to collect rankings for (space separated). Empty = config default."
         required: false
         default: ""
 
@@ -47,23 +49,44 @@ jobs:
       - name: Test
         run: pytest -q
 
+      # A source that cannot be collected, or a result the rules could not
+      # make sense of, makes `nikke refresh` exit 1. The run still commits what
+      # it did collect, and only then fails - so the run shows red (and GitHub notifies), and
+      # nothing half-read is mistaken for a quiet week.
       - name: Refresh
+        id: refresh
+        continue-on-error: true
         run: nikke -v refresh --seasons ${{ inputs.seasons }}
 
-      - name: Commit updated tables and raid snapshots
+      - name: Commit notice snapshots and rebuilt tables
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # data/raw/enikk_soloraid is deliberately not ignored: a rotated-out
-          # season cannot be re-fetched, so the snapshot has to land in the repo
-          # on the run that collected it or it is lost.
+          # data/raw is ignored except for what cannot be re-fetched reliably:
+          # the notices every date is derived from, enikk's season record and
+          # Solo Raid ranking snapshots. Collection is incremental, so a quiet
+          # week adds nothing.
           git add data/processed data/manual data/raw
           if git diff --staged --quiet; then
             echo "nothing changed"
           else
-            git commit -m "data: refresh roster, patches and metrics"
+            git commit -m "data: refresh notices, roster and Solo Raid calendar"
             git push
           fi
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '## 상태 점검'
+            echo '```'
+            nikke check || true
+            echo '```'
+            echo '## 솔로 레이드 시즌'
+            echo '```'
+            nikke seasons
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload charts
         uses: actions/upload-artifact@v4
@@ -71,3 +94,9 @@ jobs:
           name: charts
           path: reports/
           if-no-files-found: ignore
+
+      - name: Fail when the refresh needs a human
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo "nikke refresh reported a collection failure or a timeline error; see the summary."
+          exit 1

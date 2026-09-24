@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,10 +55,18 @@ class SnapshotWriter:
 
     def __init__(self, source: str, run_id: str | None = None, root: Path | None = None):
         self.source = source
-        self.run_id = run_id or utc_now_stamp()
-        base = root if root is not None else raw_dir()
-        self.dir = base / source / self.run_id
-        self.dir.mkdir(parents=True, exist_ok=True)
+        base = (root if root is not None else raw_dir()) / source
+        stem = run_id or utc_now_stamp()
+        # Run ids are second-resolution timestamps. Two runs in the same second
+        # must not share a directory: the second would write into the first, and
+        # an empty second run discarding its directory would delete the first.
+        candidate, suffix = base / stem, 1
+        while candidate.exists():
+            suffix += 1
+            candidate = base / f"{stem}-{suffix:03d}"
+        self.run_id = candidate.name
+        self.dir = candidate
+        self.dir.mkdir(parents=True)
         self._entries: list[SnapshotEntry] = []
 
     def write(
@@ -99,6 +108,18 @@ class SnapshotWriter:
         path = self.dir / MANIFEST_NAME
         path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
         return path
+
+    @property
+    def entry_count(self) -> int:
+        return len(self._entries)
+
+    def discard(self) -> None:
+        """Drop a run that turned out to have nothing new.
+
+        Incremental collectors call this so an idle week does not leave an empty
+        run directory behind for every source.
+        """
+        shutil.rmtree(self.dir, ignore_errors=True)
 
     def __enter__(self) -> "SnapshotWriter":
         return self

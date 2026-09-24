@@ -29,7 +29,7 @@ from ..config import FieldMapping
 from ..paths import processed_dir
 from ..util.names import NameIndex
 from ..util.snapshot import SnapshotRun, list_runs
-from .patches import load_alias_index
+from .roster import load_alias_index
 
 log = logging.getLogger(__name__)
 

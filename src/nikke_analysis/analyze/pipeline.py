@@ -29,7 +29,8 @@ log = logging.getLogger(__name__)
 
 ROSTER_CSV = "roster.csv"
 ENTRIES_CSV = "raid_entries.csv"
-PATCHES_CSV = "patches.csv"
+NOTICES_CSV = "notices.csv"
+BANNERS_CSV = "banners.csv"
 RELEASES_CSV = "unit_releases.csv"
 CALENDAR_CSV = "season_calendar.csv"
 
@@ -56,10 +57,28 @@ def load_inputs(data_dir: Path | None = None) -> dict[str, pd.DataFrame]:
     return {
         "roster": roster,
         "entries": entries,
-        "patches": _read(directory / PATCHES_CSV),
+        "patches": patch_events(_read(directory / NOTICES_CSV), _read(directory / BANNERS_CSV)),
         "releases": _read(directory / RELEASES_CSV),
         "calendar": calendar,
     }
+
+
+def patch_events(notices: pd.DataFrame, banners: pd.DataFrame) -> pd.DataFrame:
+    """Update notices and debut banners as one dated list (``date``, ``kind``).
+
+    ``kind`` is ``patchnote`` for an update notice and ``banner`` for a unit's
+    debut recruitment window - the two things a season transition is attributed to.
+    """
+    frames = []
+    if not notices.empty and {"published_at", "kind"}.issubset(notices.columns):
+        updates = notices[notices["kind"] == "update"]
+        frames.append(pd.DataFrame({"date": updates["published_at"].str[:10], "kind": "patchnote", "title": updates["title"]}))
+    if not banners.empty and {"start_at", "debut"}.issubset(banners.columns):
+        debuts = banners[banners["debut"] == "1"]
+        frames.append(pd.DataFrame({"date": debuts["start_at"].str[:10], "kind": "banner", "title": debuts["unit_id"]}))
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True).sort_values(["date", "kind"]).reset_index(drop=True)
 
 
 def patch_impact(

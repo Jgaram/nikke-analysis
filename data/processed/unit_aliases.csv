@@ -687,38 +687,59 @@ unit_id,alias,language,kind
 822,람,ko,full
 822,ラム,ja,full
 830,Asuka,en,full
+830,Asuka Shikinami Langley,en,full_name
 830,아스카,ko,full
+830,시키나미 아스카 랑그레이,ko,full_name
 830,アスカ,ja,full
+830,式波・アスカ・ラングレー,ja,full_name
 831,Rei,en,full
+831,Rei Ayanami,en,full_name
 831,레이,ko,full
+831,아야나미 레이,ko,full_name
 831,レイ,ja,full
+831,綾波レイ,ja,full_name
 832,Mari,en,full
+832,Mari Makinami Illustrious,en,full_name
 832,마리,ko,full
+832,마키나미 마리 일러스트리어스,ko,full_name
 832,マリ,ja,full
+832,真希波・マリ・イラストリアス,ja,full_name
 833,Misato,en,full
+833,Misato Katsuragi,en,full_name
 833,미사토,ko,full
+833,카츠라기 미사토,ko,full_name
 833,ミサト,ja,full
+833,葛城ミサト,ja,full_name
 834,Rei (Tentative Name),en,full
 834,레이 (가칭),ko,full
 834,レイ（仮称）,ja,full
 835,Asuka: WILLE,en,full
 835,WILLE,en,variant_suffix
+835,Asuka Shikinami Langley,en,full_name
 835,아스카 : WILLE,ko,full
 835,WILLE,ko,variant_suffix
 835,アスカ：WILLE,ja,full
 835,WILLE,ja,variant_suffix
+835,式波・アスカ・ラングレー,ja,full_name
 836,Sakura,en,full
+836,Sakura Suzuhara,en,full_name
 836,사쿠라,ko,full
+836,스즈하라 사쿠라,ko,full_name
 836,サクラ,ja,full
+836,鈴原サクラ,ja,full_name
 840,Ada,en,full
 840,에이다,ko,full
 840,エイダ,ja,full
 841,Jill,en,full
 841,질,ko,full
+841,질 발렌타인,ko,full_name
 841,ジル,ja,full
+841,ジル・バレンタイン,ja,full_name
 842,Claire,en,full
 842,클레어,ko,full
+842,클레어 레드필드,ko,full_name
 842,クレア,ja,full
+842,クレア・レッドフィールド,ja,full_name
 850,EVE,en,full
 850,이브,ko,full
 850,イヴ,ja,full
@@ -729,20 +750,44 @@ unit_id,alias,language,kind
 852,릴리,ko,full
 852,リリー,ja,full
 860,Chisato,en,full
+860,Chisato Nishikigi,en,full_name
 860,치사토,ko,full
+860,니시키기 치사토,ko,full_name
 860,千束,ja,full
+860,錦木千束,ja,full_name
 861,Takina,en,full
+861,Takina Inoue,en,full_name
 861,타키나,ko,full
+861,이노우에 타키나,ko,full_name
 861,たきな,ja,full
+861,井ノ上たきな,ja,full_name
 862,Kurumi,en,full
 862,쿠루미,ko,full
 862,クルミ,ja,full
 870,Queen (Makoto),en,full
+870,Makoto Niijima,en,full_name
 870,퀸(마코토),ko,full
+870,니지마 마코토,ko,full_name
 870,クイーン（真）,ja,full
+870,新島真,ja,full_name
 871,Yukiko,en,full
+871,Yukiko Amagi,en,full_name
 871,유키코,ko,full
+871,아마기 유키코,ko,full_name
 871,雪子,ja,full
+871,天城雪子,ja,full_name
 872,Aigis,en,full
 872,아이기스,ko,full
 872,アイギス,ja,full
+835,Asuka Shikinami Langley: WILLE,en,full_name_variant
+835,시키나미 아스카 랑그레이 : WILLE,ko,full_name_variant
+835,式波・アスカ・ラングレー：WILLE,ja,full_name_variant
+834,Rei Ayanami (Tentative Name),en,full_name_variant
+834,아야나미 레이 (가칭),ko,full_name_variant
+834,綾波レイ（仮称）,ja,full_name_variant
+835,Asuka Shikinami Langley: WILLE,en,full_name_variant
+284,Sakura Suzuhara: Bloom in Summer,en,full_name_variant
+284,스즈하라 사쿠라 : 블룸 인 서머,ko,full_name_variant
+284,鈴原サクラ：ブルーム・イン・サマー,ja,full_name_variant
+870,Queen (Makoto Niijima),en,full_name_variant
+870,퀸(니지마 마코토),ko,full_name_variant

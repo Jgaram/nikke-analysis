@@ -52,7 +52,7 @@ weighted_pick_rate(u) = Σ_{t ∋ u} w(rank_t) / Σ_t w(rank_t)
 
 | `availability.source` | 의미 |
 |---|---|
-| `season_calendar` | `data/manual/season_calendar.csv` 기반. 정확함. |
+| `season_calendar` | 공지에서 복원한 `data/processed/season_calendar.csv` 기반 ([timeline.md](timeline.md)). 정확함. |
 | `inferred_from_entries` | 캘린더가 없을 때. 그 시즌에 실제로 쓰인 유닛 중 가장 최근 출시일을 기준선으로 삼는다. 실존했지만 아무도 안 쓴 유닛을 놓치므로 **하한**이며, 그래서 다른 이름으로 표시된다. |
 
 ---
@@ -169,10 +169,10 @@ PMI(i,j) = log₂( P(i,j) / (P(i)·P(j)) )
    투자 비용이 큰 유닛은 여기서 과대표집된다.
 2. **`score_delta` 는 상관이다.** 유저 실력·장비·시너지가 교란으로 섞인다.
 3. **캘린더 없는 가용성은 하한이다.** 존재했지만 아무도 안 쓴 유닛을 놓친다.
-   `season_calendar.csv` 를 채우면 사라지는 문제다.
-4. **데이터파일 출시일은 약하다.** 패치노트가 닿기 전까지 `release_date_source`
-   가 `datafile*` 인 행은 데이터 등재일이지 출시일이 아니다. 출시 이전으로
-   나오는 값은 글로벌 출시일(2022-11-04)로 하한을 잡지만, 그래도 근사치다.
-   `release_date_confidence` 를 반드시 같이 볼 것.
+   시즌 달력은 이제 공지에서 자동 복원되므로(`season_calendar.csv`) 평소에는
+   해당하지 않는다.
+4. **출시일 신뢰도를 같이 볼 것.** 대부분은 공지의 모집 시작 시각(`patchnote`,
+   high)이나 런칭 로스터(`launch`, medium)지만, 공지 원문이 없는 몇 명은 데이터
+   등재일(`datafile`, low)이다. `release_date_confidence` 를 반드시 같이 볼 것.
 5. **보스마다 상성이 다르다.** 채용률은 시즌×보스 단위로 계산하고 시즌 단위로는
    평균을 낸다. 시즌 평균만 보면 상성 전문가가 희석된다.

@@ -59,11 +59,21 @@ def test_unknown_names_are_reported_not_guessed():
     assert unresolved == ["Totally Not A Nikke"]
 
 
-def test_colliding_names_raise_rather_than_silently_merging():
+def test_a_shared_name_resolves_to_neither_unit():
+    """The game really has two units called 사쿠라; guessing either would mis-join."""
     index = NameIndex()
-    index.add_primary("Rapi", "010")
-    with pytest.raises(ValueError, match="collision"):
-        index.add_primary("Rapi", "999")
+    index.add_primary("사쿠라", "282")
+    index.add_primary("사쿠라", "836")
+    assert index.resolve("사쿠라") is None
+    assert index.candidates("사쿠라") == {"282", "836"}
+    assert normalize_name("사쿠라") in index.ambiguous
+
+
+def test_a_name_claimed_twice_by_the_same_unit_is_not_ambiguous():
+    index = NameIndex()
+    index.add_primary("2B", "810", origin="name_en")
+    index.add_primary("2B", "810", origin="name_ko")
+    assert index.resolve("2b") == "810"
 
 
 def test_ambiguous_suffix_is_dropped():

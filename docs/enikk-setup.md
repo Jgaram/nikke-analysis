@@ -11,6 +11,14 @@
 
 최초 1회만 아래를 하면 된다.
 
+> **2026-09 확인 결과.** enikk 는 Next.js App Router 앱이고, 데이터는 전부
+> `POST /api/graphql` 에서 온다. 시즌 메타(`soloRaidSummaries`, `soloRaid`)와 수집
+> 시계열(`SRDamageChart`), 캐릭터 표(`/characters` 페이지)는 이미
+> `nikke collect enikk-meta` 로 수집한다 — 솔로 레이드 달력의 교차검증용이다.
+> 랭킹 자체는 `SRRankings(raid, all)` 쿼리가 서버별 상위 50명과 5개 팀 편성을
+> 준다. 지표 단계에서 이 쿼리를 수집기에 연결할 예정이며, 아래 REST 템플릿 방식은
+> 그 전까지의 설정 틀이다. 과거 시즌도 enikk 에 남아 있다(시즌 1–40 확인).
+
 ## 1. 정찰
 
 ```bash

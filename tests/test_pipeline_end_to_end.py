@@ -20,12 +20,22 @@ def processed(tmp_path_factory):
     world.calendar.to_csv(directory / "season_calendar.csv", index=False)
     pd.DataFrame(
         [
-            {"patch_id": "p1", "date": "2024-02-10", "title": "New Nikke", "url": "", "source": "steam", "kind": "banner", "body_chars": 100},
-            {"patch_id": "p2", "date": "2024-04-10", "title": "Balance", "url": "", "source": "steam", "kind": "patchnote", "body_chars": 100},
+            {"notice_id": "official:p2", "source": "official", "published_at": "2024-04-10T18:00:00+09:00",
+             "updated_at": "", "kind": "update", "title": "4월 11일 업데이트 공지", "url": "", "chars": 100},
         ]
-    ).to_csv(directory / "patches.csv", index=False)
+    ).to_csv(directory / "notices.csv", index=False)
     pd.DataFrame(
-        [{"unit_id": world.newcomer, "release_date": "2024-08-25", "patch_id": "p1", "patch_title": "New Nikke", "status": "confirmed", "matched_alias": "x"}]
+        [
+            {"unit_id": world.newcomer, "kind": "special", "debut": 1, "start_at": "2024-02-10T00:00:00+09:00",
+             "end_at": "2024-02-24T04:59:59+09:00", "start_after_maintenance": 1, "notice_id": "official:p1",
+             "notice_title": "New Nikke", "notice_published_at": "2024-02-08T18:00:00+09:00", "label": "특수 모집 기간",
+             "evidence": ""},
+        ]
+    ).to_csv(directory / "banners.csv", index=False)
+    pd.DataFrame(
+        [{"unit_id": world.newcomer, "release_at": "2024-08-25T00:00:00+09:00", "release_date": "2024-08-25",
+          "release_after_maintenance": 1, "banner_kind": "special", "notice_id": "official:p1",
+          "notice_title": "New Nikke", "notice_published_at": "2024-08-22T18:00:00+09:00", "evidence": ""}]
     ).to_csv(directory / "unit_releases.csv", index=False)
     return directory, world
 

@@ -1,8 +1,7 @@
 # 네트워크 정책 여는 법
 
-이 프로젝트는 클라우드 세션에서만 굴리는 것을 전제로 한다. 그런데 클라우드
-환경의 기본 네트워크 정책이 **Trusted** 라서, 패키지 레지스트리와 GitHub만
-허용되고 `enikk.app` 이나 공식 공지 사이트는 프록시에서 403으로 막힌다.
+이 프로젝트가 접속하는 곳은 다섯 곳이다. 클라우드 세션의 기본 **Trusted** 정책은
+패키지 레지스트리와 GitHub 만 허용하므로, 공지 CMS·네이버 라운지·enikk 는 막힌다.
 
 증상은 이렇게 보인다:
 
@@ -33,37 +32,31 @@ curl -sS "$HTTPS_PROXY/__agentproxy/status" | jq .recentRelayFailures
 ## 허용할 도메인
 
 ```text
+na-community.playerinfinite.com
+comm-api.game.naver.com
 enikk.app
-*.enikk.app
-api.steampowered.com
-store.steampowered.com
-nikke-en.com
-*.nikke-en.com
-nikke-kr.com
-*.blablalink.com
 ```
 
 | 도메인 | 쓰는 곳 |
 |---|---|
-| `enikk.app` | 솔로레이드 상위 랭킹과 편성 (`collect/enikk.py`) |
-| `api.steampowered.com` | ISteamNews 공지 API — 패치노트의 주 소스 |
-| `store.steampowered.com` | Steam 앱 ID 확인 |
-| `nikke-en.com` | 공식 공지 (Steam 공지가 축약본일 때의 보완) |
-| `*.blablalink.com` | 공식 커뮤니티 공지 (선택) |
+| `na-community.playerinfinite.com` | nikke-kr.com 공지사항·뉴스의 실제 데이터 (Level Infinite CMS API) — `collect/notices.py` |
+| `comm-api.game.naver.com` | 네이버 게임 라운지 공지 게시판 API — `collect/notices.py` |
+| `enikk.app` | 솔로 레이드 시즌 메타·수집 시계열·캐릭터 표 (GraphQL), 이후 랭킹 — `collect/enikk.py` |
+
+니케 본편은 Steam 에 없으므로 Steam API 는 쓰지 않는다.
 
 ## 허용 목록 밖에서도 되는 것
 
-정책과 무관하게 항상 닿는 경로가 있다. 이 프로젝트가 로스터를 `Trusted` 환경에서도
-만들 수 있는 이유다.
+정책과 무관하게 항상 닿는 경로가 있다. 로스터를 `Trusted` 환경에서도 만들 수
+있는 이유다.
 
-- **GitHub** — 전용 프록시를 탄다. `git clone` 과 `raw.githubusercontent.com` 은
-  공개 레포라면 언제나 된다.
-- **패키지 레지스트리** — npm·PyPI 등.
+- **GitHub** — 게임 파일 미러(`nikke-forbidden-library`)를 `git clone` 한다.
+- **패키지 레지스트리** — `@sancti0n/nikke-utils` 를 npm 에서 받는다.
 - **Anthropic API** — Claude Code 자체 통신.
 
 ## 정책을 안 열고 가는 길
 
 `.github/workflows/refresh.yml` 은 같은 `nikke refresh` 를 GitHub Actions에서
 돌린다. Actions 러너는 아웃바운드 제한이 없으므로, 수집을 전부 CI에 맡기고
-클라우드 세션은 코드 작업만 해도 된다. 오히려 이쪽이 스냅샷 히스토리가 레포에
-쌓인다는 점에서 낫다.
+클라우드 세션은 코드 작업만 해도 된다. 공지 스냅샷과 갱신된 표가 그대로 커밋되므로
+세션에서는 `git pull` 만 하면 최신 데이터로 `nikke asof` 를 쓸 수 있다.

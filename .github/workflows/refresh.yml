@@ -51,7 +51,7 @@ jobs:
 
       # A source that cannot be collected, or a result the rules could not
       # make sense of, makes `nikke refresh` exit 1. The run still commits what
-      # it did collect, and only then fails - so the failure email arrives, and
+      # it did collect, and only then fails - so the run shows red (and GitHub notifies), and
       # nothing half-read is mistaken for a quiet week.
       - name: Refresh
         id: refresh

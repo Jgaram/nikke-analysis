@@ -122,7 +122,7 @@ nikke refresh        # 또는 python -m nikke_analysis refresh
 | enikk 와 일정·속성 불일치 | 경고 | 공지되지 않은 연장? |
 
 오류가 있으면 `nikke refresh` 와 `nikke check` 가 종료 코드 1로 끝나고, CI 는 받은
-데이터를 커밋한 뒤 실패로 표시한다(GitHub 이 메일로 알린다). 결과 목록은
+데이터를 커밋한 뒤 실패로 표시한다(Actions 탭의 빨간 표시, 설정에 따라 GitHub 알림 메일). 결과 목록은
 `data/processed/timeline_issues.csv` 와 Actions 실행 요약에 남는다.
 
 ---

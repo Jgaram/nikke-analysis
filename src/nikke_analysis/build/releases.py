@@ -20,8 +20,8 @@ Reading rules, all deterministic:
   line after it ("SSR 니케 X가 ... 합류합니다"). A heading that names no unit
   clears the subject, so a New Year step-up recruit in its own section never
   inherits the previous unit.
-* A line labelled "…모집 기간:" or "…획득 기간:" with a date range is a window
-  for the subject.
+* A line labelled "…모집 기간:", "…픽업 기간:" or "…획득 기간:" with a date
+  range is a window for the subject.
 * It is a debut when its section is a new-unit section ("신규 니케", "신규 캐릭터",
   "신규 한정 캐릭터") or the introduction says the unit joins (합류/참전) rather
   than rejoins (재합류); selection reruns ("선택 모집") never are.
@@ -60,7 +60,7 @@ RELEASES_CSV = "unit_releases.csv"
 BANNERS_CSV = "banners.csv"
 UNRESOLVED_CSV = "release_unresolved.csv"
 
-WINDOW_RE = re.compile(r"(?P<label>[^:：\n]{0,30}(?:모집|획득)[^:：\n]{0,12}기간)\s*[:：]\s*(?P<value>.+)")
+WINDOW_RE = re.compile(r"(?P<label>[^:：\n]{0,30}(?:모집|획득|픽업)[^:：\n]{0,12}기간)\s*[:：]\s*(?P<value>.+)")
 BRACKET_RE = re.compile(r"\[([^\[\]]{1,40})\]")
 # "SSR 니케 X", "SR 캐릭터 [X]", "SSR 필그림 [X]" - the name follows the marker.
 MARKER_RE = re.compile(r"(?:SSR|SR|R)\s*(?:니케|캐릭터|필그림)\s*\[?")
@@ -74,6 +74,7 @@ BANNER_KINDS: tuple[tuple[str, str], ...] = (
     ("한정", "limited"),
     ("콜라보", "collab"),
     ("특수 모집", "special"),
+    ("픽업", "special"),
     ("획득", "event_reward"),
 )
 # How far ahead of its data-file date a notice may name a unit. Used only to

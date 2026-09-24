@@ -1,6 +1,6 @@
 """The timeline tables, built in the order they depend on each other.
 
-    roster (names)  ->  notices  ->  releases  ->  roster (dates)  ->  Solo Raid
+    roster (names)  ->  notices  ->  releases  ->  roster (dates)  ->  Solo Raid  ->  issues
 
 The roster is built twice on purpose. Finding a unit in a notice needs the
 alias table the roster build writes, and the roster's release dates come from
@@ -17,6 +17,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from .. import health
 from ..paths import processed_dir
 from . import enikk_meta, notices, releases, roster, soloraid
 
@@ -77,4 +78,8 @@ def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
         releases=availability(_roster_rows(directory)),
         out_dir=directory,
     )
+
+    issues = health.data_issues(directory, steps["soloraid"]["problems"])
+    health.write(directory, issues)
+    steps["issues"] = {level: sum(1 for i in issues if i.level == level) for level in health.LEVELS}
     return steps

@@ -49,11 +49,14 @@ jobs:
       - name: Test
         run: pytest -q
 
+      # A source that cannot be collected, or a result the rules could not
+      # make sense of, makes `nikke refresh` exit 1. The run still commits what
+      # it did collect, and only then fails - so the failure email arrives, and
+      # nothing half-read is mistaken for a quiet week.
       - name: Refresh
+        id: refresh
+        continue-on-error: true
         run: nikke -v refresh --seasons ${{ inputs.seasons }}
-
-      - name: Solo Raid calendar
-        run: nikke seasons
 
       - name: Commit notice snapshots and rebuilt tables
         run: |
@@ -71,9 +74,29 @@ jobs:
             git push
           fi
 
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '## 상태 점검'
+            echo '```'
+            nikke check || true
+            echo '```'
+            echo '## 솔로 레이드 시즌'
+            echo '```'
+            nikke seasons
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload charts
         uses: actions/upload-artifact@v4
         with:
           name: charts
           path: reports/
           if-no-files-found: ignore
+
+      - name: Fail when the refresh needs a human
+        if: steps.refresh.outcome == 'failure'
+        run: |
+          echo "nikke refresh reported a collection failure or a timeline error; see the summary."
+          exit 1

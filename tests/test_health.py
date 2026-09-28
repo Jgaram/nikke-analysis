@@ -116,12 +116,31 @@ def test_ranking_findings_name_unmatched_names_and_missing_seasons(tmp_path):
     processed.mkdir()
     write(processed / "raid_unresolved_names.csv", [{"name": "Rei", "occurrences": 7, "seasons": "19;20", "candidates": "392;831"}])
     write(processed / "metrics_seasons.csv", [{"season": "40", "rankers": "300"}])
-    played = season(40, "2026-08-20T12:00:00+09:00")
     missing = {**season(39, "2026-07-16T12:00:00+09:00"), "end_at": "2026-07-23T04:59:59+09:00",
                "enikk_first_seen": "2026-07-17T00:00:00+09:00"}
-    write(processed / "soloraid_seasons.csv", [missing, played])
+    played = {**season(40, "2026-08-20T12:00:00+09:00"), "end_at": "2026-08-27T04:59:59+09:00",
+              "enikk_first_seen": "2026-08-21T00:00:00+09:00"}
+    just_ended = {**season(41, "2026-09-17T12:00:00+09:00"), "end_at": "2026-09-24T04:59:59+09:00",
+                  "enikk_first_seen": "2026-09-18T00:00:00+09:00"}
+    untracked = {**season(38, "2026-06-11T12:00:00+09:00"), "end_at": "2026-06-18T04:59:59+09:00"}
+    write(processed / "soloraid_seasons.csv", [missing, played, just_ended, untracked])
     issues = health.ranking_issues(processed, datetime(2026, 9, 28, tzinfo=KST))
-    codes = {(i.code, i.subject) for i in issues}
-    assert ("ranking_name_unresolved", "Rei") in codes
-    assert ("ranking_missing", "시즌 39") in codes
-    assert all(i.level == "warning" for i in issues)
+    levels = {(i.code, i.subject): i.level for i in issues}
+    assert levels == {
+        ("ranking_name_unresolved", "Rei"): "warning",
+        # a week past its end with nothing: the collection has stopped
+        ("ranking_missing", "시즌 39"): "error",
+        # season 41 ended four days ago - enikk may still be collecting; 38 enikk never tracked
+    }
+    assert health.has_errors(issues)
+
+
+def test_missing_rankings_are_reported_without_any_metric_table(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    write(processed / "soloraid_seasons.csv", [
+        {**season(39, "2026-07-16T12:00:00+09:00"), "end_at": "2026-07-23T04:59:59+09:00",
+         "enikk_first_seen": "2026-07-17T00:00:00+09:00"},
+    ])
+    issues = health.ranking_issues(processed, datetime(2026, 9, 28, tzinfo=KST))
+    assert [(i.level, i.code) for i in issues] == [("error", "ranking_missing")]

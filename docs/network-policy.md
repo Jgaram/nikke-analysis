@@ -41,7 +41,7 @@ enikk.app
 |---|---|
 | `na-community.playerinfinite.com` | nikke-kr.com 공지사항·뉴스의 실제 데이터 (Level Infinite CMS API) — `collect/notices.py` |
 | `comm-api.game.naver.com` | 네이버 게임 라운지 공지 게시판 API — `collect/notices.py` |
-| `enikk.app` | 솔로 레이드 시즌 메타·수집 시계열·캐릭터 표 (GraphQL), 이후 랭킹 — `collect/enikk.py` |
+| `enikk.app` | 솔로 레이드 랭킹, 시즌 메타·수집 시계열·캐릭터 표 (GraphQL) — `collect/enikk.py` |
 
 니케 본편은 Steam 에 없으므로 Steam API 는 쓰지 않는다.
 

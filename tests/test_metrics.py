@@ -139,3 +139,48 @@ def test_empty_inputs_return_empty_frames_not_exceptions(world, seasons):
     assert metrics.unit_season(empty, world.roster, seasons).empty
     assert metrics.synergy(empty).empty
     assert metrics.trajectories(pd.DataFrame()).empty
+
+
+def test_a_deck_that_dealt_no_damage_was_not_fought(world, seasons):
+    entries = world.entries[world.entries["season"] == 1].copy()
+    player = entries["player"].iloc[0]
+    unfought = (entries["player"] == player) & (entries["deck"] == 3)
+    benched = set(entries.loc[unfought, "unit_id"])
+    entries.loc[unfought, "deck_score"] = 0
+
+    population = metrics.select_population(entries)
+    assert not (population["deck_score"] <= 0).any()
+    summary = metrics.season_summary(population, seasons).iloc[0]
+    assert summary["decks"] == 5 * summary["rankers"] - 1
+
+    before = metrics.unit_season(world.entries[world.entries["season"] == 1], world.roster, seasons).set_index("unit_id")
+    after = metrics.unit_season(population, world.roster, seasons).set_index("unit_id")
+    assert (after.loc[list(benched), "rankers"] == before.loc[list(benched), "rankers"] - 1).all()
+
+
+def test_deck_rank_follows_damage_not_the_order_decks_were_listed(world):
+    listed = world.entries.copy()
+    listed["deck"] = 6 - listed["deck"]  # the synthetic world lists decks strongest first; reverse that
+    decks = metrics.deck_table(listed)
+    strongest = decks.loc[decks.groupby(metrics.RANKER_KEYS)["deck_score"].idxmax()]
+    assert (strongest["deck_rank"] == 1).all() and strongest["is_main"].all()
+    assert decks.groupby(metrics.RANKER_KEYS)["deck_rank"].apply(lambda r: sorted(r) == [1, 2, 3, 4, 5]).all()
+    pd.testing.assert_frame_equal(metrics.deck_split(listed), metrics.deck_split(world.entries))
+
+
+def test_deck_split_accounts_for_every_user(world, table):
+    assert (table[metrics.DECK_SPLIT].sum(axis=1) == table["rankers"]).all()
+    used = table[table["rankers"] > 0]
+    assert used["avg_deck"].between(1, 5).all()
+    assert table.loc[table["rankers"] == 0, "avg_deck"].isna().all()
+    # the newcomer is the strongest unit from its release on: the main deck, nearly always
+    newcomer = table[(table["unit_id"] == world.newcomer) & (table["season"] >= world.newcomer_season)]
+    assert (newcomer["avg_deck"] < 1.2).all()
+
+
+def test_usage_rate_and_rank_count_players_without_weights(world, table):
+    players = world.entries.drop_duplicates(metrics.RANKER_KEYS).groupby("season").size()
+    assert np.allclose(table["usage_rate"], table["rankers"] / table["season"].map(players))
+    for _, group in table.groupby("season"):
+        expected = group["rankers"].rank(method="min", ascending=False).astype(int)
+        assert (group["usage_rank"] == expected).all()  # ties share a rank: 1, 1, 3

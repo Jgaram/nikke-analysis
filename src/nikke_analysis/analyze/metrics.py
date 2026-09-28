@@ -29,6 +29,12 @@ picked". Season rows cover exactly the units released by the season's start
 (plus any unit the data shows was fielded), and every such unit gets a row, zero
 if nobody used it - so an unused unit reads as zero, not as missing.
 
+**Decks that were not fought.** A deck that dealt no damage was not fought with
+(rare: six decks in seasons 1-41), so it counts for nothing: not as a deck, and
+not as use of the units listed in it. The rest are ranked by the damage they
+dealt - deck rank 1 is a player's strongest deck. enikk lists decks in the order
+the player arranged them, which is not the same thing.
+
 **Deck effect** (a diagnostic, not part of the tier). Comparing a player's five
 decks with each other holds the account fixed - its investment, its skill - which
 the leaderboard otherwise confounds with unit strength. A ridge regression of log
@@ -103,23 +109,46 @@ def release_instants(roster: pd.DataFrame) -> pd.Series:
 
 
 def select_population(entries: pd.DataFrame, *, top_n: int = 50, servers: tuple[str, ...] = ()) -> pd.DataFrame:
-    """The ranked players the metrics are defined on: ranks 1..``top_n`` of the chosen servers."""
-    work = entries[(entries["rank"] >= 1) & (entries["rank"] <= top_n)]
+    """The decks the metrics are defined on: ranks 1..``top_n`` of the chosen
+    servers, and only decks that were fought (dealt damage)."""
+    work = entries[(entries["rank"] >= 1) & (entries["rank"] <= top_n) & (entries["deck_score"] > 0)]
     if servers:
         work = work[work["server"].isin(servers)]
     return work
 
 
 def deck_table(entries: pd.DataFrame, *, weighting: str = "dcg") -> pd.DataFrame:
-    """One row per deck: its damage, its share of the player's total, whether it is the main deck."""
+    """One row per deck: its damage, its share of the player's total, and its rank
+    among the player's decks by damage (``deck_rank`` 1 = the main deck; ties keep
+    the order enikk listed them in)."""
     decks = entries.groupby(DECK_KEYS, as_index=False).agg(
         rank=("rank", "first"), deck_score=("deck_score", "first"), size=("unit_id", "size")
     )
     total = decks.groupby(RANKER_KEYS)["deck_score"].transform("sum")
     decks["share"] = np.where(total > 0, decks["deck_score"] / total, 0.0)
-    decks["is_main"] = decks["deck_score"] == decks.groupby(RANKER_KEYS)["deck_score"].transform("max")
+    decks["deck_rank"] = decks.groupby(RANKER_KEYS)["deck_score"].rank(method="first", ascending=False).astype(int)
+    decks["is_main"] = decks["deck_rank"] == 1
     decks["w"] = rank_weight(decks["rank"], weighting)
     return decks
+
+
+DECK_RANKS = (1, 2, 3, 4, 5)
+DECK_SPLIT = [f"in_deck_{d}" for d in DECK_RANKS]
+
+
+def deck_split(entries: pd.DataFrame, decks: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Per season and unit: of the players who fielded it, how many had it in
+    their deck ranked 1, 2 ... 5 by damage (``in_deck_1`` .. ``in_deck_5``), and
+    the average of that rank (``avg_deck``)."""
+    decks = deck_table(entries) if decks is None else decks
+    member = entries[DECK_KEYS + ["unit_id"]].merge(decks[DECK_KEYS + ["deck_rank"]], on=DECK_KEYS)
+    member = member.drop_duplicates(RANKER_KEYS + ["unit_id"])
+    split = pd.crosstab([member["season"], member["unit_id"]], member["deck_rank"])
+    split = split.reindex(columns=list(DECK_RANKS), fill_value=0)
+    split.columns = DECK_SPLIT
+    users = split.sum(axis=1)
+    split["avg_deck"] = (split[DECK_SPLIT] * list(DECK_RANKS)).sum(axis=1) / users.where(users > 0)
+    return split.reset_index()
 
 
 # --------------------------------------------------------------------------
@@ -174,6 +203,10 @@ def unit_season(
       ``deck_effect``     within-player deck regression: +0.12 = decks with it do 12% more
       ``best_rank``       best placement it appears in
       ``cp_median``       median combat power among the players fielding it
+      ``usage_rate``      players fielding it / players (unweighted)
+      ``usage_rank``      1 = fielded by the most players; ties share a rank
+      ``in_deck_1..5``    players who had it in their deck ranked 1..5 by damage
+      ``avg_deck``        the average of that deck rank
     """
     if entries.empty:
         return pd.DataFrame()
@@ -211,6 +244,7 @@ def unit_season(
         per = per.merge(effects, on=keys, how="left")
     else:
         per["deck_effect"] = np.nan
+    per = per.merge(deck_split(entries, decks), on=keys, how="left")
 
     # Every unit available that season gets a row, zero when nobody fielded it.
     released = release_instants(roster)
@@ -225,6 +259,9 @@ def unit_season(
                                         "credit": 0.0, "deck_share": np.nan, "main_deck_rate": np.nan}))
     table = pd.concat(frames, ignore_index=True)
     table["rankers"] = table["rankers"].astype(int)
+    table[DECK_SPLIT] = table[DECK_SPLIT].fillna(0).astype(int)
+    table["usage_rate"] = table["rankers"] / table["season"].map(rankers.groupby("season").size())
+    table["usage_rank"] = table.groupby("season")["rankers"].rank(method="min", ascending=False).astype(int)
     table["slots"] = table["season"].map(slots).fillna(25.0)
     table["lift"] = table["credit"] * table["slots"]
 

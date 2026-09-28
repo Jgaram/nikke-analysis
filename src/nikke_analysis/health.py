@@ -38,6 +38,9 @@ ISSUES_CSV = "timeline_issues.csv"
 # most 42 days apart. Silence well past that means collection or parsing stopped.
 UPDATE_NOTICE_MAX_GAP = timedelta(days=45)
 SEASON_MAX_GAP = timedelta(days=60)
+# enikk has a season's rankings a day or two after it opens; a week after it
+# closed, still none means the ranking collection has stopped.
+RANKINGS_MAX_DELAY = timedelta(days=7)
 
 ENIKK_DISAGREEMENTS = (
     "enikk_after_periods",
@@ -128,8 +131,10 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
     """Findings about the Solo Raid rankings behind the tiers.
 
     A name no rule matched drops that unit from every number of the seasons it
-    appears in, and a played season without rankings is a hole in every trend
-    line - neither makes the timeline wrong, so both are warnings.
+    appears in - a known kind of gap, so a warning. A season enikk tracks that
+    ended more than ``RANKINGS_MAX_DELAY`` ago and still has no rankings is an
+    error: the collection has stopped, and every tier after it is stale. Within
+    the week it is not reported at all - enikk is usually still collecting.
     """
     issues = [
         Issue(
@@ -141,11 +146,15 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
         for row in _rows(directory / "raid_unresolved_names.csv")
     ]
     ranked = {row["season"] for row in _rows(directory / "metrics_seasons.csv") if row.get("rankers") not in (None, "", "0")}
-    if ranked:
-        for row in _rows(directory / "soloraid_seasons.csv"):
-            end = row.get("end_at")
-            if end and row.get("enikk_first_seen") and datetime.fromisoformat(end) <= now and row["season"] not in ranked:
-                issues.append(Issue("warning", "ranking_missing", f"시즌 {row['season']}", "끝난 시즌인데 랭킹 스냅샷이 없다"))
+    for row in _rows(directory / "soloraid_seasons.csv"):
+        if not row.get("end_at") or not row.get("enikk_first_seen") or row["season"] in ranked:
+            continue
+        end = datetime.fromisoformat(row["end_at"])
+        if now - end > RANKINGS_MAX_DELAY:
+            issues.append(
+                Issue("error", "ranking_missing", f"시즌 {row['season']}",
+                      f"{end.date()} 에 끝났는데 랭킹이 없다 — enikk 랭킹 수집이 멈췄을 수 있다")
+            )
     return issues
 
 

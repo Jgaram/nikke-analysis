@@ -1,0 +1,94 @@
+name: merge-to-main
+
+# The repo keeps a single branch, main. Claude Code sessions still push to a
+# branch of their own (claude/...), so this workflow folds that work back in:
+# it merges the pushed commit into main, runs the tests on the result, pushes
+# main and deletes the session branch. Nobody has to open or merge a PR.
+#
+# When the merge conflicts or the tests fail, main is left as it was and the
+# branch stays, so the run shows red (and GitHub notifies) and nothing is lost:
+# fix it on the branch and push again.
+#
+# "main" is read from the repository's default branch rather than spelled out,
+# so renaming the default branch does not break the workflow.
+
+on:
+  push:
+    branches:
+      - "claude/**"
+
+permissions:
+  contents: write
+
+# Runs for one branch go one at a time, so each merges a newer head than the
+# last. Different branches may run side by side; the push below copes with
+# main moving underneath.
+concurrency:
+  group: merge-to-main-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    # A branch deletion is not work to merge, and the default branch never
+    # merges into itself.
+    if: ${{ !github.event.deleted && github.ref_name != github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      MAIN: ${{ github.event.repository.default_branch }}
+      BRANCH: ${{ github.ref_name }}
+      SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Merge into main, test, push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # main can move while the tests run (the scheduled refresh, another
+          # session's merge). A rejected push means: merge again on top of it.
+          for attempt in 1 2 3; do
+            git fetch -q origin "$MAIN"
+            git checkout -q -f -B "$MAIN" "origin/$MAIN"
+
+            if git merge-base --is-ancestor "$SHA" HEAD; then
+              echo "::notice::$BRANCH is already in $MAIN"
+              break
+            fi
+
+            if ! git merge -m "Merge branch '$BRANCH'" "$SHA"; then
+              git merge --abort
+              echo "::error::$BRANCH conflicts with $MAIN; $MAIN is unchanged. Merge origin/$MAIN into the branch, resolve and push again."
+              exit 1
+            fi
+
+            pip install -q -e ".[dev]"
+            if ! pytest -q; then
+              echo "::error::Tests fail with $BRANCH merged into $MAIN; $MAIN is unchanged. Fix it on the branch and push again."
+              exit 1
+            fi
+
+            if git push -q origin "HEAD:$MAIN"; then
+              echo "::notice::Merged $BRANCH into $MAIN"
+              break
+            fi
+            if [ "$attempt" = 3 ]; then
+              echo "::error::$MAIN kept moving; push $BRANCH again to retry."
+              exit 1
+            fi
+          done
+
+          # Delete the branch only if it still points at the merged commit. A
+          # push that landed during this run has a run of its own, which merges
+          # that head and deletes the branch then.
+          if ! git push -q origin --delete --force-with-lease="refs/heads/$BRANCH:$SHA" "$BRANCH"; then
+            echo "::notice::Left $BRANCH in place: it has moved since this run started."
+          fi

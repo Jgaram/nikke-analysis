@@ -76,6 +76,9 @@ jobs:
             echo "nothing changed"
           else
             git commit -m "data: refresh notices, rankings, tiers and Solo Raid calendar"
+            # Session work reaches main through merge-to-main at any time, so
+            # main may have moved since checkout: put the data commit on top.
+            git pull --rebase
             git push
           fi
 

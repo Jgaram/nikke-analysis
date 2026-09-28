@@ -28,9 +28,8 @@ So the calendar is rebuilt in four steps, each deterministic:
    are listed in the ``checks`` column, never resolved silently.
 
 Outputs: ``soloraid_seasons.csv`` (one row per season), ``soloraid_periods.csv``
-(one row per open interval), ``soloraid_events.csv`` (the evidence, one row per
-statement) and ``season_calendar.csv`` (season, start_date, end_date - a plain
-calendar; the analysis reads ``soloraid_seasons.csv`` for the boss weakness too).
+(one row per open interval) and ``soloraid_events.csv`` (the evidence, one row
+per statement).
 """
 
 from __future__ import annotations
@@ -53,7 +52,6 @@ log = logging.getLogger(__name__)
 SEASONS_CSV = "soloraid_seasons.csv"
 PERIODS_CSV = "soloraid_periods.csv"
 EVENTS_CSV = "soloraid_events.csv"
-CALENDAR_CSV = "season_calendar.csv"
 
 ELEMENTS_KO = {"작열": "Fire", "수냉": "Water", "풍압": "Wind", "철갑": "Iron", "전격": "Electric"}
 LAUNCH_DATE = "2022-11-04"
@@ -626,7 +624,7 @@ def build(
 
     target = out_dir or processed_dir()
     target.mkdir(parents=True, exist_ok=True)
-    season_rows, period_rows, calendar_rows = [], [], []
+    season_rows, period_rows = [], []
     # "New" for the first season means new since the game launched.
     previous_end: datetime = datetime.fromisoformat(f"{LAUNCH_DATE}T00:00:00+09:00")
     for number in numbers:
@@ -674,9 +672,6 @@ def build(
                 start = season.periods[0].start
                 end = season.periods[-1].end
                 row["start_at"], row["end_at"] = _iso(start), _iso(end)
-                calendar_rows.append(
-                    {"season": number, "start_date": start.at.date().isoformat(), "end_date": end.at.date().isoformat() if end else ""}
-                )
                 if end is not None and release_times:
                     available = [u for t, u in release_times if t <= end.at]
                     fresh = [u for t, u in release_times if previous_end < t <= end.at]
@@ -719,7 +714,6 @@ def build(
     _write(target / SEASONS_CSV, season_rows)
     _write(target / PERIODS_CSV, period_rows)
     _write(target / EVENTS_CSV, event_rows)
-    _write(target / CALENDAR_CSV, calendar_rows, fields=["season", "start_date", "end_date"])
     unassigned = sum(1 for e in events if id(e) not in number_of)
     return {
         "events": len(events),
@@ -732,9 +726,9 @@ def build(
     }
 
 
-def _write(path: Path, rows: list[dict[str, Any]], fields: list[str] | None = None) -> None:
+def _write(path: Path, rows: list[dict[str, Any]]) -> None:
     with path.open("w", encoding="utf-8", newline="") as handle:
-        names = fields or (list(rows[0].keys()) if rows else [])
+        names = list(rows[0].keys()) if rows else []
         writer = csv.DictWriter(handle, fieldnames=names)
         writer.writeheader()
         writer.writerows(rows)

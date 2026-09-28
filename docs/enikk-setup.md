@@ -17,6 +17,8 @@ enikk 는 Next.js 앱이고 데이터는 전부 `POST /api/graphql` 에서 온�
 | `soloRaid`, `SRDamageChart` | 보스·속성·약점, 수집 시계열 (달력 교차검증) | `collect enikk-meta` |
 | `/characters` 페이지 | 니케 속성 보충 | `collect enikk-meta` |
 
+사이트가 주는 필드 전체와 응답의 모양·주의점은 [enikk-api.md](enikk-api.md) 에 있다.
+
 랭킹 쿼리와 응답의 필드 위치는 코드가 아니라 [`config/enikk.yaml`](../config/enikk.yaml)
 에 있다. 사이트가 필드 이름을 바꾸면 YAML 한 줄을 고치고 `nikke build raids` 를
 다시 돌리면 되고, **이미 받아둔 시즌 스냅샷은 그대로 다시 파싱된다.**

@@ -40,10 +40,3 @@ unit_id,alias,reason
 
 (That particular alias is not needed: it is derived automatically from the unit
 description in the game files.)
-
-## `season_calendar.csv`
-
-Superseded, and no longer read by anything. The Solo Raid calendar is rebuilt
-from the notices, and the analysis reads `data/processed/soloraid_seasons.csv`
-(which also carries each season's boss weakness, needed for the element tiers).
-This file can be deleted.

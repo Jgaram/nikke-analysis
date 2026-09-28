@@ -6,7 +6,9 @@ Uses the synthetic world so it needs no network and no committed ranking data.
 import pandas as pd
 import pytest
 
+from nikke_analysis import raidstats
 from nikke_analysis.analyze import pipeline
+from nikke_analysis.raidstats import QueryError, RaidBook
 from nikke_analysis.tierlist import TierBook, render, render_unit
 from nikke_analysis.viz import charts
 from tests.synthetic import make_world, write_processed
@@ -105,3 +107,92 @@ def test_analyze_refuses_without_ranking_data(tmp_path):
     )
     with pytest.raises(RuntimeError, match="raid_entries"):
         pipeline.run(data_dir=tmp_path)
+
+
+def test_the_na_server_is_a_server_not_a_missing_value(tmp_path):
+    """pandas reads "NA" as missing unless told not to; the NA server's rankers must survive."""
+    world = make_world(seasons=6, rankers=5, fillers=10, seed=3)
+    world.entries["server"] = world.entries["server"].map({"S1": "NA", "S2": "KR"})
+    write_processed(world, tmp_path)
+    assert set(pipeline.load_inputs(tmp_path)["entries"]["server"]) == {"NA", "KR"}
+    summary = pipeline.run(data_dir=tmp_path)
+    assert summary["rankers"] == 6 * 2 * 5
+    usage = RaidBook.load(tmp_path).season(3, servers=["na"])
+    assert usage.filter_servers == ("NA",) and usage.rankers == 5
+
+
+def test_raid_view_defaults_to_the_newest_season(processed):
+    directory, world, _ = processed
+    book = RaidBook.load(directory)
+    number, unit = book.parse(None, None)
+    assert (number, unit) == (world.live_season, None)
+    usage = book.season(number)
+    assert (usage.rankers, usage.decks, usage.servers) == (30, 150, 2)
+    assert not usage.final
+    ranks = list(usage.used["usage_rank"])
+    assert ranks == sorted(ranks) and ranks[0] == 1
+    text = raidstats.render_season(usage)
+    assert "진행 중인 시즌" in text and "Newcomer(ko)" in text
+
+
+def test_raid_view_takes_a_moment_and_a_unit_in_either_order(processed):
+    directory, world, _ = processed
+    book = RaidBook.load(directory)
+    start = pd.Timestamp(world.seasons.set_index("season").loc[3, "start_at"])
+    assert book.parse((start + pd.Timedelta(days=2)).date().isoformat(), None) == (3, None)
+    assert book.parse("Newcomer", "7") == book.parse("7", "Newcomer") == (7, "Newcomer")
+    assert book.parse("Newcomer", None) == (world.live_season, "Newcomer")
+
+    usage = book.season(7)
+    row = book.unit(usage, "Newcomer")
+    assert row["unit_id"] == world.newcomer and row["rankers"] == 30
+    assert sum(int(row[c]) for c in raidstats.SPLIT) == 30
+    assert "평균 덱 순위" in raidstats.render_unit(usage, row)
+    with pytest.raises(QueryError, match="출시 전"):
+        book.unit(book.season(3), "Newcomer")
+
+
+def test_raid_view_narrows_the_sample_from_raid_entries(processed):
+    directory, _, _ = processed
+    book = RaidBook.load(directory)
+    narrow = book.season(7, servers=["s1"], top=5)
+    assert (narrow.rankers, narrow.decks, narrow.servers, narrow.filter_servers) == (5, 25, 1, ("S1",))
+    assert (narrow.rows[raidstats.SPLIT].sum(axis=1) == narrow.rows["rankers"]).all()
+    # recomputing the whole sample gives back the committed table
+    committed = book.season(7).rows.set_index("unit_id").sort_index()
+    recomputed = book.season(7, servers=["S1", "S2"]).rows.set_index("unit_id").sort_index()
+    columns = ["rankers", "usage_rank", *raidstats.SPLIT]
+    pd.testing.assert_frame_equal(committed[columns], recomputed[columns], check_dtype=False)
+    assert (committed["lift"] - recomputed["lift"]).abs().max() < 1e-6
+    with pytest.raises(QueryError, match="없는 서버"):
+        book.season(7, servers=["XX"])
+
+
+def test_raid_view_lists_units_nobody_fielded_only_on_request(processed):
+    directory, world, _ = processed
+    book = RaidBook.load(directory)
+    usage = book.season(7)
+    # the dealers of the four elements the boss is not weak to sit the season out
+    weak = world.seasons.set_index("season").loc[7, "weak_element"]
+    benched = {unit for element, unit in world.element_dps.items() if element != weak}
+    unused = set(usage.rows.loc[usage.rows["rankers"] == 0, "unit_id"])
+    assert benched <= unused and not unused & set(usage.used["unit_id"])
+    assert len(usage.to_dict(include_unused=True)["units"]) == len(usage.rows)
+    assert len(usage.to_dict()["units"]) == len(usage.used)
+    names = world.roster.set_index("unit_id")["name_ko"]
+    assert not any(names[u] in raidstats.render_season(usage) for u in benched)
+    assert all(names[u] in raidstats.render_season(usage, include_unused=True) for u in benched)
+
+
+def test_raid_view_says_what_it_cannot_find(processed):
+    directory, _, _ = processed
+    book = RaidBook.load(directory)
+    with pytest.raises(QueryError, match="랭킹이 없다"):
+        book.season_of("99")
+    with pytest.raises(QueryError, match="시즌 번호나 날짜가 아니다"):
+        book.parse("Newcomer", "Core A")
+    usage = book.season(7)
+    with pytest.raises(LookupError):
+        book.unit(usage, "Nobody")
+    with pytest.raises(LookupError):
+        book.unit(usage, "Filler")  # matches many

@@ -91,6 +91,10 @@ jobs:
             echo '```'
             nikke tier || true
             echo '```'
+            echo '## 최근 시즌 사용률'
+            echo '```'
+            nikke raid || true
+            echo '```'
             echo '## 솔로 레이드 시즌'
             echo '```'
             nikke seasons

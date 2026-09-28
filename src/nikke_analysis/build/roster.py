@@ -412,7 +412,7 @@ def load_alias_index(path: Path | None = None) -> NameIndex | None:
     aliases.extend(load_manual_aliases())
     index = build_name_index(list(by_unit.values()), aliases=aliases)
     if index.ambiguous:
-        log.info("names shared by more than one unit (resolved by context only): %s", sorted(index.ambiguous))
+        log.debug("names shared by more than one unit (resolved by context only): %s", sorted(index.ambiguous))
     return index
 
 

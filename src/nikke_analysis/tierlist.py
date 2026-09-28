@@ -20,6 +20,7 @@ season in progress only if its snapshot had been taken by then.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -30,8 +31,9 @@ import pandas as pd
 from .analyze import tiers as tiering
 from .analyze.metrics import ELEMENTS
 from .paths import processed_dir
-from .timeline import ELEMENT_KO, Season, Timeline, _pad, _width, resolve_moment
-from .util.names import normalize_name
+from .timeline import ELEMENT_KO, Season, Timeline, resolve_moment
+from .util.names import NameIndex, normalize_name, normalize_unit_id
+from .util.text import pad, rjust
 
 ROLE_KO = {
     "universal": "범용",
@@ -60,6 +62,49 @@ def _name(row: Any) -> str:
     ko = row.get("name_ko") if hasattr(row, "get") else None
     en = row.get("name_en") if hasattr(row, "get") else None
     return str(ko) if isinstance(ko, str) and ko else str(en or row.get("unit_id", ""))
+
+
+def find_unit(query: str, units: pd.DataFrame, index: NameIndex | None = None) -> str:
+    """A unit id from an id (``16``, ``016``, ``c016``), any name the alias table
+    knows, or a Korean or English name - exact first, then a unique partial match.
+
+    Only units in ``units`` (a table with ``unit_id``, ``name_ko``, ``name_en``)
+    can be answered. A name two units share raises, listing both.
+    """
+    table = units.drop_duplicates("unit_id")
+    present = set(table["unit_id"].astype(str))
+    text = query.strip()
+    if re.fullmatch(r"[cC]?\d{1,4}", text) and normalize_unit_id(text) in present:
+        return normalize_unit_id(text)
+    names = {str(r["unit_id"]): _name(r) for _, r in table.iterrows()}
+    if index is not None:
+        hit = index.resolve(text)
+        if hit in present:
+            return str(hit)
+        shared = sorted(index.candidates(text) & present)
+        if len(shared) > 1:
+            options = ", ".join(f"{names[u]} ({u})" for u in shared)
+            raise LookupError(f"'{query}' 은(는) 여러 니케의 이름이다: {options} — 번호로 지정할 것")
+    key = normalize_name(text)
+    ko = table["name_ko"].fillna("").astype(str).map(normalize_name)
+    en = table["name_en"].fillna("").astype(str).map(normalize_name)
+    exact = table[(ko == key) | (en == key)]
+    if len(exact) == 1:
+        return str(exact["unit_id"].iloc[0])
+    partial = table[ko.str.contains(key, regex=False) | en.str.contains(key, regex=False)] if key else table.iloc[0:0]
+    if len(exact) == 0 and len(partial) == 1:
+        return str(partial["unit_id"].iloc[0])
+    options = exact if len(exact) > 1 else partial
+    if options.empty:
+        raise LookupError(f"'{query}' 에 해당하는 니케가 랭킹 기록에 없다")
+    listed = ", ".join(sorted(f"{_name(r)} ({r['unit_id']})" for _, r in options.iterrows()))
+    raise LookupError(f"'{query}' 가 여러 니케와 맞는다: {listed}")
+
+
+def load_index(directory: Path) -> NameIndex | None:
+    from .build.roster import load_alias_index
+
+    return load_alias_index(directory / "unit_aliases.csv")
 
 
 @dataclass
@@ -127,11 +172,13 @@ class TierBook:
         seasons: pd.DataFrame,
         timeline: Timeline,
         config: tiering.TierConfig | None = None,
+        index: NameIndex | None = None,
     ):
         self.history = history
         self.seasons = seasons
         self.timeline = timeline
         self.config = config or tiering.load_tier_config()
+        self.index = index
 
     @classmethod
     def load(cls, data_dir: Path | None = None, config: tiering.TierConfig | None = None) -> "TierBook":
@@ -145,7 +192,7 @@ class TierBook:
                 seasons[column] = pd.to_datetime(seasons[column], errors="coerce", utc=True)
         seasons["final"] = seasons["final"].astype(str).str.lower().isin(("true", "1"))
         history["end_at"] = pd.to_datetime(history["end_at"], errors="coerce", utc=True)
-        return cls(history, seasons, Timeline.load(directory), config)
+        return cls(history, seasons, Timeline.load(directory), config, load_index(directory))
 
     # ------------------------------------------------------------------
 
@@ -198,23 +245,7 @@ class TierBook:
     # ------------------------------------------------------------------
 
     def find_unit(self, query: str) -> str:
-        """A unit id from a Korean or English name (exact, then partial)."""
-        units = self.history.drop_duplicates("unit_id")
-        key = normalize_name(query)
-        exact = units[(units["name_ko"].map(normalize_name) == key) | (units["name_en"].map(normalize_name) == key)]
-        if len(exact) == 1:
-            return str(exact["unit_id"].iloc[0])
-        partial = units[
-            units["name_ko"].map(normalize_name).str.contains(key, regex=False)
-            | units["name_en"].map(normalize_name).str.contains(key, regex=False)
-        ]
-        if len(partial) == 1:
-            return str(partial["unit_id"].iloc[0])
-        options = (exact if len(exact) > 1 else partial)
-        if options.empty:
-            raise LookupError(f"'{query}' 에 해당하는 니케가 랭킹 기록에 없다")
-        names = ", ".join(sorted(_name(r) for _, r in options.iterrows()))
-        raise LookupError(f"'{query}' 가 여러 니케와 맞는다: {names}")
+        return find_unit(query, self.history, self.index)
 
     def unit(self, query: str, moment: datetime | str | None = None) -> UnitHistory:
         unit_id = self.find_unit(query)
@@ -238,11 +269,6 @@ def _kst():
 
 def _element(value: str) -> str:
     return ELEMENT_KO.get(value, value) if value else "?"
-
-
-def _rpad(text: str, width: int) -> str:
-    """Right-align for a terminal, where a Hangul syllable takes two columns."""
-    return " " * max(width - _width(text), 0) + text
 
 
 def _season_head(block: SeasonBlock, label: str) -> str:
@@ -342,8 +368,8 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
         out.append("  속성별  " + " · ".join(slots) + "   (괄호 = 관측 시즌 수, ? = 미관측)")
     out += [
         "",
-        f"{_rpad('시즌', 4)}  {_pad('시작', 10)}  {_pad('보스 · 약점', 30)}  {_rpad('채용', 5)}  {_rpad('덱 몫', 5)}  "
-        f"{_rpad('메인', 5)}  {_rpad('lift', 5)}  {_pad('시즌', 4)}  종합",
+        f"{rjust('시즌', 4)}  {pad('시작', 10)}  {pad('보스 · 약점', 30)}  {rjust('채용', 5)}  {rjust('덱 몫', 5)}  "
+        f"{rjust('메인', 5)}  {rjust('lift', 5)}  {pad('시즌', 4)}  종합",
     ]
     for _, row in history.rows.iterrows():
         used = row["presence"] > 0
@@ -355,7 +381,7 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
         overall = f"{row['overall_tier']} {row['overall']:.2f}" if pd.notna(row.get("overall")) else "-"
         live = "" if bool(row.get("final", True)) else " (진행 중)"
         out.append(
-            f"{int(row['season']):>4}  {_pad(f'{start:%Y-%m-%d}' if start is not None else '', 10)}  {_pad(boss, 30)}  "
-            f"{row['presence']:>5.0%}  {deck_share:>5}  {main:>5}  {row['lift']:>5.2f}  {_pad(str(row['tier']), 4)}  {overall}{live}"
+            f"{int(row['season']):>4}  {pad(f'{start:%Y-%m-%d}' if start is not None else '', 10)}  {pad(boss, 30)}  "
+            f"{row['presence']:>5.0%}  {deck_share:>5}  {main:>5}  {row['lift']:>5.2f}  {pad(str(row['tier']), 4)}  {overall}{live}"
         )
     return "\n".join(out)

@@ -6,6 +6,8 @@
     nikke tier                       tiers now: last season, the live one, the next one, overall
     nikke tier 2주년                 the same, as the data stood then
     nikke tier --unit 크라운         one unit's tier, season by season
+    nikke raid                       the newest season: units by usage, with the deck split
+    nikke raid 40 크라운             one unit in one season (--server KR, --top 10 narrow it)
     nikke check                      does the timeline need a human? (exit 1 if so)
 
     nikke collect roster             fetch the roster sources
@@ -82,6 +84,31 @@ def cmd_tier(args: argparse.Namespace) -> int:
         _emit(view.to_dict())
     else:
         print(render(view, show_all=args.all))
+    return 0
+
+
+def cmd_raid(args: argparse.Namespace) -> int:
+    from .raidstats import RaidBook, render_season, render_unit, unit_record
+
+    servers = [s for value in args.server or [] for s in value.split(",")]
+    try:
+        book = RaidBook.load()
+        number, unit = book.parse(args.target, args.unit)
+        usage = book.season(number, servers=servers, top=args.top)
+        row = book.unit(usage, unit) if unit else None
+    except LookupError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    if args.json:
+        payload = usage.to_dict(include_unused=args.all)
+        if row is not None:
+            payload.pop("units")
+            payload["unit"] = unit_record(row)
+        _emit(payload)
+    elif row is not None:
+        print(render_unit(usage, row))
+    else:
+        print(render_season(usage, include_unused=args.all))
     return 0
 
 
@@ -378,6 +405,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--all", action="store_true", help="also list C and D")
     p.add_argument("--json", action="store_true", help="machine-readable output")
     p.set_defaults(func=cmd_tier)
+
+    p = sub.add_parser("raid", help="one Solo Raid season's usage: units by rankers, with the deck split")
+    p.add_argument("target", nargs="?", default=None,
+                   help="season number, a moment (2024-11-04, 2주년), or a unit name (default: newest season)")
+    p.add_argument("unit", nargs="?", default=None, help="one unit, by Korean or English name or id")
+    p.add_argument("--server", action="append", default=None,
+                   help="only these servers (GLOBAL, JP, KR, NA, SEA, TW-HK); repeat or comma-separate")
+    p.add_argument("--top", type=int, default=None, help="only ranks 1..N of each server")
+    p.add_argument("--all", action="store_true", help="also list the units available then that nobody fielded")
+    p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.set_defaults(func=cmd_raid)
 
     p = sub.add_parser("check", help="does the timeline need a human? (exit 1 if so)")
     p.add_argument("--json", action="store_true")

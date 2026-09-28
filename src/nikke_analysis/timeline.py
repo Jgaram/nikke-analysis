@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import csv
 import re
-import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
@@ -27,6 +26,7 @@ from typing import Any, Iterable
 
 from .paths import processed_dir
 from .util.kdate import KST, parse_moment
+from .util.text import pad as _pad
 
 LAUNCH = date(2022, 11, 4)
 
@@ -500,17 +500,6 @@ def render(view: Snapshot, *, list_units: bool = False) -> str:
                 f"{ELEMENT_KO.get(unit.element, unit.element)} {unit.burst:<8} {unit.unit_class}"
             )
     return "\n".join(out)
-
-
-def _width(text: str) -> int:
-    return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in text)
-
-
-def _pad(text: str, width: int) -> str:
-    """Left-align for a terminal, where a Hangul syllable takes two columns."""
-    while _width(text) > width:
-        text = text[:-1]
-    return text + " " * (width - _width(text))
 
 
 def render_seasons(timeline: Timeline) -> str:

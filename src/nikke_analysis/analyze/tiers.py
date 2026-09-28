@@ -1,27 +1,41 @@
-"""Turning measurements into a tier list, and tracking how it moves.
+"""Turning measurements into tiers, per season, per element, and over time.
 
-A tier list is an opinion. The point of deriving one from data is not that it is
-more correct than a good player's, but that it is *reproducible*: same input,
-same tiers, every time, with the reasoning visible as three numbers rather than
-hidden in a judgement call.
+A tier list is an opinion. Deriving one from data does not make it more correct
+than a good player's; it makes it *reproducible* - same input, same tiers, with
+the reasoning visible as numbers instead of hidden in a judgement call. Every
+judgement that remains is a parameter in ``config/tiers.yaml``.
 
-Each unit is scored on three axes, each expressed as a percentile among the units
-that were actually available that season:
+Three tiers answer three different questions:
 
-``usage``        rank-weighted pick rate - how much of the top-50's evidence it carries.
-``performance``  score delta - whether teams using it out-score teams that don't.
-``breadth``      how many of the season's bosses it shows up against.
+**Season tier** - how much a unit carried in one season: fixed cuts on its lift.
+Fixed cuts, not percentiles, so the number of SS units is itself information: a
+season one deck dominates has five, a season with no dominant deck may have none.
 
-Breadth is what stops a hard-countered specialist outranking a generalist on pick
-rate alone: a unit that dominates one elemental matchup and is unplayable in the
-other four is a real thing in Solo Raid, and it should not read as S tier.
+**Element tier** - how much a unit is worth when the boss is weak to a given
+element. Solo Raid's meta turns on the boss's weakness, and more so every year,
+so each unit gets five slots: its recent lift in seasons whose boss was weak to
+Fire, Water, Wind, Iron and Electric. The condition is the *boss's* weakness,
+not the unit's own element, because supports follow the element of the deck they
+support: a Water support fielded only in Wind-weak seasons is a Wind unit here.
+Recent seasons count more (``half_life_days``). A slot with no season since the
+unit's release is *unobserved*: it borrows the unit's overall level and is
+flagged, rather than reading as zero.
 
-Units that were available but never picked score zero on every axis rather than
-being dropped, so the percentiles describe the whole roster instead of only the
-units that already made it.
+**Overall tier** - one number from the five slots (``overall``): their mean by
+default, so a unit's standing does not depend on which elements happened to come
+up lately. A specialist's overall is low by construction; its best element and
+coverage (slots at A or better) say the rest.
 
-Weights and cut points live in ``config/tiers.yaml``. Nothing here is magic - if
-a cut looks wrong, move it in the config and re-run.
+**Role** - in how many elements a unit is viable, meaning its slot is at least
+``viable_fraction`` of its best one. Viable in (nearly) every observed element:
+``universal``. In one: ``specialist``. In between: ``hybrid`` - where damage-
+dealing supports and partner units land without needing a label. The
+``specialization`` column is the continuous version: 1 - (average of the other
+observed slots / the best slot), 0 when every element is worth the same.
+
+A unit seen in fewer than ``min_elements_observed`` elements is ``provisional``:
+its unobserved slots borrow its level from the elements it was seen in, which
+flatters a specialist, so its overall tier is shown but marked.
 """
 
 from __future__ import annotations
@@ -35,228 +49,307 @@ import pandas as pd
 import yaml
 
 from ..paths import REPO_ROOT
-from .metrics import Availability, season_order
+from .metrics import ELEMENTS, season_order
 
 DEFAULT_TIER_CONFIG = REPO_ROOT / "config" / "tiers.yaml"
 
-# Ordered best -> worst. The label is what appears in reports; the cut is the
-# minimum composite score (0-100) required to reach it.
+# Ordered best -> worst: (label, minimum lift).
 DEFAULT_CUTS: list[tuple[str, float]] = [
-    ("SS", 92.0),
-    ("S", 80.0),
-    ("A", 62.0),
-    ("B", 42.0),
-    ("C", 20.0),
+    ("SS", 1.4),
+    ("S", 1.1),
+    ("A", 0.8),
+    ("B", 0.5),
+    ("C", 0.2),
     ("D", 0.0),
 ]
+OVERALL_MODES = ("mean", "max", "frequency")
+ROLES = ("universal", "hybrid", "specialist", "outside", "undetermined")
+SLOT = {e: e.lower() for e in ELEMENTS}
 
 
 @dataclass
 class TierConfig:
-    weight_usage: float = 0.55
-    weight_performance: float = 0.30
-    weight_breadth: float = 0.15
+    # population
+    top_n: int = 50
+    servers: tuple[str, ...] = ()
+    rank_weighting: str = "dcg"
+    # season tier
     cuts: list[tuple[str, float]] = field(default_factory=lambda: list(DEFAULT_CUTS))
-    min_teams: int = 10
+    # element profile
+    half_life_days: float = 180.0
+    prior_strength: float = 0.0
+    overall: str = "mean"
+    coverage_min_tier: str = "A"
+    # roles
+    min_elements_observed: int = 3
+    min_best_lift: float = 0.5
+    viable_fraction: float = 0.5
+    universal_min_share: float = 0.8
+    specialist_max_viable: int = 1
+    # diagnostics
+    deck_effect_ridge: float = 20.0
+    synergy_min_decks: int = 20
 
-    @property
-    def weights(self) -> tuple[float, float, float]:
-        total = self.weight_usage + self.weight_performance + self.weight_breadth
-        if total <= 0:
-            raise ValueError("tier weights must sum to a positive number")
-        return (
-            self.weight_usage / total,
-            self.weight_performance / total,
-            self.weight_breadth / total,
-        )
+    def __post_init__(self) -> None:
+        self.cuts = sorted(((str(l), float(v)) for l, v in self.cuts), key=lambda c: c[1], reverse=True)
+        if self.overall not in OVERALL_MODES:
+            raise ValueError(f"element.overall must be one of {OVERALL_MODES}, not {self.overall!r}")
+        if self.coverage_min_tier not in self.tier_order:
+            raise ValueError(f"element.coverage_min_tier {self.coverage_min_tier!r} is not a tier label")
+        if not 0 < self.viable_fraction <= 1 or not 0 < self.universal_min_share <= 1:
+            raise ValueError("roles.viable_fraction and roles.universal_min_share must be in (0, 1]")
 
     @property
     def tier_order(self) -> list[str]:
         return [label for label, _ in self.cuts]
+
+    def cut(self, label: str) -> float:
+        return dict(self.cuts)[label]
 
 
 def load_tier_config(path: Path | None = None) -> TierConfig:
     target = path or DEFAULT_TIER_CONFIG
     if not target.is_file():
         return TierConfig()
-    document = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
-    cuts = document.get("cuts")
-    parsed_cuts = (
-        [(str(entry["label"]), float(entry["min_score"])) for entry in cuts]
-        if cuts
-        else list(DEFAULT_CUTS)
-    )
-    parsed_cuts.sort(key=lambda item: item[1], reverse=True)
-    weights = document.get("weights") or {}
+    doc: dict[str, Any] = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
+    population = doc.get("population") or {}
+    element = doc.get("element") or {}
+    roles = doc.get("roles") or {}
+    diagnostics = doc.get("diagnostics") or {}
+    defaults = TierConfig()
+    cuts = doc.get("cuts")
     return TierConfig(
-        weight_usage=float(weights.get("usage", 0.55)),
-        weight_performance=float(weights.get("performance", 0.30)),
-        weight_breadth=float(weights.get("breadth", 0.15)),
-        cuts=parsed_cuts,
-        min_teams=int(document.get("min_teams", 10)),
+        top_n=int(population.get("top_n", defaults.top_n)),
+        servers=tuple(str(s) for s in population.get("servers") or ()),
+        rank_weighting=str(population.get("rank_weighting", defaults.rank_weighting)),
+        cuts=[(str(c["label"]), float(c["min_lift"])) for c in cuts] if cuts else list(DEFAULT_CUTS),
+        half_life_days=float(element.get("half_life_days", defaults.half_life_days)),
+        prior_strength=float(element.get("prior_strength", defaults.prior_strength)),
+        overall=str(element.get("overall", defaults.overall)),
+        coverage_min_tier=str(element.get("coverage_min_tier", defaults.coverage_min_tier)),
+        min_elements_observed=int(roles.get("min_elements_observed", defaults.min_elements_observed)),
+        min_best_lift=float(roles.get("min_best_lift", defaults.min_best_lift)),
+        viable_fraction=float(roles.get("viable_fraction", defaults.viable_fraction)),
+        universal_min_share=float(roles.get("universal_min_share", defaults.universal_min_share)),
+        specialist_max_viable=int(roles.get("specialist_max_viable", defaults.specialist_max_viable)),
+        deck_effect_ridge=float(diagnostics.get("deck_effect_ridge", defaults.deck_effect_ridge)),
+        synergy_min_decks=int(diagnostics.get("synergy_min_decks", defaults.synergy_min_decks)),
     )
 
 
-def _percentile(values: pd.Series) -> pd.Series:
-    """Rank to 0-100. Ties share a rank, and an all-equal column maps to 50."""
-    if values.empty:
-        return values
-    if values.nunique(dropna=True) <= 1:
-        return pd.Series(50.0, index=values.index)
-    return values.rank(pct=True, na_option="bottom") * 100.0
-
-
-def season_unit_scores(
-    usage: pd.DataFrame,
-    roster: pd.DataFrame,
-    availability: Availability,
-    config: TierConfig | None = None,
-) -> pd.DataFrame:
-    """Collapse per-boss usage into one scored row per (season, unit)."""
+def assign_tier(value: float, config: TierConfig | None = None) -> str:
     config = config or TierConfig()
-    if usage.empty:
-        return pd.DataFrame()
-
-    work = usage.copy()
-    work["season"] = work["season"].astype(str)
-
-    bosses_per_season = work.groupby("season")["boss"].nunique().rename("bosses")
-    per_unit = (
-        work.groupby(["season", "unit_id"])
-        .agg(
-            weighted_pick_rate=("weighted_pick_rate", "mean"),
-            pick_rate=("pick_rate", "mean"),
-            lift=("lift", "mean"),
-            score_delta=("score_delta", "mean"),
-            bosses_used=("boss", "nunique"),
-            best_rank=("best_rank", "min"),
-            teams=("teams", "sum"),
-        )
-        .reset_index()
-        .join(bosses_per_season, on="season")
-    )
-    per_unit["breadth"] = np.where(
-        per_unit["bosses"] > 0, per_unit["bosses_used"] / per_unit["bosses"], np.nan
-    )
-
-    # Re-introduce available-but-unpicked units so percentiles cover the roster.
-    filled: list[pd.DataFrame] = []
-    for season in season_order(per_unit["season"]):
-        present = per_unit[per_unit["season"] == season]
-        available = availability.by_season.get(season, set())
-        missing = sorted(available - set(present["unit_id"]))
-        if missing:
-            blanks = pd.DataFrame(
-                {
-                    "season": season,
-                    "unit_id": missing,
-                    "weighted_pick_rate": 0.0,
-                    "pick_rate": 0.0,
-                    "lift": 0.0,
-                    "score_delta": 0.0,
-                    "bosses_used": 0,
-                    "best_rank": np.nan,
-                    "teams": present["teams"].max() if not present.empty else 0,
-                    "bosses": present["bosses"].max() if not present.empty else 0,
-                    "breadth": 0.0,
-                }
-            )
-            present = pd.concat([present, blanks], ignore_index=True)
-        filled.append(present)
-    per_unit = pd.concat(filled, ignore_index=True)
-
-    # score_delta is undefined for a unit nobody ran; treat it as neutral so a
-    # missing measurement cannot masquerade as a bad one.
-    per_unit["score_delta"] = per_unit["score_delta"].fillna(0.0)
-
-    w_usage, w_perf, w_breadth = config.weights
-    parts = []
-    for season, group in per_unit.groupby("season", sort=False):
-        group = group.copy()
-        group["pct_usage"] = _percentile(group["weighted_pick_rate"])
-        group["pct_performance"] = _percentile(group["score_delta"])
-        group["pct_breadth"] = _percentile(group["breadth"])
-        group["tier_score"] = (
-            w_usage * group["pct_usage"]
-            + w_perf * group["pct_performance"]
-            + w_breadth * group["pct_breadth"]
-        )
-        parts.append(group)
-    scored = pd.concat(parts, ignore_index=True)
-    scored["tier"] = scored["tier_score"].map(lambda value: assign_tier(value, config))
-
-    names = roster.set_index("unit_id")[["name_en", "name_ko", "burst", "unit_class", "element"]]
-    scored = scored.join(names, on="unit_id")
-    return scored.sort_values(["season", "tier_score"], ascending=[True, False]).reset_index(drop=True)
-
-
-def assign_tier(score: float, config: TierConfig | None = None) -> str:
-    config = config or TierConfig()
-    if score is None or (isinstance(score, float) and np.isnan(score)):
-        return config.cuts[-1][0]
+    if value is None or pd.isna(value):
+        return ""
     for label, minimum in config.cuts:
-        if score >= minimum:
+        if value >= minimum:
             return label
     return config.cuts[-1][0]
 
 
-def tier_changes(scored: pd.DataFrame, config: TierConfig | None = None) -> pd.DataFrame:
-    """Per-unit tier movement between consecutive seasons.
+def tier_rank(label: str, config: TierConfig | None = None) -> int:
+    """0 for the best tier; unknown labels sort last."""
+    order = (config or TierConfig()).tier_order
+    return order.index(label) if label in order else len(order)
 
-    ``steps`` is positive for a promotion. This is the table that answers "which
-    units did this patch actually change", and it is the one worth reading first
-    after a new season lands.
+
+def assign_role(viable: int, best: float, observed: int, config: TierConfig) -> str:
+    """``viable``: observed elements whose slot is at least ``viable_fraction`` of the best."""
+    if observed < config.min_elements_observed:
+        return "undetermined"
+    if pd.isna(best) or best < config.min_best_lift:
+        return "outside"
+    if viable <= config.specialist_max_viable:
+        return "specialist"
+    if viable >= config.universal_min_share * observed:
+        return "universal"
+    return "hybrid"
+
+
+# --------------------------------------------------------------------------
+# element profiles
+# --------------------------------------------------------------------------
+
+PROFILE_COLUMNS = (
+    ["unit_id", "overall", "overall_tier", "provisional", "best_element", "best_lift", "best_tier", "coverage",
+     "viable_elements", "specialization", "role", "elements_observed", "seasons_observed", "last_season"]
+    + [f"lift_{SLOT[e]}" for e in ELEMENTS]
+    + [f"tier_{SLOT[e]}" for e in ELEMENTS]
+    + [f"n_{SLOT[e]}" for e in ELEMENTS]
+)
+
+
+def _decay(ages_days: pd.Series, half_life_days: float) -> pd.Series:
+    if half_life_days <= 0:
+        return pd.Series(1.0, index=ages_days.index)
+    return 0.5 ** (ages_days.clip(lower=0) / half_life_days)
+
+
+def element_profiles(
+    table: pd.DataFrame,
+    seasons: pd.DataFrame,
+    moment: pd.Timestamp,
+    config: TierConfig | None = None,
+) -> pd.DataFrame:
+    """Every unit's five element slots, overall tier and role, as known at ``moment``.
+
+    Only seasons that were over by ``moment`` count: the view of the past never
+    uses what happened after it. ``table`` is the season x unit table and
+    ``seasons`` the season summary (it says which seasons are final).
     """
     config = config or TierConfig()
-    if scored.empty:
-        return pd.DataFrame()
+    moment = pd.Timestamp(moment)
+    moment = moment.tz_localize("UTC") if moment.tzinfo is None else moment.tz_convert("UTC")
+    final = seasons.loc[seasons["final"].astype(bool) & (seasons["end_at"] <= moment), ["season", "end_at", "weak_element"]]
+    rows = table.loc[table["season"].isin(final["season"]), ["season", "unit_id", "lift"]].merge(final, on="season")
+    rows = rows[rows["weak_element"].isin(ELEMENTS)]
+    if rows.empty:
+        return pd.DataFrame(columns=PROFILE_COLUMNS)
 
-    order = {label: i for i, label in enumerate(config.tier_order)}
-    seasons = season_order(scored["season"])
-    by_season = {s: scored[scored["season"] == s].set_index("unit_id") for s in seasons}
+    rows = rows.assign(w=_decay((moment - rows["end_at"]).dt.total_seconds() / 86400.0, config.half_life_days))
+    rows["wl"] = rows["w"] * rows["lift"]
+    unit = rows.groupby("unit_id").agg(W=("w", "sum"), WL=("wl", "sum"), seasons_observed=("season", "size"),
+                                       last_season=("season", "max"))
+    prior = unit["WL"] / unit["W"]
+    slot = rows.groupby(["unit_id", "weak_element"]).agg(W=("w", "sum"), WL=("wl", "sum"), n=("w", "size"))
+    mean = (slot["WL"] / slot["W"]).unstack().reindex(columns=list(ELEMENTS))
+    count = slot["n"].unstack().reindex(columns=list(ELEMENTS)).fillna(0).astype(int)
 
+    k = config.prior_strength
+    estimate = pd.DataFrame(index=unit.index)
+    for element in ELEMENTS:
+        n = count[element].reindex(unit.index).fillna(0)
+        m = mean[element].reindex(unit.index)
+        shrunk = (n * m.fillna(0) + k * prior) / (n + k) if k > 0 else m
+        estimate[element] = np.where(n > 0, shrunk, prior)
+
+    out = pd.DataFrame(index=unit.index)
+    observed = count.reindex(unit.index).fillna(0) > 0
+    if config.overall == "mean":
+        out["overall"] = estimate.mean(axis=1)
+    elif config.overall == "max":
+        out["overall"] = estimate.where(observed).max(axis=1)
+    else:  # frequency: weight each element by how often (recently) the boss was weak to it
+        ages = (moment - final["end_at"]).dt.total_seconds() / 86400.0
+        freq = _decay(ages, config.half_life_days).groupby(final["weak_element"].to_numpy()).sum()
+        freq = freq.reindex(list(ELEMENTS)).fillna(0.0)
+        freq = freq / freq.sum() if freq.sum() > 0 else pd.Series(1.0 / len(ELEMENTS), index=list(ELEMENTS))
+        out["overall"] = estimate.mul(freq, axis=1).sum(axis=1)
+    out["overall_tier"] = out["overall"].map(lambda v: assign_tier(v, config))
+
+    best_values = estimate.where(observed)
+    out["best_element"] = best_values.idxmax(axis=1)
+    out["best_lift"] = best_values.max(axis=1)
+    out["best_tier"] = out["best_lift"].map(lambda v: assign_tier(v, config))
+    out["coverage"] = (best_values >= config.cut(config.coverage_min_tier)).sum(axis=1).astype(int)
+
+    # Shape of the value over the elements, from the observed slots, unshrunk.
+    raw = mean.reindex(unit.index).where(observed)
+    n_obs = observed.sum(axis=1).astype(int)
+    top = raw.max(axis=1)
+    others = (raw.sum(axis=1) - top) / (n_obs - 1).where(n_obs > 1)
+    out["specialization"] = (1.0 - others / top.where(top > 0)).clip(lower=0.0)
+    out["viable_elements"] = raw.ge(config.viable_fraction * top, axis=0).sum(axis=1).astype(int)
+    out["elements_observed"] = n_obs
+    out["provisional"] = n_obs < config.min_elements_observed
+    out["role"] = [
+        assign_role(int(v), b, int(o), config)
+        for v, b, o in zip(out["viable_elements"], top, out["elements_observed"])
+    ]
+    out["seasons_observed"] = unit["seasons_observed"].astype(int)
+    out["last_season"] = unit["last_season"].astype(int)
+    for element in ELEMENTS:
+        out[f"lift_{SLOT[element]}"] = estimate[element]
+        out[f"tier_{SLOT[element]}"] = estimate[element].map(lambda v: assign_tier(v, config))
+        out[f"n_{SLOT[element]}"] = count[element].reindex(unit.index).fillna(0).astype(int)
+    out = out.reset_index()
+    return out[PROFILE_COLUMNS].sort_values(["overall", "unit_id"], ascending=[False, True]).reset_index(drop=True)
+
+
+# --------------------------------------------------------------------------
+# season tiers and their history
+# --------------------------------------------------------------------------
+
+def season_tiers(table: pd.DataFrame, config: TierConfig | None = None) -> pd.DataFrame:
+    config = config or TierConfig()
+    out = table.copy()
+    out["tier"] = out["lift"].map(lambda v: assign_tier(v, config))
+    return out
+
+
+def tier_history(table: pd.DataFrame, seasons: pd.DataFrame, config: TierConfig | None = None) -> pd.DataFrame:
+    """The season table with each unit's element profile as known at that season's end.
+
+    Row (season s, unit u) carries both what u did in s (``lift``, ``tier``) and
+    where u stood overall once s was over (``overall``, ``overall_tier``, role,
+    the five slots). For the season still in progress the profile is the one of
+    the last finished season: its own numbers are provisional.
+    """
+    config = config or TierConfig()
+    parts = []
+    by_season = seasons.set_index("season")
+    for season in season_order(table["season"]):
+        info = by_season.loc[season]
+        moment = info["end_at"] if bool(info["final"]) else info["collected_until"]
+        if pd.isna(moment):
+            continue
+        profile = element_profiles(table, seasons, moment, config)
+        profile = profile.drop(columns=["last_season", "seasons_observed"])
+        rows = table[table["season"] == season].merge(profile, on="unit_id", how="left")
+        parts.append(rows)
+    history = pd.concat(parts, ignore_index=True) if parts else table.copy()
+    history["final"] = history["season"].map(by_season["final"]).astype(bool)
+    return history
+
+
+def tier_changes(history: pd.DataFrame, config: TierConfig | None = None) -> pd.DataFrame:
+    """Units whose season tier or overall tier moved between consecutive seasons.
+
+    ``steps`` and ``overall_steps`` are positive for a promotion. This is the
+    table that answers "what did this season change".
+    """
+    config = config or TierConfig()
+    seasons = season_order(history["season"])
     rows = []
+    columns = ["unit_id", "name_ko", "name_en", "lift", "tier", "overall", "overall_tier"]
     for previous, current in zip(seasons, seasons[1:]):
-        before, after = by_season[previous], by_season[current]
-        for unit_id in sorted(set(before.index) | set(after.index)):
-            tier_before = before.loc[unit_id, "tier"] if unit_id in before.index else None
-            tier_after = after.loc[unit_id, "tier"] if unit_id in after.index else None
-            if tier_before is None and tier_after is None:
+        before = history.loc[history["season"] == previous, columns].set_index("unit_id")
+        after = history.loc[history["season"] == current, columns].set_index("unit_id")
+        both = before.join(after, lsuffix="_from", rsuffix="_to", how="inner")
+        for unit_id, row in both.iterrows():
+            steps = tier_rank(row["tier_from"], config) - tier_rank(row["tier_to"], config)
+            overall_steps = tier_rank(row["overall_tier_from"], config) - tier_rank(row["overall_tier_to"], config)
+            if steps == 0 and overall_steps == 0:
                 continue
-            steps = (
-                order[tier_before] - order[tier_after]
-                if tier_before is not None and tier_after is not None
-                else np.nan
-            )
-            score_before = float(before.loc[unit_id, "tier_score"]) if unit_id in before.index else np.nan
-            score_after = float(after.loc[unit_id, "tier_score"]) if unit_id in after.index else np.nan
             rows.append(
                 {
                     "season_from": previous,
                     "season_to": current,
                     "unit_id": unit_id,
-                    "name_en": (after if unit_id in after.index else before).loc[unit_id, "name_en"],
-                    "tier_from": tier_before,
-                    "tier_to": tier_after,
+                    "name_ko": row["name_ko_to"],
+                    "name_en": row["name_en_to"],
+                    "tier_from": row["tier_from"],
+                    "tier_to": row["tier_to"],
                     "steps": steps,
-                    "tier_score_from": score_before,
-                    "tier_score_to": score_after,
-                    "tier_score_delta": score_after - score_before,
+                    "lift_from": row["lift_from"],
+                    "lift_to": row["lift_to"],
+                    "overall_tier_from": row["overall_tier_from"],
+                    "overall_tier_to": row["overall_tier_to"],
+                    "overall_steps": overall_steps,
+                    "overall_from": row["overall_from"],
+                    "overall_to": row["overall_to"],
                 }
             )
-    frame = pd.DataFrame(rows)
-    if frame.empty:
-        return frame
-    return frame.sort_values("tier_score_delta", ascending=False).reset_index(drop=True)
+    return pd.DataFrame(rows)
 
 
-def summarise(scored: pd.DataFrame) -> dict[str, Any]:
-    if scored.empty:
+def summarise(history: pd.DataFrame, config: TierConfig | None = None) -> dict[str, Any]:
+    config = config or TierConfig()
+    if history.empty:
         return {}
+    latest = max(history["season"])
+    counts = history[history["season"] == latest]["tier"].value_counts()
     return {
-        "seasons": season_order(scored["season"]),
-        "tier_counts": {
-            season: group["tier"].value_counts().to_dict()
-            for season, group in scored.groupby("season")
-        },
+        "latest_season": int(latest),
+        "latest_tier_counts": {label: int(counts.get(label, 0)) for label in config.tier_order},
     }

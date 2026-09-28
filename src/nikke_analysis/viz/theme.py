@@ -76,16 +76,42 @@ THEMES = {"light": LIGHT, "dark": DARK}
 
 FONT_STACK = ["DejaVu Sans", "Noto Sans CJK KR", "Noto Sans KR", "sans-serif"]
 
+# Fonts that carry Hangul, in order of preference. Unit names are drawn in
+# Korean when one of these is installed and in English otherwise, so a machine
+# without them still renders readable charts instead of empty boxes.
+HANGUL_FONTS = (
+    "Noto Sans CJK KR",
+    "Noto Sans KR",
+    "Source Han Sans KR",
+    "NanumGothic",
+    "NanumBarunGothic",
+    "Malgun Gothic",
+    "Apple SD Gothic Neo",
+    "AppleGothic",
+    "WenQuanYi Zen Hei",
+)
+
+
+def hangul_font() -> str | None:
+    """The first installed font that can draw Korean unit names, if any."""
+    from matplotlib import font_manager
+
+    installed = {f.name for f in font_manager.fontManager.ttflist}
+    return next((name for name in HANGUL_FONTS if name in installed), None)
+
 
 def apply(theme: Theme) -> None:
     """Set the rcParams a chart should never have to repeat."""
+    korean = hangul_font()
     matplotlib.rcParams.update(
         {
             "figure.facecolor": theme.surface,
             "axes.facecolor": theme.surface,
             "savefig.facecolor": theme.surface,
-            "font.family": "sans-serif",
+            # Latin glyphs from DejaVu; Hangul falls through to the Korean font.
+            "font.family": ["DejaVu Sans", korean] if korean else "sans-serif",
             "font.sans-serif": FONT_STACK,
+            "axes.unicode_minus": False,
             "text.color": theme.ink_primary,
             "axes.labelcolor": theme.ink_secondary,
             "axes.edgecolor": theme.axis,

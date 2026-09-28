@@ -1,4 +1,4 @@
-"""One test that runs the whole thing: tables in, metrics out, charts on disk.
+"""The whole thing: tables in, metrics out, charts on disk, tiers at a moment.
 
 Uses the synthetic world so it needs no network and no committed ranking data.
 """
@@ -7,83 +7,96 @@ import pandas as pd
 import pytest
 
 from nikke_analysis.analyze import pipeline
+from nikke_analysis.tierlist import TierBook, render, render_unit
 from nikke_analysis.viz import charts
-from tests.synthetic import make_world
+from tests.synthetic import make_world, write_processed
 
 
 @pytest.fixture(scope="module")
 def processed(tmp_path_factory):
     directory = tmp_path_factory.mktemp("processed")
-    world = make_world(seasons=5, bosses=2, teams_per_boss=30, units=40, seed=11)
-    world.entries.to_csv(directory / "raid_entries.csv", index=False)
-    world.roster.to_csv(directory / "roster.csv", index=False)
-    world.calendar.to_csv(directory / "season_calendar.csv", index=False)
-    pd.DataFrame(
-        [
-            {"notice_id": "official:p2", "source": "official", "published_at": "2024-04-10T18:00:00+09:00",
-             "updated_at": "", "kind": "update", "title": "4월 11일 업데이트 공지", "url": "", "chars": 100},
-        ]
-    ).to_csv(directory / "notices.csv", index=False)
-    pd.DataFrame(
-        [
-            {"unit_id": world.newcomer, "kind": "special", "debut": 1, "start_at": "2024-02-10T00:00:00+09:00",
-             "end_at": "2024-02-24T04:59:59+09:00", "start_after_maintenance": 1, "notice_id": "official:p1",
-             "notice_title": "New Nikke", "notice_published_at": "2024-02-08T18:00:00+09:00", "label": "특수 모집 기간",
-             "evidence": ""},
-        ]
-    ).to_csv(directory / "banners.csv", index=False)
-    pd.DataFrame(
-        [{"unit_id": world.newcomer, "release_at": "2024-08-25T00:00:00+09:00", "release_date": "2024-08-25",
-          "release_after_maintenance": 1, "banner_kind": "special", "notice_id": "official:p1",
-          "notice_title": "New Nikke", "notice_published_at": "2024-08-22T18:00:00+09:00", "evidence": ""}]
-    ).to_csv(directory / "unit_releases.csv", index=False)
-    return directory, world
+    world = make_world(seasons=8, rankers=15, fillers=24, seed=11)
+    write_processed(world, directory)
+    summary = pipeline.run(data_dir=directory)
+    return directory, world, summary
 
 
 def test_analyze_writes_every_metric_table(processed):
-    directory, _ = processed
-    summary = pipeline.run(data_dir=directory)
-    assert summary["availability_source"] == "season_calendar"
-    for name in (
-        "metrics_usage.csv",
-        "metrics_tiers.csv",
-        "metrics_tier_changes.csv",
-        "metrics_meta_shift.csv",
-        "metrics_synergy.csv",
-        "metrics_trajectory.csv",
-        "metrics_patch_impact.csv",
-    ):
+    directory, _, summary = processed
+    for name in pipeline.OUTPUTS:
         path = directory / name
         assert path.is_file(), name
         assert not pd.read_csv(path).empty, name
+    assert summary["final_seasons"] == 7 and summary["live_season"] == 8
 
 
 def test_analysis_is_reproducible(processed):
     """Same inputs must give byte-identical outputs - no RNG, no clock."""
-    directory, _ = processed
+    directory, _, _ = processed
     pipeline.run(data_dir=directory)
-    first = (directory / "metrics_tiers.csv").read_bytes()
+    first = {name: (directory / name).read_bytes() for name in pipeline.OUTPUTS}
     pipeline.run(data_dir=directory)
-    assert (directory / "metrics_tiers.csv").read_bytes() == first
+    assert all((directory / name).read_bytes() == first[name] for name in pipeline.OUTPUTS)
 
 
 def test_patch_impact_locates_releases_inside_the_window(processed):
-    directory, world = processed
-    pipeline.run(data_dir=directory)
+    directory, world, _ = processed
     impact = pd.read_csv(directory / "metrics_patch_impact.csv")
-    assert (impact["units_released"] >= 0).all()
     assert impact["total_variation"].between(0, 1).all()
+    arrival = impact[impact["season_to"] == world.newcomer_season].iloc[0]
+    assert arrival["units_released"] == 1
 
 
 def test_charts_render_in_both_themes(processed, tmp_path):
-    directory, _ = processed
-    pipeline.run(data_dir=directory)
+    directory, world, _ = processed
     result = charts.render_all(data_dir=directory, out_dir=tmp_path)
-    assert result["written"], result
+    assert not result["skipped_no_data"], result
+    assert len(result["written"]) == 14
     for name in result["written"]:
         path = tmp_path / f"{name}.png"
         assert path.is_file() and path.stat().st_size > 5_000, name
-    assert any(n.endswith("-dark") for n in result["written"])
+    chosen = charts.render_all(data_dir=directory, out_dir=tmp_path, themes=("light",), units=["Newcomer"])
+    assert "tier-trajectories" in chosen["written"]
+
+
+def test_tiers_now_show_last_live_and_next_season(processed):
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    view = book.at("2026-01-01")
+    assert view.finished.number == world.live_season - 1
+    assert view.upcoming is not None and view.upcoming.kind == "expected"
+    text = render(view)
+    assert "직전 시즌" in text and "종합 티어" in text
+
+
+def test_tiers_of_the_past_use_only_what_was_known(processed):
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    view = book.at("2025-04-01")  # season 3 over, season 4 not started yet
+    assert view.final_seasons == [1, 2, 3]
+    assert world.newcomer not in set(view.overall["unit_id"])
+    assert view.upcoming is not None and view.upcoming.number == 4
+
+
+def test_the_season_in_progress_is_provisional(processed):
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    live_start = pd.Timestamp(world.seasons.set_index("season").loc[world.live_season, "start_at"])
+    view = book.at((live_start + pd.Timedelta(days=4)).isoformat())
+    assert view.current is not None and view.current.kind == "live"
+    early = book.at((live_start + pd.Timedelta(hours=2)).isoformat())
+    assert early.current is not None and early.current.kind == "expected"
+
+
+def test_unit_history_reads_every_season_since_release(processed):
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    history = book.unit("Newcomer")
+    assert history.unit_id == world.newcomer
+    assert list(history.rows["season"]) == list(range(world.newcomer_season, world.live_season + 1))
+    assert "종합" in render_unit(history, book.config)
+    with pytest.raises(LookupError):
+        book.unit("Filler")  # matches many
 
 
 def test_analyze_refuses_without_ranking_data(tmp_path):

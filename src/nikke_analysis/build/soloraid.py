@@ -29,8 +29,8 @@ So the calendar is rebuilt in four steps, each deterministic:
 
 Outputs: ``soloraid_seasons.csv`` (one row per season), ``soloraid_periods.csv``
 (one row per open interval), ``soloraid_events.csv`` (the evidence, one row per
-statement) and ``season_calendar.csv`` (season, start_date, end_date - the shape
-the analysis stage reads).
+statement) and ``season_calendar.csv`` (season, start_date, end_date - a plain
+calendar; the analysis reads ``soloraid_seasons.csv`` for the boss weakness too).
 """
 
 from __future__ import annotations

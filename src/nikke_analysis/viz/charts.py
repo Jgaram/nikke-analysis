@@ -1,15 +1,18 @@
 """Render the metric tables as charts.
 
-Five charts, each answering one question:
+Seven charts, each answering one question:
 
-``meta_shift``           how much did the meta move, season to season?
-``usage_trend``          which units are rising and falling?
-``tier_distribution``    how is the roster spread across tiers over time?
-``usage_vs_performance`` popular versus actually effective, this season
-``patch_impact``         which patch windows moved the meta most?
+``tier-snapshot``      what was each unit's tier in the latest finished season?
+``tier-trajectories``  how did these units' tiers move, season by season?
+``tier-heatmap``       every strong unit's tier in every season, at a glance
+``element-tiers``      what is each unit worth against each boss weakness, now?
+``tier-distribution``  how many units reach each tier, season by season?
+``meta-shift``         how much did the meta move, season to season?
+``patch-impact``       which patch windows moved the meta most?
 
 Every chart is rendered in both light and dark. The dark version uses its own
-validated steps rather than an inverted copy of the light one.
+validated steps rather than an inverted copy of the light one. Unit names are in
+Korean when a Hangul font is installed, in English otherwise.
 """
 
 from __future__ import annotations
@@ -22,49 +25,52 @@ import matplotlib
 
 matplotlib.use("Agg")  # no display in CI or a cloud session
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch, PathPatch, Rectangle
+from matplotlib.path import Path as MplPath
 
-from ..analyze.metrics import season_order
+from ..analyze.metrics import ELEMENTS, season_order
 from ..analyze.tiers import load_tier_config
 from ..paths import processed_dir, reports_dir
 from . import theme as th
 
 log = logging.getLogger(__name__)
 
-
 SEASON_COLUMNS = ("season", "season_from", "season_to")
+ELEMENT_SHORT = {"Fire": "Fire", "Water": "Water", "Wind": "Wind", "Iron": "Iron", "Electric": "Elec."}
+ELEMENT_INITIAL = {"Fire": "F", "Water": "Wa", "Wind": "Wi", "Iron": "I", "Electric": "E"}
 
 
 def _read(name: str, directory: Path) -> pd.DataFrame:
-    """Read a metric table, forcing season columns to strings.
-
-    A CSV round-trip turns season "7" into the integer 7, which then silently
-    fails to match the string season order and renders an empty chart. Casting
-    on the way in is the one place that can go wrong, so it goes here.
-    """
+    """Read a metric table with ids kept as text and seasons as integers."""
     path = directory / name
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
-    frame = pd.read_csv(path)
+    frame = pd.read_csv(path, dtype={"unit_id": str})
     for column in SEASON_COLUMNS:
         if column in frame.columns:
-            frame[column] = frame[column].astype(str)
+            frame[column] = pd.to_numeric(frame[column], errors="coerce").astype("Int64")
     return frame
 
 
-def _label_unit(row: pd.Series) -> str:
-    return str(row.get("name_en") or row.get("name_ko") or row.get("unit_id"))
+class Names:
+    """Korean display names when the font can draw them, English otherwise."""
+
+    def __init__(self) -> None:
+        self.korean = th.hangul_font() is not None
+
+    def __call__(self, row: Any) -> str:
+        ko, en = row.get("name_ko"), row.get("name_en")
+        if self.korean and isinstance(ko, str) and ko:
+            return ko
+        if isinstance(en, str) and en:
+            return en
+        return str(row.get("unit_id", ""))
 
 
-def _frame(
-    fig,
-    ax,
-    theme: th.Theme,
-    *,
-    title: str,
-    subtitle: str = "",
-    legend_cols: int = 0,
-) -> None:
+def _frame(fig, ax, theme: th.Theme, *, title: str, subtitle: str = "", legend_cols: int = 0) -> None:
     """Title, subtitle and legend in one place, positioned in points.
 
     Axes-fraction positioning collides as soon as a chart is resized, so both
@@ -72,41 +78,315 @@ def _frame(
     below the plot where it can never overlap a mark.
     """
     ax.set_title("")
-    ax.annotate(
-        title,
-        (0, 1),
-        xycoords="axes fraction",
-        textcoords="offset points",
-        xytext=(0, 34),
-        fontsize=14,
-        fontweight="bold",
-        color=theme.ink_primary,
-        va="bottom",
-        annotation_clip=False,
-    )
+    ax.annotate(title, (0, 1), xycoords="axes fraction", textcoords="offset points", xytext=(0, 34),
+                fontsize=14, fontweight="bold", color=theme.ink_primary, va="bottom", annotation_clip=False)
     if subtitle:
-        ax.annotate(
-            subtitle,
-            (0, 1),
-            xycoords="axes fraction",
-            textcoords="offset points",
-            xytext=(0, 16),
-            fontsize=9,
-            color=theme.ink_muted,
-            va="bottom",
-            annotation_clip=False,
-        )
+        ax.annotate(subtitle, (0, 1), xycoords="axes fraction", textcoords="offset points", xytext=(0, 16),
+                    fontsize=9, color=theme.ink_muted, va="bottom", annotation_clip=False)
     if legend_cols:
-        ax.legend(
-            loc="upper center",
-            bbox_to_anchor=(0.5, -0.16),
-            ncols=legend_cols,
-            frameon=False,
-        )
+        ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncols=legend_cols, frameon=False)
+
+
+def _tier_color(tier: str, theme: th.Theme, order: list[str]) -> str:
+    return th.tier_color(tier, theme, order)
+
+
+def _rounded_hbar(ax, y: float, width: float, height: float, color: str, radius_px: float = 4.0) -> None:
+    """A horizontal bar, square at the baseline, with a 4px rounded data-end."""
+    if width <= 0:
+        return
+    dx, dy = th.px_to_data(ax, radius_px)
+    rx, ry = min(dx, width / 2), min(dy, height / 2)
+    top, bottom = y + height / 2, y - height / 2
+    points = [(0.0, bottom), (width - rx, bottom)]
+    points += [(width - rx + rx * np.cos(a), bottom + ry + ry * np.sin(a)) for a in np.linspace(-np.pi / 2, 0, 8)]
+    points.append((width, top - ry))
+    points += [(width - rx + rx * np.cos(a), top - ry + ry * np.sin(a)) for a in np.linspace(0, np.pi / 2, 8)]
+    points += [(0.0, top), (0.0, bottom)]
+    codes = [MplPath.MOVETO] + [MplPath.LINETO] * (len(points) - 2) + [MplPath.CLOSEPOLY]
+    ax.add_patch(PathPatch(MplPath(points, codes), facecolor=color, linewidth=0, zorder=2))
+
+
+def _tier_legend(order: list[str], theme: th.Theme, *, extra: list | None = None) -> list:
+    handles = [Patch(facecolor=_tier_color(t, theme, order), label=t) for t in order]
+    return handles + (extra or [])
 
 
 # --------------------------------------------------------------------------
-# charts
+# tiers
+# --------------------------------------------------------------------------
+
+def chart_tier_snapshot(history: pd.DataFrame, seasons: pd.DataFrame, theme: th.Theme, out: Path,
+                        names: Names) -> Path | None:
+    """Every unit that mattered in the latest finished season, by lift and tier.
+
+    The tick on each bar is the unit's overall tier score once that season was
+    over - where a bar and its tick disagree, the season suited the unit (or
+    did not) more than usual.
+    """
+    if history.empty or seasons.empty:
+        return None
+    final = seasons[seasons["final"].astype(str).str.lower().isin(("true", "1"))]
+    if final.empty:
+        return None
+    season = int(final["season"].max())
+    meta = final[final["season"] == season].iloc[0]
+    order = load_tier_config().tier_order
+    table = history[(history["season"] == season) & (history["lift"] >= load_tier_config().cut("C"))]
+    table = table.sort_values(["lift", "unit_id"], ascending=[True, True])
+    if table.empty:
+        return None
+    n = len(table)
+    fig, ax = plt.subplots(figsize=(9.2, 0.34 * n + 1.8))
+    ax.set_xlim(0, max(2.0, float(table["lift"].max()) * 1.12))
+    ax.set_ylim(-0.7, n - 0.3)
+    fig.canvas.draw()
+    for i, (_, row) in enumerate(table.iterrows()):
+        _rounded_hbar(ax, i, float(row["lift"]), 0.62, _tier_color(row["tier"], theme, order))
+    ax.scatter(table["overall"], range(n), marker="|", s=170, linewidths=2.2, color=theme.ink_primary, zorder=4)
+    ax.set_yticks(range(n))
+    ax.set_yticklabels([names(r) for _, r in table.iterrows()], fontsize=9, color=theme.ink_secondary)
+    ax.tick_params(axis="y", length=0)
+    for label, cut in load_tier_config().cuts[:-1]:
+        ax.axvline(cut, color=theme.grid, linewidth=1, zorder=1)
+        ax.annotate(label, (cut, n - 0.3), textcoords="offset points", xytext=(4, 2), fontsize=9,
+                    color=theme.ink_muted, va="bottom", annotation_clip=False)
+    ax.grid(False)
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
+    ax.set_xlabel("Lift (1.0 = an average member of a player's 25 units)")
+    handles = _tier_legend(order[:-1], theme, extra=[
+        Line2D([], [], marker="|", linestyle="none", markersize=12, markeredgewidth=2.2, color=theme.ink_primary,
+               label="Overall score after the season")
+    ])
+    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.45, -0.075), ncols=len(handles),
+              frameon=False, handlelength=1.2, columnspacing=1.2)
+    boss = meta.get("boss_en") if isinstance(meta.get("boss_en"), str) else "?"
+    _frame(fig, ax, theme, title=f"Season {season} tiers",
+           subtitle=f"{boss} · weak to {meta.get('weak_element', '?')} · bar = lift that season (colour = tier)")
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def chart_trajectories(history: pd.DataFrame, current: pd.DataFrame, theme: th.Theme, out: Path, names: Names,
+                       *, unit_ids: list[str]) -> Path | None:
+    """Selected units, season by season: the season's lift and the overall score as it stood."""
+    if history.empty or not unit_ids:
+        return None
+    config = load_tier_config()
+    cols = 2
+    rows_n = int(np.ceil(len(unit_ids) / cols))
+    fig, axes = plt.subplots(rows_n, cols, figsize=(12, 2.75 * rows_n + 0.9), sharex=True, sharey=True)
+    axes = np.atleast_1d(axes).ravel()
+    s_min, s_max = int(history["season"].min()), int(history["season"].max())
+    ymax = max(2.3, float(history.loc[history["unit_id"].isin(unit_ids), "lift"].max()) * 1.05)
+    best = current.set_index("unit_id")["best_element"] if not current.empty else pd.Series(dtype=str)
+    live = history.loc[~history["final"].astype(str).str.lower().isin(("true", "1")), "season"]
+    for ax, unit_id in zip(axes, unit_ids):
+        unit = history[history["unit_id"] == unit_id].sort_values("season")
+        if unit.empty:
+            ax.set_visible(False)
+            continue
+        info = unit.iloc[-1]
+        for label, cut in config.cuts[:-1]:
+            ax.axhline(cut, color=theme.grid, linewidth=1, zorder=1)
+            ax.annotate(label, (s_max + 0.6, cut), fontsize=8, color=theme.ink_muted, va="bottom", annotation_clip=False)
+        for season in live:
+            ax.axvspan(season - 0.5, season + 0.5, color=theme.page, zorder=0)
+        seasons_x = unit["season"].astype(int)
+        ax.plot(seasons_x, unit["lift"], color=theme.categorical[0], linewidth=1.0, zorder=2)
+        favoured = unit["weak_element"] == best.get(unit_id, "")
+        ax.scatter(seasons_x[~favoured], unit.loc[~favoured, "lift"], s=30, facecolor=theme.surface,
+                   edgecolor=theme.categorical[0], linewidth=1.4, zorder=3)
+        ax.scatter(seasons_x[favoured], unit.loc[favoured, "lift"], s=38, color=theme.categorical[0],
+                   edgecolor=theme.surface, linewidth=1.2, zorder=4)
+        ax.plot(seasons_x, unit["overall"], color=theme.categorical[1], linewidth=2.0, zorder=5,
+                solid_capstyle="round", solid_joinstyle="round")
+        ax.set_xlim(s_min - 0.8, s_max + 0.8)
+        ax.set_ylim(-0.08, ymax)
+        ax.grid(False)
+        for side in ("top", "right"):
+            ax.spines[side].set_visible(False)
+        best_el = best.get(unit_id, "")
+        ax.set_title(f"{names(info)}   ·  {info.get('element', '')} {info.get('unit_class', '')}"
+                     + (f"  ·  best vs {best_el}-weak" if isinstance(best_el, str) and best_el else ""),
+                     loc="left", fontsize=10.5, color=theme.ink_primary, pad=6)
+    for ax in axes[len(unit_ids):]:
+        ax.set_visible(False)
+    for ax in axes[-cols:]:
+        ax.set_xlabel("Solo Raid season")
+    for ax in axes[::cols]:
+        ax.set_ylabel("Lift")
+    handles = [
+        Line2D([], [], color=theme.categorical[0], linewidth=1.0, marker="o", markersize=6,
+               markerfacecolor=theme.categorical[0], markeredgecolor=theme.surface,
+               label="Season lift · filled = boss weak to the unit's best element"),
+        Line2D([], [], color=theme.categorical[1], linewidth=2.0, label="Overall score as it stood"),
+    ]
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.045, 0.935), ncols=2, frameon=False)
+    fig.text(0.05, 1.005, "How these units' tiers moved", fontsize=14, fontweight="bold",
+             color=theme.ink_primary, ha="left", va="bottom")
+    cuts = " · ".join(f"{label} {cut:g}" for label, cut in config.cuts[:-1])
+    fig.text(0.05, 0.982, f"Gridlines = tier cuts ({cuts}) · shaded column = season in progress",
+             fontsize=9, color=theme.ink_muted, ha="left", va="bottom")
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def chart_tier_heatmap(history: pd.DataFrame, theme: th.Theme, out: Path, names: Names,
+                       *, min_seasons: int = 3) -> Path | None:
+    """Units that reached S in at least ``min_seasons`` seasons, by release, against every season."""
+    if history.empty:
+        return None
+    config = load_tier_config()
+    order = config.tier_order
+    strong = history[history["lift"] >= config.cut("S")].groupby("unit_id").size()
+    ids = strong[strong >= min_seasons].index
+    if len(ids) == 0:
+        return None
+    units = history[history["unit_id"].isin(ids)].drop_duplicates("unit_id").sort_values(["release_date", "unit_id"])
+    seasons = season_order(history["season"].dropna())
+    column = {s: i for i, s in enumerate(seasons)}
+    weak = history.drop_duplicates("season").set_index("season")["weak_element"]
+    live = set(history.loc[~history["final"].astype(str).str.lower().isin(("true", "1")), "season"].astype(int))
+    n_rows, n_cols = len(units), len(seasons)
+    fig, ax = plt.subplots(figsize=(0.27 * n_cols + 3.2, 0.25 * n_rows + 2.2))
+    ax.set_xlim(-0.5, n_cols - 0.5)
+    ax.set_ylim(n_rows - 0.5, -1.9)
+    gap = 0.07
+    for r, unit in enumerate(units.itertuples()):
+        cells = history[history["unit_id"] == unit.unit_id]
+        for cell in cells.itertuples():
+            ax.add_patch(Rectangle((column[int(cell.season)] - 0.5 + gap, r - 0.5 + gap), 1 - 2 * gap, 1 - 2 * gap,
+                                   facecolor=_tier_color(cell.tier, theme, order), linewidth=0, zorder=2))
+    for s in seasons:
+        ax.annotate(ELEMENT_INITIAL.get(weak.get(s, ""), ""), (column[s], -1.05), ha="center", va="center",
+                    fontsize=7, color=theme.ink_secondary, annotation_clip=False)
+    ax.annotate("weak", (-0.9, -1.05), ha="right", va="center", fontsize=7.5, color=theme.ink_muted,
+                annotation_clip=False)
+    ax.set_yticks(range(n_rows))
+    ax.set_yticklabels([f"{names(u._asdict())} ({ELEMENT_INITIAL.get(u.element, '?')})" for u in units.itertuples()],
+                       fontsize=8.5, color=theme.ink_secondary)
+    ax.set_xticks(range(n_cols))
+    ax.set_xticklabels([f"{s}*" if s in live else str(s) for s in seasons], fontsize=7)
+    ax.tick_params(length=0)
+    ax.grid(False)
+    for side in ax.spines.values():
+        side.set_visible(False)
+    ax.set_xlabel("Solo Raid season  (* = in progress)")
+    handles = _tier_legend(order, theme, extra=[
+        Patch(facecolor=theme.surface, edgecolor=theme.axis, linewidth=0.8, label="blank = not released")
+    ])
+    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.06), ncols=len(handles),
+              frameon=False, handlelength=1.2)
+    _frame(fig, ax, theme, title=f"Every season's tiers — units at S or better in {min_seasons}+ seasons",
+           subtitle="Rows by release date · top row = the element each season's boss was weak to "
+                    "(F Fire, Wa Water, Wi Wind, I Iron, E Electric) · brackets = the unit's own element")
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def chart_element_tiers(current: pd.DataFrame, theme: th.Theme, out: Path, names: Names,
+                        *, limit: int = 40) -> Path | None:
+    """What each unit is worth against each boss weakness, and overall, as of the newest data."""
+    if current.empty:
+        return None
+    config = load_tier_config()
+    order = config.tier_order
+    table = current[current["role"] != "outside"].sort_values(["overall", "unit_id"], ascending=[False, True]).head(limit)
+    if table.empty:
+        return None
+    columns = list(ELEMENTS) + ["overall"]
+    n_rows = len(table)
+    fig, ax = plt.subplots(figsize=(8.6, 0.28 * n_rows + 2.2))
+    ax.set_xlim(-0.5, len(columns) - 0.5 + 0.25)
+    ax.set_ylim(n_rows - 0.5, -0.9)
+    gap = 0.07
+    role_short = {"universal": "U", "hybrid": "H", "specialist": "S", "undetermined": "?", "outside": "-"}
+    for r, (_, row) in enumerate(table.iterrows()):
+        for c, element in enumerate(columns):
+            x = c + (0.25 if element == "overall" else 0.0)
+            if element == "overall":
+                tier, observed = row["overall_tier"], not bool(row["provisional"])
+            else:
+                slot = element.lower()
+                tier, observed = row[f"tier_{slot}"], row[f"n_{slot}"] > 0
+            if observed:
+                ax.add_patch(Rectangle((x - 0.5 + gap, r - 0.5 + gap), 1 - 2 * gap, 1 - 2 * gap,
+                                       facecolor=_tier_color(tier, theme, order), linewidth=0, zorder=2))
+                # The three strongest steps are dark on light and pale on dark: flip the ink.
+                strong = tier in order[:3]
+                ink = (theme.page if theme.name == "dark" else "#ffffff") if strong else theme.ink_primary
+            else:
+                ax.add_patch(Rectangle((x - 0.5 + gap, r - 0.5 + gap), 1 - 2 * gap, 1 - 2 * gap,
+                                       facecolor=theme.surface, edgecolor=theme.axis, linewidth=0.8, zorder=2))
+                ink = theme.ink_muted
+            ax.annotate(f"{tier}" + ("" if observed else "?"), (x, r), ha="center", va="center", fontsize=7.5,
+                        color=ink, zorder=3)
+    ax.set_yticks(range(n_rows))
+    ax.set_yticklabels([f"{names(r)} [{role_short.get(r['role'], '?')}]" for _, r in table.iterrows()],
+                       fontsize=8.5, color=theme.ink_secondary)
+    ax.set_xticks([i + (0.25 if c == "overall" else 0.0) for i, c in enumerate(columns)])
+    ax.set_xticklabels([f"{ELEMENT_SHORT[c]}-weak" if c in ELEMENT_SHORT else "Overall" for c in columns], fontsize=8.5)
+    ax.xaxis.set_ticks_position("top")
+    ax.tick_params(length=0)
+    ax.grid(False)
+    for side in ax.spines.values():
+        side.set_visible(False)
+    handles = _tier_legend(order, theme, extra=[
+        Patch(facecolor=theme.surface, edgecolor=theme.axis, linewidth=0.8, label="? = not yet observed")
+    ])
+    ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.02), ncols=4, frameon=False,
+              handlelength=1.2)
+    _frame(fig, ax, theme, title="Element tiers — worth against each boss weakness",
+           subtitle=f"Recent seasons weigh more (half-life {config.half_life_days:g} days) · "
+                    "role: U universal, H hybrid, S specialist, ? undetermined", )
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+def chart_tier_distribution(history: pd.DataFrame, theme: th.Theme, out: Path) -> Path | None:
+    """How many units reach each tier, season by season (D - outside the meta - left out)."""
+    if history.empty:
+        return None
+    order = load_tier_config().tier_order
+    shown = order[:-1]
+    seasons = season_order(history["season"].dropna())
+    counts = history.groupby(["season", "tier"]).size().unstack(fill_value=0).reindex(seasons).fillna(0)
+    for tier in shown:
+        if tier not in counts.columns:
+            counts[tier] = 0
+    counts = counts[shown]
+    fig, ax = plt.subplots(figsize=(9, 4.8))
+    x = range(len(seasons))
+    bottom = [0.0] * len(seasons)
+    for tier in shown:
+        values = counts[tier].tolist()
+        ax.bar(list(x), values, bottom=bottom, width=0.62, color=_tier_color(tier, theme, order),
+               edgecolor=theme.surface, linewidth=1.5, label=tier, zorder=2)
+        bottom = [b + v for b, v in zip(bottom, values)]
+    ax.set_xticks(list(x))
+    ax.set_xticklabels([str(s) for s in seasons], fontsize=7)
+    ax.set_xlabel("Season")
+    ax.set_ylabel("Units")
+    th.strip_chrome(ax)
+    handles, labels = ax.get_legend_handles_labels()
+    _frame(fig, ax, theme, title="How many units reach each tier",
+           subtitle="Fixed lift cuts, so a season with one dominant deck has more SS than a spread-out one")
+    ax.legend(handles[::-1], labels[::-1], loc="upper center", bbox_to_anchor=(0.5, -0.14), ncols=len(shown),
+              frameon=False)
+    fig.savefig(out, bbox_inches="tight")
+    plt.close(fig)
+    return out
+
+
+# --------------------------------------------------------------------------
+# meta movement
 # --------------------------------------------------------------------------
 
 def chart_meta_shift(shift: pd.DataFrame, theme: th.Theme, out: Path) -> Path | None:
@@ -116,233 +396,23 @@ def chart_meta_shift(shift: pd.DataFrame, theme: th.Theme, out: Path) -> Path | 
         return None
     labels = [f"{a}→{b}" for a, b in zip(shift["season_from"], shift["season_to"])]
     x = range(len(labels))
-
-    fig, ax = plt.subplots(figsize=(9, 4.6))
+    fig, ax = plt.subplots(figsize=(11, 4.6))
     series = [
         ("Meta shift (total variation)", shift["total_variation"], theme.categorical[0]),
-        ("Share taken by new units", shift["newcomer_share"], theme.categorical[1]),
+        ("Share taken by units unused the season before", shift["newcomer_share"], theme.categorical[1]),
     ]
     for label, values, color in series:
-        ax.plot(list(x), values, color=color, marker="o", markersize=5, label=label, zorder=3)
-        if len(labels):
-            ax.annotate(
-                f"{values.iloc[-1]:.0%}",
-                (len(labels) - 1, values.iloc[-1]),
-                textcoords="offset points",
-                xytext=(8, 0),
-                color=theme.ink_secondary,
-                fontsize=9,
-                va="center",
-            )
-
+        ax.plot(list(x), values, color=color, marker="o", markersize=4, label=label, zorder=3)
+        ax.annotate(f"{values.iloc[-1]:.0%}", (len(labels) - 1, values.iloc[-1]), textcoords="offset points",
+                    xytext=(8, 0), color=theme.ink_secondary, fontsize=9, va="center")
     ax.set_xticks(list(x))
-    ax.set_xticklabels(labels, rotation=45, ha="right")
+    ax.set_xticklabels(labels, rotation=60, ha="right", fontsize=7)
     ax.set_ylim(bottom=0)
-    ax.margins(x=0.06)
+    ax.margins(x=0.03)
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
     th.strip_chrome(ax)
-    _frame(
-        fig,
-        ax,
-        theme,
-        title="How much the meta moved each season",
-        subtitle="Rank-weighted usage share; 20% means a fifth of the meta changed hands",
-        legend_cols=2,
-    )
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    return out
-
-
-def chart_usage_trend(
-    tiers_table: pd.DataFrame, theme: th.Theme, out: Path, *, top_n: int = 6
-) -> Path | None:
-    """Rank-weighted pick rate over time for the units that matter now."""
-    if tiers_table.empty:
-        return None
-    seasons = season_order(tiers_table["season"])
-    latest = tiers_table[tiers_table["season"].astype(str) == seasons[-1]]
-    top_units = latest.nlargest(min(top_n, len(latest)), "weighted_pick_rate")["unit_id"].tolist()
-    if not top_units:
-        return None
-
-    fig, ax = plt.subplots(figsize=(9.5, 5))
-    position = {s: i for i, s in enumerate(seasons)}
-    ends: list[tuple[float, str, str]] = []
-    for slot, unit_id in enumerate(top_units):
-        rows = tiers_table[tiers_table["unit_id"] == unit_id].copy()
-        rows["x"] = rows["season"].astype(str).map(position)
-        rows = rows.sort_values("x")
-        color = theme.categorical[slot % len(theme.categorical)]
-        label = _label_unit(rows.iloc[-1])
-        ax.plot(
-            rows["x"],
-            rows["weighted_pick_rate"],
-            color=color,
-            marker="o",
-            markersize=4,
-            label=label,
-            zorder=3,
-        )
-        ends.append((float(rows["weighted_pick_rate"].iloc[-1]), label, color))
-
-    ax.set_xticks(range(len(seasons)))
-    ax.set_xticklabels(seasons)
-    ax.set_ylim(bottom=0)
-    ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
-    ax.set_xlabel("Season")
-    th.strip_chrome(ax)
-    ax.margins(x=0.16)
-
-    # Direct end labels are the required relief for the low-contrast slots, so
-    # they must not stack on top of each other when series finish close together.
-    span = ax.get_ylim()[1] - ax.get_ylim()[0]
-    placed = th.spread_labels([value for value, _, _ in ends], span * 0.045)
-    for (value, label, color), y in zip(ends, placed):
-        ax.annotate(
-            label,
-            xy=(len(seasons) - 1, value),
-            xytext=(len(seasons) - 1 + 0.18, y),
-            fontsize=9,
-            color=theme.ink_secondary,
-            va="center",
-            annotation_clip=False,
-            arrowprops=dict(arrowstyle="-", color=theme.grid, linewidth=0.8, shrinkA=0, shrinkB=2),
-        )
-
-    _frame(
-        fig,
-        ax,
-        theme,
-        title=f"Top {len(top_units)} units by current usage",
-        subtitle="Rank-weighted pick rate inside the top-50 leaderboard",
-        legend_cols=min(len(top_units), 3),
-    )
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    return out
-
-
-def chart_tier_distribution(tiers_table: pd.DataFrame, theme: th.Theme, out: Path) -> Path | None:
-    """How many units sit in each tier, season by season."""
-    if tiers_table.empty:
-        return None
-    config = load_tier_config()
-    order = config.tier_order
-    seasons = season_order(tiers_table["season"])
-    counts = (
-        tiers_table.groupby(["season", "tier"]).size().unstack(fill_value=0).reindex(seasons)
-    )
-    for tier in order:
-        if tier not in counts.columns:
-            counts[tier] = 0
-    counts = counts[order]
-
-    fig, ax = plt.subplots(figsize=(9, 4.8))
-    x = range(len(seasons))
-    bottom = [0.0] * len(seasons)
-    gap = 1.5  # points; a surface-coloured hairline reads as the 2px spacer
-    for tier in order:
-        values = counts[tier].tolist()
-        ax.bar(
-            list(x),
-            values,
-            bottom=bottom,
-            width=0.62,
-            color=th.tier_color(tier, theme, order),
-            edgecolor=theme.surface,
-            linewidth=gap,
-            label=tier,
-            zorder=2,
-        )
-        bottom = [b + v for b, v in zip(bottom, values)]
-
-    ax.set_xticks(list(x))
-    ax.set_xticklabels(seasons)
-    ax.set_xlabel("Season")
-    ax.set_ylabel("Units")
-    th.strip_chrome(ax)
-    handles, labels = ax.get_legend_handles_labels()
-    _frame(
-        fig,
-        ax,
-        theme,
-        title="Tier distribution over time",
-        subtitle="Every unit available that season, including the never-picked",
-    )
-    ax.legend(
-        handles[::-1],
-        labels[::-1],
-        loc="upper center",
-        bbox_to_anchor=(0.5, -0.14),
-        ncols=len(order),
-        frameon=False,
-    )
-    fig.savefig(out, bbox_inches="tight")
-    plt.close(fig)
-    return out
-
-
-def chart_usage_vs_performance(
-    tiers_table: pd.DataFrame, theme: th.Theme, out: Path, *, label_n: int = 10
-) -> Path | None:
-    """Popularity against measured contribution, for the newest season.
-
-    The interesting units are off the diagonal: heavily used with no score edge
-    (fashion or a comfort pick), or a strong edge at low usage (underrated, or
-    gated behind investment).
-    """
-    if tiers_table.empty:
-        return None
-    seasons = season_order(tiers_table["season"])
-    latest = tiers_table[tiers_table["season"].astype(str) == seasons[-1]].copy()
-    latest = latest[latest["weighted_pick_rate"] > 0]
-    if latest.empty:
-        return None
-
-    fig, ax = plt.subplots(figsize=(8.4, 5.6))
-    ax.axhline(0, color=theme.axis, linewidth=1, zorder=1)
-    ax.scatter(
-        latest["weighted_pick_rate"],
-        latest["score_delta"],
-        s=60,
-        color=theme.accent,
-        edgecolor=theme.surface,
-        linewidth=1.2,
-        alpha=0.9,
-        zorder=3,
-    )
-    # Label only the units worth naming, and push the labels apart vertically so
-    # a cluster of similar performers stays readable.
-    labelled = latest.nlargest(min(label_n, len(latest)), "weighted_pick_rate")
-    span = float(latest["score_delta"].max() - latest["score_delta"].min()) or 1.0
-    placed = th.spread_labels(labelled["score_delta"].astype(float).tolist(), span * 0.06)
-    for (_, row), y in zip(labelled.iterrows(), placed):
-        ax.annotate(
-            _label_unit(row),
-            xy=(row["weighted_pick_rate"], row["score_delta"]),
-            xytext=(row["weighted_pick_rate"], y),
-            textcoords="data",
-            fontsize=8.5,
-            color=theme.ink_secondary,
-            va="center",
-            ha="left",
-            arrowprops=dict(arrowstyle="-", color=theme.grid, linewidth=0.8, shrinkA=0, shrinkB=6),
-        )
-
-    ax.set_xlabel("Rank-weighted pick rate")
-    ax.set_ylabel("Score delta (teams with − teams without)")
-    ax.xaxis.set_major_formatter(lambda v, _: f"{v:.1%}")
-    for side in ("top", "right"):
-        ax.spines[side].set_visible(False)
-    ax.grid(True)
-    _frame(
-        fig,
-        ax,
-        theme,
-        title=f"Usage vs. measured contribution \u2014 season {seasons[-1]}",
-        subtitle="Above the line: teams running this unit score higher than those that don't",
-    )
+    _frame(fig, ax, theme, title="How much the meta moved each season",
+           subtitle="Share of the top players' damage that changed hands between consecutive seasons", legend_cols=2)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -354,34 +424,20 @@ def chart_patch_impact(impact: pd.DataFrame, theme: th.Theme, out: Path) -> Path
         return None
     labels = [f"{a}→{b}" for a, b in zip(impact["season_from"], impact["season_to"])]
     values = impact["total_variation"].tolist()
-
-    fig, ax = plt.subplots(figsize=(9, 4.6))
+    fig, ax = plt.subplots(figsize=(11, 4.6))
     ax.set_xlim(-0.6, len(labels) - 0.4)
     ax.set_ylim(0, max(values) * 1.25 if values else 1)
     th.rounded_bars(ax, list(range(len(labels))), values, color=theme.accent)
-
     for i, (value, released) in enumerate(zip(values, impact["units_released"])):
-        ax.annotate(
-            f"{value:.0%}" + (f"  ·  +{int(released)} new" if released else ""),
-            (i, value),
-            textcoords="offset points",
-            xytext=(0, 6),
-            ha="center",
-            fontsize=8.5,
-            color=theme.ink_secondary,
-        )
-
+        if released:
+            ax.annotate(f"+{int(released)}", (i, value), textcoords="offset points", xytext=(0, 4), ha="center",
+                        fontsize=7.5, color=theme.ink_secondary)
     ax.set_xticks(range(len(labels)))
-    ax.set_xticklabels(labels, rotation=45, ha="right")
+    ax.set_xticklabels(labels, rotation=60, ha="right", fontsize=7)
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
     th.strip_chrome(ax)
-    _frame(
-        fig,
-        ax,
-        theme,
-        title="Meta movement per patch window",
-        subtitle="Total variation of rank-weighted usage between consecutive seasons",
-    )
+    _frame(fig, ax, theme, title="Meta movement per patch window",
+           subtitle="Total variation between consecutive seasons · +n = units released in the window")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -389,23 +445,51 @@ def chart_patch_impact(impact: pd.DataFrame, theme: th.Theme, out: Path) -> Path
 
 # --------------------------------------------------------------------------
 
+def default_units(current: pd.DataFrame, top_n: int) -> list[str]:
+    """The strongest settled units right now, one per slot."""
+    if current.empty:
+        return []
+    settled = current[~current["provisional"].astype(str).str.lower().isin(("true", "1"))]
+    return settled.sort_values(["overall", "unit_id"], ascending=[False, True])["unit_id"].head(top_n).tolist()
+
+
+def resolve_units(queries: list[str], history: pd.DataFrame) -> list[str]:
+    from ..util.names import normalize_name
+
+    units = history.drop_duplicates("unit_id")
+    found = []
+    for query in queries:
+        key = normalize_name(query)
+        match = units[(units["name_ko"].map(normalize_name) == key) | (units["name_en"].map(normalize_name) == key)
+                      | (units["unit_id"] == query)]
+        if match.empty:
+            raise LookupError(f"no unit named {query!r} in the ranking data")
+        found.append(str(match["unit_id"].iloc[0]))
+    return found
+
+
 def render_all(
     *,
     data_dir: Path | None = None,
     out_dir: Path | None = None,
     themes: tuple[str, ...] = ("light", "dark"),
     top_n: int = 6,
+    units: list[str] | None = None,
 ) -> dict[str, Any]:
     directory = data_dir or processed_dir()
     target = out_dir or reports_dir()
     target.mkdir(parents=True, exist_ok=True)
 
+    history = _read("metrics_unit_season.csv", directory)
+    seasons = _read("metrics_seasons.csv", directory)
+    current = _read("metrics_element_tiers.csv", directory)
     shift = _read("metrics_meta_shift.csv", directory)
-    tiers_table = _read("metrics_tiers.csv", directory)
     impact = _read("metrics_patch_impact.csv", directory)
-    if tiers_table.empty and shift.empty:
+    if history.empty and shift.empty:
         raise RuntimeError("no metric tables found; run `nikke analyze` first")
+    picks = resolve_units(units, history) if units else default_units(current, top_n)
 
+    names = Names()
     written: list[str] = []
     skipped: list[str] = []
     for theme_name in themes:
@@ -413,10 +497,12 @@ def render_all(
         th.apply(theme)
         suffix = "" if theme_name == "light" else "-dark"
         jobs = [
+            ("tier-snapshot", lambda p, t=theme: chart_tier_snapshot(history, seasons, t, p, names)),
+            ("tier-trajectories", lambda p, t=theme: chart_trajectories(history, current, t, p, names, unit_ids=picks)),
+            ("tier-heatmap", lambda p, t=theme: chart_tier_heatmap(history, t, p, names)),
+            ("element-tiers", lambda p, t=theme: chart_element_tiers(current, t, p, names)),
+            ("tier-distribution", lambda p, t=theme: chart_tier_distribution(history, t, p)),
             ("meta-shift", lambda p, t=theme: chart_meta_shift(shift, t, p)),
-            ("usage-trend", lambda p, t=theme: chart_usage_trend(tiers_table, t, p, top_n=top_n)),
-            ("tier-distribution", lambda p, t=theme: chart_tier_distribution(tiers_table, t, p)),
-            ("usage-vs-performance", lambda p, t=theme: chart_usage_vs_performance(tiers_table, t, p)),
             ("patch-impact", lambda p, t=theme: chart_patch_impact(impact, t, p)),
         ]
         for name, render in jobs:
@@ -425,4 +511,5 @@ def render_all(
             (written if result else skipped).append(f"{name}{suffix}")
 
     log.info("rendered %s charts -> %s", len(written), target)
-    return {"out_dir": str(target), "written": written, "skipped_no_data": sorted(set(skipped))}
+    return {"out_dir": str(target), "written": written, "skipped_no_data": sorted(set(skipped)),
+            "korean_names": names.korean}

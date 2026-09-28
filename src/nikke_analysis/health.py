@@ -124,6 +124,31 @@ def run_issues(directory: Path, now: datetime, failures: dict[str, str] | None =
     return issues
 
 
+def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
+    """Findings about the Solo Raid rankings behind the tiers.
+
+    A name no rule matched drops that unit from every number of the seasons it
+    appears in, and a played season without rankings is a hole in every trend
+    line - neither makes the timeline wrong, so both are warnings.
+    """
+    issues = [
+        Issue(
+            "warning",
+            "ranking_name_unresolved",
+            row["name"],
+            f"{row['occurrences']}칸 · 시즌 {row['seasons']} · 후보 {row['candidates'] or '없음'} — 이 칸은 지표에서 빠진다",
+        )
+        for row in _rows(directory / "raid_unresolved_names.csv")
+    ]
+    ranked = {row["season"] for row in _rows(directory / "metrics_seasons.csv") if row.get("rankers") not in (None, "", "0")}
+    if ranked:
+        for row in _rows(directory / "soloraid_seasons.csv"):
+            end = row.get("end_at")
+            if end and row.get("enikk_first_seen") and datetime.fromisoformat(end) <= now and row["season"] not in ranked:
+                issues.append(Issue("warning", "ranking_missing", f"시즌 {row['season']}", "끝난 시즌인데 랭킹 스냅샷이 없다"))
+    return issues
+
+
 def write(directory: Path, issues: Iterable[Issue]) -> Path:
     path = directory / ISSUES_CSV
     with path.open("w", encoding="utf-8", newline="") as handle:

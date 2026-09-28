@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       seasons:
-        description: "Season numbers to collect rankings for (space separated). Empty = config default."
+        description: "Seasons whose rankings to re-read even if unchanged (space separated). Empty = only new or changed seasons."
         required: false
         default: ""
 
@@ -43,6 +43,8 @@ jobs:
 
       - name: Install
         run: |
+          # A Hangul font so the charts can name units in Korean.
+          sudo apt-get install -y --no-install-recommends fonts-nanum > /dev/null
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
@@ -64,13 +66,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # data/raw is ignored except for what cannot be re-fetched reliably:
           # the notices every date is derived from, enikk's season record and
-          # Solo Raid ranking snapshots. Collection is incremental, so a quiet
-          # week adds nothing.
+          # Solo Raid ranking snapshots. Collection is incremental: a quiet
+          # week adds nothing, a week with a season running adds that season's
+          # newest rankings.
           git add data/processed data/manual data/raw
           if git diff --staged --quiet; then
             echo "nothing changed"
           else
-            git commit -m "data: refresh notices, roster and Solo Raid calendar"
+            git commit -m "data: refresh notices, rankings, tiers and Solo Raid calendar"
             git push
           fi
 
@@ -81,6 +84,10 @@ jobs:
             echo '## 상태 점검'
             echo '```'
             nikke check || true
+            echo '```'
+            echo '## 티어'
+            echo '```'
+            nikke tier || true
             echo '```'
             echo '## 솔로 레이드 시즌'
             echo '```'

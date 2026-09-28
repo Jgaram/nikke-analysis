@@ -43,6 +43,7 @@ description in the game files.)
 
 ## `season_calendar.csv`
 
-Superseded. The Solo Raid calendar is now rebuilt from the notices into
-`data/processed/season_calendar.csv`, which the analysis stage reads first; this
-file is only a fallback when no processed calendar exists.
+Superseded, and no longer read by anything. The Solo Raid calendar is rebuilt
+from the notices, and the analysis reads `data/processed/soloraid_seasons.csv`
+(which also carries each season's boss weakness, needed for the element tiers).
+This file can be deleted.

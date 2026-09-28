@@ -16,7 +16,7 @@
     nikke collect enikk-meta         fetch Solo Raid season metadata and the unit table from enikk
     nikke probe enikk                reconnaissance on the ranking site's API
     nikke collect enikk              fetch Solo Raid rankings (new and changed seasons)
-    nikke collect icons              fetch unit faces and element/class icons not on disk yet
+    nikke collect icons              fetch unit faces and attribute icons not on disk yet
     nikke build timeline             snapshots -> roster, releases, banners, Solo Raid calendar
     nikke build roster               snapshots -> data/processed/roster.csv (names only)
     nikke build raids                snapshots -> raid_entries.csv
@@ -518,7 +518,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--full", action="store_true", help="re-read every season")
     p.set_defaults(func=cmd_collect_enikk)
 
-    p = collect.add_parser("icons", help="unit faces and element/class icons from blablalink (only missing ones)")
+    p = collect.add_parser("icons", help="unit faces and element/class/burst/manufacturer/weapon icons from blablalink (only missing ones)")
     p.add_argument("--force", action="store_true", help="re-fetch icons already on disk")
     p.set_defaults(func=cmd_collect_icons)
 

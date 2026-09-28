@@ -1,13 +1,21 @@
 """Icons from blablalink, the official NIKKE companion site.
 
-The charts draw a unit's face instead of its name, and an element or class icon
-instead of the word. Three kinds of file, all public and unauthenticated:
+The charts draw a unit's face instead of its name, and an attribute's icon
+instead of the word. All public and unauthenticated:
 
-``units/<unit_id>.webp``    the 128x128 face (``si_c<id>_00_s``) from the game
-                            resource CDN. The roster's unit id *is* the game's
-                            resource id (``010`` is Rapi), so no lookup table.
-``elements/<element>.png``  the coloured hexagon the site shows for each element.
-``classes/<class>.png``     the class glyph. One flat colour; charts tint it.
+``units/<unit_id>.webp``         the 128x128 face (``si_c<id>_00_s``) from the game
+                                 resource CDN. The roster's unit id *is* the game's
+                                 resource id (``010`` is Rapi), so no lookup table.
+``elements/<element>.png``       the coloured hexagon the site shows for each element.
+``classes/<class>.png``          the class glyph.
+``bursts/<burst>.png``           the burst stage numeral (``I``, ``II``, ``III``, and
+                                 the all-stage mark for ``I-II-III``).
+``manufacturers/<maker>.png``    the manufacturer mark. Not drawn yet - kept for later.
+``weapons/<weapon>.png``         the weapon type glyph. Not drawn yet - kept for later.
+
+Everything but the element hexagons is one flat colour; charts tint it with the
+theme's ink. Attribute files are named by the roster's spelling
+(``paths.attribute_icon_path``).
 
 The CDN hides its paths: every directory becomes a short hash token and the file
 name the md5 of the whole plain path. ``obfuscate`` is the site front end's own
@@ -32,7 +40,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Iterable
 
-from ..paths import class_icon_path, element_icon_path, icons_dir, processed_dir, unit_icon_path
+from ..paths import attribute_icon_path, icons_dir, processed_dir, unit_icon_path
 from ..util.http import Fetcher
 from .base import CollectorError
 
@@ -43,7 +51,9 @@ SITE_IMAGES = "https://www.blablalink.com/assets/nikke/version/default/shiftysas
 
 UNIT_ICON = "/character/si/si_c{rid:03d}_00_s.webp"
 
-# The roster's spelling -> the site's file names.
+# The roster's spelling -> the site's file names, per attribute folder. The
+# site's own names come from its front end (``icon-code-${element}``,
+# ``icon-burst-${step}`` with ``p`` for all stages, ``icon-weapon-${type}``...).
 ELEMENT_FILES = {
     "Fire": "icon-code-fire.png",
     "Water": "icon-code-water.png",
@@ -55,6 +65,36 @@ CLASS_FILES = {
     "Attacker": "icon-job-attacker.png",
     "Defender": "icon-job-defender.png",
     "Supporter": "icon-job-supporter.png",
+}
+BURST_FILES = {
+    "I": "icon-burst-1.png",
+    "II": "icon-burst-2.png",
+    "III": "icon-burst-3.png",
+    "I-II-III": "icon-burst-p.png",
+}
+MANUFACTURER_FILES = {
+    "Elysion": "icon-manufacturer-elysion.png",
+    "Missilis Industry": "icon-manufacturer-missilis.png",
+    "Tetra Line": "icon-manufacturer-tetra.png",
+    "Pilgrim": "icon-manufacturer-pilgrim.png",
+    "Abnormal": "icon-manufacturer-abnormal.png",
+}
+WEAPON_FILES = {
+    "Assault Rifle": "icon-weapon-assault_rifle.png",
+    "Machine Gun": "icon-weapon-machine_gun.png",
+    "Shotgun": "icon-weapon-shot_gun.png",
+    "Rocket Launcher": "icon-weapon-rocket_launcher.png",
+    "Sub Machine Gun": "icon-weapon-sub_machine_gun.png",
+    "Sniper Rifle": "icon-weapon-sniper_rifle.png",
+}
+
+# Folder -> (roster column, roster value -> site file).
+ATTRIBUTE_ICONS = {
+    "elements": ("element", ELEMENT_FILES),
+    "classes": ("unit_class", CLASS_FILES),
+    "bursts": ("burst", BURST_FILES),
+    "manufacturers": ("manufacturer", MANUFACTURER_FILES),
+    "weapons": ("weapon", WEAPON_FILES),
 }
 
 # The front end's LARGE_PRIMES, one per directory depth.
@@ -123,9 +163,12 @@ def roster_unit_ids(directory: Path | None = None) -> list[str]:
 
 
 def targets(unit_ids: Iterable[str], directory: Path) -> list[tuple[str, str, Path]]:
-    """(label, url, destination) for every icon the charts can ask for."""
-    out = [(f"element:{e}", site_image_url(name), element_icon_path(e, directory)) for e, name in ELEMENT_FILES.items()]
-    out += [(f"class:{c}", site_image_url(name), class_icon_path(c, directory)) for c, name in CLASS_FILES.items()]
+    """(label, url, destination) for every attribute icon and every unit's face."""
+    out = [
+        (f"{kind}:{value}", site_image_url(name), attribute_icon_path(kind, value, directory))
+        for kind, (_, files) in ATTRIBUTE_ICONS.items()
+        for value, name in files.items()
+    ]
     out += [(unit_id, unit_icon_url(unit_id), unit_icon_path(unit_id, directory)) for unit_id in sorted(set(unit_ids))]
     return out
 
@@ -137,7 +180,7 @@ def collect_icons(
     fetcher: Fetcher | None = None,
     force: bool = False,
 ) -> IconResult:
-    """Fetch every icon not on disk yet: each roster unit's face, every element and class.
+    """Fetch every icon not on disk yet: each roster unit's face and every attribute icon.
 
     ``unit_ids`` defaults to every unit in ``roster.csv``. ``force`` re-fetches
     files that exist. Raises when an icon could not be fetched for any reason
@@ -158,8 +201,8 @@ def collect_icons(
             failed.append(f"{label}: {exc}")
             continue
         if response.status in NOT_THERE:
-            # Only a unit can be "not there yet"; a missing element or class
-            # icon means the site moved its assets.
+            # Only a unit can be "not there yet"; a missing attribute icon
+            # means the site moved its assets.
             if ":" in label:
                 failed.append(f"{label}: {url} -> HTTP {response.status}")
             else:

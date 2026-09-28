@@ -43,7 +43,7 @@ def manual_dir() -> Path:
 
 
 def icons_dir() -> Path:
-    """Unit, element and class icons the charts draw instead of names. Committed.
+    """Unit faces and attribute icons the charts draw instead of names. Committed.
 
     Unlike ``raw/`` this is not a dated snapshot: one file per unit, fetched once
     and kept, so a fresh clone draws the same charts without the network.
@@ -56,14 +56,30 @@ def unit_icon_path(unit_id: str, directory: Path | None = None) -> Path:
     return (directory or icons_dir()) / "units" / f"{unit_id}.webp"
 
 
+def attribute_icon_path(kind: str, value: str, directory: Path | None = None) -> Path:
+    """An attribute's icon, by the roster's spelling of the value.
+
+    ``kind`` is the folder: ``elements``, ``classes``, ``bursts``,
+    ``manufacturers`` or ``weapons``. The file is the value in lower case with
+    spaces as hyphens: ``Tetra Line`` -> ``manufacturers/tetra-line.png``,
+    ``I-II-III`` -> ``bursts/i-ii-iii.png``.
+    """
+    return (directory or icons_dir()) / kind / f"{value.strip().lower().replace(' ', '-')}.png"
+
+
 def element_icon_path(element: str, directory: Path | None = None) -> Path:
-    """An element's icon, by the roster's spelling (``Fire`` ... ``Electric``)."""
-    return (directory or icons_dir()) / "elements" / f"{element.lower()}.png"
+    """An element's icon (``Fire`` ... ``Electric``)."""
+    return attribute_icon_path("elements", element, directory)
 
 
 def class_icon_path(unit_class: str, directory: Path | None = None) -> Path:
-    """A class's icon, by the roster's spelling (``Attacker`` ...)."""
-    return (directory or icons_dir()) / "classes" / f"{unit_class.lower()}.png"
+    """A class's icon (``Attacker`` ...)."""
+    return attribute_icon_path("classes", unit_class, directory)
+
+
+def burst_icon_path(burst: str, directory: Path | None = None) -> Path:
+    """A burst stage's icon (``I``, ``II``, ``III``, ``I-II-III``)."""
+    return attribute_icon_path("bursts", burst, directory)
 
 
 def reports_dir() -> Path:

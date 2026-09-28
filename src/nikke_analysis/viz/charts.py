@@ -13,11 +13,11 @@ Seven charts, each answering one question:
 Every chart is rendered in both light and dark. The dark version uses its own
 validated steps rather than an inverted copy of the light one.
 
-Units are drawn as their faces, elements and classes as their icons
-(``data/assets/icons/``, fetched by ``nikke collect icons``), so no chart spells
-out a unit's name or an element. A unit whose face is not on disk yet falls
-back to its name - in Korean when a Hangul font is installed, in English
-otherwise - and so does an element or class without its icon.
+Units are drawn as their faces, and elements, classes and burst stages as
+their icons (``data/assets/icons/``, fetched by ``nikke collect icons``), so no
+chart spells out a unit's name or an element. A unit whose face is not on disk
+yet falls back to its name - in Korean when a Hangul font is installed, in
+English otherwise - and so does an attribute without its icon.
 
 Charts of another server sample (``nikke viz --exclude NA``) say so at the end
 of every subtitle, so a copied image does not pass for the whole population.
@@ -141,16 +141,26 @@ def _element_part(icons: Icons, element: Any, height_pt: float, *, word: str = "
     return word.format(element) if isinstance(element, str) and element else ""
 
 
+def _burst_part(icons: Icons, burst: Any, height_pt: float) -> Any:
+    """A burst stage's numeral as its icon, or as text when there is none."""
+    image = icons.burst(burst)
+    if image is not None:
+        return (image, height_pt)
+    return burst if isinstance(burst, str) else ""
+
+
 def _unit_parts(icons: Icons, names: Names, row: Any, face_pt: float) -> list:
-    """A unit as its face with its element beside it, or its name and element initial."""
+    """A unit as its face with its element and burst stage beside it; its name
+    and element initial when the face is missing."""
     face = icons.face(str(row.get("unit_id", "")))
     element = row.get("element")
+    burst = _burst_part(icons, row.get("burst"), face_pt * 0.5)
     if face is not None:
-        return [(face, face_pt), _element_part(icons, element, face_pt * 0.62)]
+        return [(face, face_pt), _element_part(icons, element, face_pt * 0.62), burst]
     tag = _element_part(icons, element, face_pt * 0.62, word="")
     if not tag and isinstance(element, str) and element:
         tag = f"({ELEMENT_INITIAL.get(element, '?')})"
-    return [names(row), tag]
+    return [names(row), tag, burst]
 
 
 def _label_rows(ax, theme: th.Theme, rows: list[list], *, face_pt: float, fontsize: float = 8.5) -> None:
@@ -213,7 +223,7 @@ def chart_tier_snapshot(history: pd.DataFrame, seasons: pd.DataFrame, theme: th.
     boss = meta.get("boss_en") if isinstance(meta.get("boss_en"), str) else "?"
     _frame(fig, ax, theme, title=f"Season {season} tiers",
            subtitle=[f"{boss} · weak to", _element_part(icons, meta.get("weak_element"), 13) or "?",
-                     "· bar = lift that season (colour = tier) · beside each face = its element"])
+                     "· bar = lift that season (colour = tier) · beside each face = its element and burst"])
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -263,7 +273,8 @@ def chart_trajectories(history: pd.DataFrame, current: pd.DataFrame, theme: th.T
         klass = icons.unit_class(info.get("unit_class"))
         parts = [(face, 30) if face is not None else names(info),
                  _element_part(icons, info.get("element"), 17),
-                 (klass, 15) if klass is not None else str(info.get("unit_class", "") or "")]
+                 (klass, 15) if klass is not None else str(info.get("unit_class", "") or ""),
+                 _burst_part(icons, info.get("burst"), 13)]
         if isinstance(best_el, str) and best_el:
             parts += ["·  best when the boss is weak to", _element_part(icons, best_el, 14)]
         place(ax, line(parts, height_pt=14, fontsize=10, color=theme.ink_secondary, sep_pt=4), (0, 1),
@@ -343,7 +354,7 @@ def chart_tier_heatmap(history: pd.DataFrame, theme: th.Theme, out: Path, names:
               frameon=False, handlelength=1.2)
     _frame(fig, ax, theme, title=f"Every season's tiers — units at S or better in {min_seasons}+ seasons",
            subtitle="Rows by release date · top row = the element each season's boss was weak to "
-                    "· beside each face = the unit's own element")
+                    "· beside each face = the unit's own element and burst")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -414,7 +425,7 @@ def chart_element_tiers(current: pd.DataFrame, theme: th.Theme, out: Path, names
               handlelength=1.2)
     _frame(fig, ax, theme, title="Element tiers — worth against each boss weakness",
            subtitle=f"Recent seasons weigh more (half-life {config.half_life_days:g} days) · "
-                    "letter after each face = role: U universal, H hybrid, S specialist, ? undetermined")
+                    "beside each face: element, burst, role (U universal, H hybrid, S specialist, ? undetermined)")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out

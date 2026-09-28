@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
-from .paths import class_icon_path, element_icon_path, icons_dir, processed_dir, unit_icon_path
+from .paths import attribute_icon_path, icons_dir, processed_dir, unit_icon_path
 
 ISSUES_CSV = "timeline_issues.csv"
 
@@ -159,12 +159,16 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
 
 
 def icon_issues(directory: Path, icons: Path | None = None) -> list[Issue]:
-    """Units the charts draw by name because their face is not on disk.
+    """Icons the charts or the icon set are missing.
 
-    Only units in the rankings count - those are the ones a chart shows. A new
-    unit's face usually reaches the CDN with its release, so this clears itself
-    on the next run; one that stays means ``nikke collect icons`` is failing or
-    the CDN changed its paths.
+    * a ranked unit without a face - the charts draw it by name. Only units in
+      the rankings count, those are the ones a chart shows. A new unit's face
+      usually reaches the CDN with its release, so this clears itself on the
+      next run; one that stays means ``nikke collect icons`` is failing or the
+      CDN changed its paths.
+    * an attribute icon missing from disk.
+    * a roster value no site icon is mapped to (a new weapon type, a renamed
+      manufacturer) - add it to ``collect/blablalink.py``.
     """
     icons = icons or icons_dir()
     issues = []
@@ -176,14 +180,16 @@ def icon_issues(directory: Path, icons: Path | None = None) -> list[Issue]:
         if not unit_icon_path(unit_id, icons).is_file():
             issues.append(Issue("warning", "unit_icon_missing", name,
                                 f"id {unit_id} 얼굴 아이콘 없음 — 차트에 이름으로 나온다 (nikke collect icons)"))
-    from .collect.blablalink import CLASS_FILES, ELEMENT_FILES
+    from .collect.blablalink import ATTRIBUTE_ICONS
 
-    for element in ELEMENT_FILES:
-        if not element_icon_path(element, icons).is_file():
-            issues.append(Issue("warning", "icon_missing", element, "속성 아이콘 없음 — 차트에 글자로 나온다"))
-    for unit_class in CLASS_FILES:
-        if not class_icon_path(unit_class, icons).is_file():
-            issues.append(Issue("warning", "icon_missing", unit_class, "클래스 아이콘 없음 — 차트에 글자로 나온다"))
+    roster = _rows(directory / "roster.csv")
+    for kind, (column, files) in ATTRIBUTE_ICONS.items():
+        for value in files:
+            if not attribute_icon_path(kind, value, icons).is_file():
+                issues.append(Issue("warning", "icon_missing", f"{kind}/{value}", "아이콘 없음 (nikke collect icons)"))
+        for value in sorted({row.get(column, "") for row in roster} - set(files) - {""}):
+            issues.append(Issue("warning", "icon_unmapped", f"{kind}/{value}",
+                                f"로스터의 {column} 값에 대응하는 아이콘이 없다 — collect/blablalink.py 에 추가"))
     return issues
 
 

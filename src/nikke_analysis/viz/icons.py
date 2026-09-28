@@ -1,6 +1,6 @@
-"""Icons in place of words: a unit's face, its element, its class.
+"""Icons in place of words: a unit's face, its element, class and burst stage.
 
-A chart asks for an icon by unit id, element or class and gets an RGBA array, or
+A chart asks for an icon by unit id or attribute value and gets an RGBA array, or
 ``None`` when the file is not on disk (``nikke collect icons`` fetches them). The
 chart then writes the word as before, so a unit whose face the CDN does not have
 yet still reads - it is just the one row with a name in it.
@@ -19,7 +19,7 @@ import numpy as np
 from matplotlib.colors import to_rgb
 from matplotlib.offsetbox import AnnotationBbox, HPacker, OffsetImage, TextArea
 
-from ..paths import class_icon_path, element_icon_path, icons_dir, unit_icon_path
+from ..paths import burst_icon_path, class_icon_path, element_icon_path, icons_dir, unit_icon_path
 from .theme import Theme
 
 # Share of the face's side rounded off each corner - the charts' marks have
@@ -64,6 +64,25 @@ def _round_corners(rgba: np.ndarray, share: float) -> np.ndarray:
     return out
 
 
+def _pad_width(rgba: np.ndarray, width: int) -> np.ndarray:
+    """Centre a glyph on a transparent canvas ``width`` pixels wide.
+
+    The burst numerals run from a narrow I to a wide III; on one canvas every
+    row label has the same width and the faces stay in one column.
+    """
+    height, current = rgba.shape[:2]
+    if current >= width:
+        return rgba
+    out = np.zeros((height, width, 4), dtype=rgba.dtype)
+    left = (width - current) // 2
+    out[:, left:left + current] = rgba
+    return out
+
+
+# As wide as the widest burst glyph the site ships (III and the all-stage mark, 40px).
+BURST_CANVAS = 40
+
+
 class Icons:
     """The icons one chart theme draws, with the units that had to fall back to names."""
 
@@ -83,11 +102,19 @@ class Icons:
         return _read(element_icon_path(element, self.directory)) if isinstance(element, str) and element else None
 
     def unit_class(self, unit_class: object) -> np.ndarray | None:
-        """The class glyph is one flat grey; draw it in the theme's secondary ink so
-        it reads on the dark surface as well as the light one."""
         if not (isinstance(unit_class, str) and unit_class):
             return None
-        image = _read(class_icon_path(unit_class, self.directory))
+        return self._glyph(_read(class_icon_path(unit_class, self.directory)))
+
+    def burst(self, burst: object) -> np.ndarray | None:
+        if not (isinstance(burst, str) and burst):
+            return None
+        image = self._glyph(_read(burst_icon_path(burst, self.directory)))
+        return None if image is None else _pad_width(image, BURST_CANVAS)
+
+    def _glyph(self, image: np.ndarray | None) -> np.ndarray | None:
+        """Class and burst glyphs are one flat colour (grey or white); draw them in
+        the theme's secondary ink so they read on either surface."""
         if image is None:
             return None
         tinted = image.copy()

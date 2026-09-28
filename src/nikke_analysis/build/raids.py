@@ -24,6 +24,12 @@ context, in order: only a unit already released when the season started; then th
 burst stage the rest of the deck is missing (a deck needs I, II and III to burst);
 then the element the boss is weak to. Anything still undecided is reported, not
 guessed: a mis-joined name would corrupt every usage number it touches.
+
+Context is a guess all the same, and for ``Rei`` it guessed wrong: the site's
+``Rei`` is 레이 (Ayanami Rei), in Water-weak seasons too. So a name whose meaning
+is known is pinned by hand in data/manual/ranking_names.csv. A pin holds from
+the pinned unit's release on; before it (``Rei`` before 2024-08-29) the name is
+settled from context as above.
 """
 
 from __future__ import annotations
@@ -37,9 +43,9 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from ..config import RankingMapping
-from ..paths import processed_dir
+from ..paths import manual_dir, processed_dir
 from ..util.jsonpath import resolve_one, resolve_path
-from ..util.names import NameIndex, normalize_name
+from ..util.names import NameIndex, normalize_name, normalize_unit_id
 from ..util.snapshot import SnapshotRun, list_runs
 from .roster import load_alias_index
 
@@ -48,6 +54,7 @@ log = logging.getLogger(__name__)
 SOURCE = "enikk_soloraid"
 ENTRIES_CSV = "raid_entries.csv"
 UNRESOLVED_CSV = "raid_unresolved_names.csv"
+RANKING_NAMES_CSV = "ranking_names.csv"
 BURST_STAGES = ("I", "II", "III")
 
 __all__ = ["RaidEntry", "UnitResolver", "build", "parse_document", "resolve_one", "resolve_path"]
@@ -114,18 +121,36 @@ class UnitFacts:
     burst: str
 
 
+def load_ranking_names(path: Path | None = None) -> dict[str, str]:
+    """Which unit a name in the rankings means, from data/manual/ranking_names.csv
+    (``name``, ``unit_id``, ``reason``), keyed by the normalised name. A row naming
+    no name or no unit is skipped."""
+    target = path or (manual_dir() / RANKING_NAMES_CSV)
+    if not target.is_file():
+        return {}
+    with target.open(encoding="utf-8", newline="") as handle:
+        return {
+            normalize_name(row["name"]): normalize_unit_id(row["unit_id"])
+            for row in csv.DictReader(handle)
+            if (row.get("name") or "").strip() and (row.get("unit_id") or "").strip()
+        }
+
+
 class UnitResolver:
-    """Name -> unit id, using the deck and the season when a name is shared."""
+    """Name -> unit id, using the deck and the season when a name is shared, and
+    the hand-kept ``pins`` (normalised name -> unit id) where context is not enough."""
 
     def __init__(
         self,
         index: NameIndex,
         units: dict[str, UnitFacts] | None = None,
         seasons: dict[int, dict[str, str]] | None = None,
+        pins: dict[str, str] | None = None,
     ):
         self.index = index
         self.units = units or {}
         self.seasons = seasons or {}
+        self.pins = pins or {}
 
     @classmethod
     def load(cls, directory: Path | None = None) -> "UnitResolver":
@@ -142,10 +167,20 @@ class UnitResolver:
             for row in _csv_rows(directory / "soloraid_seasons.csv")
             if row.get("season", "").isdigit()
         }
-        return cls(index, units, seasons)
+        return cls(index, units, seasons, load_ranking_names())
 
     def direct(self, name: str) -> str | None:
         return self.index.resolve(name)
+
+    def pinned(self, name: str, season: int) -> str | None:
+        """The unit ``name`` is pinned to, once that unit had been released by the
+        season's start; ``None`` before then or for a name with no pin."""
+        unit_id = self.pins.get(normalize_name(name))
+        if unit_id is None:
+            return None
+        start = self.seasons.get(season, {}).get("start", "")
+        released = self.units[unit_id].release_date if unit_id in self.units else ""
+        return unit_id if not start or (released and released <= start) else None
 
     def candidates(self, name: str) -> set[str]:
         return self.index.candidates(name)
@@ -225,7 +260,7 @@ def parse_document(
                 continue
             cps = resolve_one(deck, mapping.deck_unit_cp)
             cores = resolve_one(deck, mapping.deck_unit_cores)
-            ids: list[str | None] = [resolver.direct(str(name)) for name in names]
+            ids: list[str | None] = [resolver.pinned(str(name), season) or resolver.direct(str(name)) for name in names]
             for slot, name in enumerate(names):
                 if ids[slot] is not None:
                     continue

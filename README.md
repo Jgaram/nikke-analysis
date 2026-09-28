@@ -36,7 +36,7 @@
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 | 작업 반영 | ✅ 브랜치는 `main` 하나. 세션 브랜치(`claude/*`)에 push 하면 테스트 통과 후 main 에 자동 병합, 브랜치 삭제 (`.github/workflows/merge-to-main.yml`) |
 
-`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 263개.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 265개.
 
 ---
 
@@ -337,7 +337,7 @@ nikke refresh        # 또는 python -m nikke_analysis refresh
 | 시즌 번호 충돌 | 오류 | 두 일정이 같은 시즌으로 묶임 |
 | 공지에서 못 푼 니케 이름 | 경고 | 새 콜라보의 표기 → 다음 게임 파일 갱신 때 자동 해소되거나 별칭 1줄 추가 |
 | 공지 기반 출시일이 없는 니케 | 경고 | 지금은 알려진 6명 |
-| 랭킹에서 못 맞춘 니케 이름 | 경고 | 시즌 19·20·23의 `Rei` 7칸 (라이인지 레이인지 문맥으로도 못 정함) |
+| 랭킹에서 못 맞춘 니케 이름 | 경고 | 로스터에 아직 없는 새 니케 → 다음 로스터 갱신 때 자동 해소되거나, 두 니케가 같이 쓰는 이름이면 `data/manual/ranking_names.csv` 1줄 |
 | enikk 와 일정·속성 불일치 | 경고 | 공지되지 않은 연장? |
 
 오류가 있으면 `nikke refresh` 와 `nikke check` 가 종료 코드 1로 끝나고, CI 는 받은
@@ -499,6 +499,7 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 |---|---|
 | `data/manual/release_overrides.csv` | 출시일 수동 보정 (사유 필수, 공지 기반 날짜보다 우선) |
 | `data/manual/unit_aliases.csv` | 자동으로 못 찾는 표기의 수동 별칭 |
+| `data/manual/ranking_names.csv` | 랭킹 사이트의 이름이 어느 니케인지 (사유 필수) — 두 니케가 같이 쓰는 이름을 문맥 대신 정한다. 지금은 `Rei` = 레이(아야나미 레이) |
 | `data/manual/extra_elements.csv` | 스킬로 우월 코드가 하나 더 있는 니케와 그 속성 (사유 필수) — 두 속성 모두에서 티어를 받는다. 애장품으로 생긴 것은 `since` 에 `treasure` |
 | `config/tiers.yaml` | 티어 컷, 모집단(쓸 서버·뺄 서버·순위·가중), 속성·종합 티어의 최근성·종합 방식·진행 중 시즌 반영 — 인자 전체는 [docs/metrics.md](docs/metrics.md#조정-가능한-인자-configtiersyaml) |
 | `config/enikk.yaml` | 랭킹 GraphQL 쿼리와 응답 필드 위치 |

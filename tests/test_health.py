@@ -139,6 +139,18 @@ def test_a_treasure_row_is_checked_too_and_so_is_its_since(tmp_path):
                                                      ("extra_element_unknown_since", "140")]
 
 
+def test_a_ranking_pin_to_a_unit_the_roster_lacks_is_a_warning(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    write(processed / "roster.csv", [roster_row("831", "레이", "patchnote")])
+    manual = tmp_path / "manual"
+    manual.mkdir()
+    (manual / "ranking_names.csv").write_text("name,unit_id,reason\nRei,831,레이\nSakura,999,오타\n",
+                                              encoding="utf-8")
+    issues = health.manual_issues(processed, manual)
+    assert [(i.code, i.subject) for i in issues] == [("ranking_name_unknown_unit", "999")]
+
+
 def test_the_committed_skill_elements_name_units_of_the_committed_roster():
     from nikke_analysis import paths
     from nikke_analysis.build.roster import load_extra_elements

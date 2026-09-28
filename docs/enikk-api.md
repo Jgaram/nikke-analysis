@@ -98,7 +98,8 @@ curl -sS -X POST https://enikk.app/api/graphql \
 
 영어 표시 이름을 준다 — `Rapi: Red Hood`, `Dorothy: Serendipity`, `2B`, `Queen (Makoto)`.
 로스터 별칭 표로 거의 전부 1:1로 맞는다. 예외는 **두 니케가 같이 쓰는 이름 둘**
-(`Rei` = 라이 392 / 레이 831, `Sakura` = 사쿠라 282 / 836)이고, 규칙으로 가른다 —
+(`Rei` = 라이 392 / 레이 831, `Sakura` = 사쿠라 282 / 836)이다. 사이트의 `Rei` 는
+레이(아야나미 레이)로 정해 두고, 나머지는 규칙으로 가른다 —
 [enikk-setup.md의 이름 매칭](enikk-setup.md#이름-매칭).
 
 ## 수집 매너

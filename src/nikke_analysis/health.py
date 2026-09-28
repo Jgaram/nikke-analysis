@@ -144,7 +144,8 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
             "warning",
             "ranking_name_unresolved",
             row["name"],
-            f"{row['occurrences']}칸 · 시즌 {row['seasons']} · 후보 {row['candidates'] or '없음'} — 이 칸은 지표에서 빠진다",
+            f"{row['occurrences']}칸 · 시즌 {row['seasons']} · 후보 {row['candidates'] or '없음'} — 이 칸은 지표에서 빠진다"
+            + (" (어느 니케인지 알면 data/manual/ranking_names.csv 에)" if row["candidates"] else ""),
         )
         for row in _rows(directory / "raid_unresolved_names.csv")
     ]
@@ -198,8 +199,10 @@ def icon_issues(directory: Path, icons: Path | None = None) -> list[Issue]:
 
 def manual_issues(directory: Path, manual: Path | None = None) -> list[Issue]:
     """Hand-kept rows that point at nothing: a unit id in data/manual/extra_elements.csv
-    the roster does not have, or a ``since`` the build does not know. A typo there
-    would quietly leave the unit in its own element only."""
+    or data/manual/ranking_names.csv the roster does not have, or a ``since`` the
+    build does not know. A typo there would quietly leave the unit in its own
+    element only, or a ranking name to the guess the pin was meant to replace."""
+    from .build.raids import RANKING_NAMES_CSV, load_ranking_names
     from .build.roster import EXTRA_SINCE, load_extra_elements
 
     roster = {row["unit_id"] for row in _rows(directory / "roster.csv")}
@@ -215,6 +218,10 @@ def manual_issues(directory: Path, manual: Path | None = None) -> list[Issue]:
         if since.lower() not in EXTRA_SINCE:
             issues.append(Issue("warning", "extra_element_unknown_since", row.get("unit_id", ""),
                                 f"data/manual/extra_elements.csv 의 since {since!r} — 비우거나 treasure 로"))
+    pins = load_ranking_names((manual or manual_dir()) / RANKING_NAMES_CSV)
+    issues += [Issue("warning", "ranking_name_unknown_unit", unit_id,
+                     "data/manual/ranking_names.csv 의 id 가 로스터에 없다 — 오타인지 확인")
+               for unit_id in sorted(set(pins.values()) - roster)]
     return issues
 
 

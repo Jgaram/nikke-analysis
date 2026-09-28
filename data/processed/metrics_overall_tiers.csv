@@ -9,7 +9,7 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 8,355,앵커 : 이노센트 메이드,Anchor: Innocent Maid,Water,,,0.772296,B,False,5,20,41,False,II,Supporter,SSR,2025-02-06
 9,223,나유타,Nayuta,Wind,,,0.768176,B,False,5,11,41,False,II,Supporter,SSR,2025-10-30
 10,600,민트,Mint,Iron,,,0.735806,B,False,4,5,41,False,II,Supporter,SSR,2026-05-14
-11,082,리타,Liter,Iron,,,0.723833,B,False,5,41,41,False,I,Supporter,SSR,2022-11-04
+11,082,리타,Liter,Iron,,,0.723827,B,False,5,41,41,False,I,Supporter,SSR,2022-11-04
 12,352,헬름,Helm,Water,,,0.716378,B,False,5,20,41,True,III,Attacker,SSR,2022-11-10
 13,281,목단,Moran,Electric,,,0.665933,B,False,5,8,41,True,I,Defender,SSR,2024-01-25
 14,601,프리카,Prika,Water,,,0.651704,B,False,4,5,41,False,II,Supporter,SSR,2026-05-28
@@ -27,7 +27,7 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 26,225,홍련 : 흑영,Scarlet: Black Shadow,Wind,,,0.455269,C,False,5,33,41,False,III,Attacker,SSR,2024-01-01
 27,074,솔린 : 프로스트 티켓,Soline: Frost Ticket,Water,,,0.422955,C,False,5,10,41,False,I,Supporter,SSR,2025-11-20
 28,140,슈가,Sugar,Iron,,Water,0.419864,C,True,2,2,41,True,III,Attacker,SSR,2022-11-04
-29,514,그레이브,Grave,Fire,,,0.410461,C,False,5,23,41,False,II,Supporter,SSR,2024-11-07
+29,514,그레이브,Grave,Fire,,,0.410455,C,False,5,23,41,False,II,Supporter,SSR,2024-11-07
 30,583,아르카나 : 포츈 메이트,Arcana: Fortune Mate,Fire,,,0.41023,C,False,5,7,41,False,II,Attacker,SSR,2026-03-19
 31,840,에이다,Ada,Electric,,,0.398221,C,False,5,12,41,False,III,Attacker,SSR,2025-09-24
 32,075,디젤 : 윈터 스위츠,Diesel: Winter Sweets,Fire,,,0.362642,C,False,5,10,41,False,III,Attacker,SSR,2025-12-04
@@ -40,14 +40,14 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 39,015,아니스 : 스파클링 서머,Anis: Sparkling Summer,Electric,,,0.296153,C,False,5,38,41,False,III,Supporter,SSR,2023-08-03
 40,450,나가,Naga,Electric,,,0.277174,C,False,5,36,41,False,II,Supporter,SSR,2023-10-05
 41,073,브리드 : 사일런트 트랙,Brid: Silent Track,Fire,,,0.270865,C,False,5,10,41,False,II,Supporter,SSR,2025-12-11
-42,043,D : 킬러 와이프,D: Killer Wife,Fire,,,0.269799,C,False,5,31,41,False,I,Supporter,SSR,2024-03-07
+42,043,D : 킬러 와이프,D: Killer Wife,Fire,,,0.269769,C,False,5,31,41,False,I,Supporter,SSR,2024-03-07
 43,850,이브,EVE,Iron,,,0.26928,C,False,5,16,41,False,III,Attacker,SSR,2025-06-12
 44,018,네온 : 비전 아이,Neon: Vision Eye,Electric,,,0.254744,C,False,5,6,41,False,III,Attacker,SSR,2026-04-30
 45,183,메이든 : 아이스 로즈,Maiden: Ice Rose,Electric,,,0.252329,C,False,5,22,41,False,III,Defender,SSR,2024-12-05
 46,835,아스카 : WILLE,Asuka: WILLE,Wind,,,0.242433,C,False,5,19,41,False,III,Attacker,SSR,2025-02-20
 47,231,이사벨,Isabel,Electric,,,0.241901,C,False,5,41,41,False,III,Attacker,SSR,2022-11-04
 48,411,플로라,Flora,Electric,,,0.241597,C,True,2,2,41,True,II,Supporter,SSR,2024-11-21
-49,260,모더니아,Modernia,Fire,,,0.218382,C,False,5,41,41,False,III,Attacker,SSR,2023-01-01
+49,260,모더니아,Modernia,Fire,,,0.218337,C,False,5,41,41,False,III,Attacker,SSR,2023-01-01
 50,871,유키코,Yukiko,Fire,,,0.218235,C,True,2,2,41,False,III,Attacker,SSR,2026-08-20
 51,870,퀸(마코토),Queen (Makoto),Fire,,,0.218219,C,True,2,2,41,False,III,Attacker,SSR,2026-08-13
 52,316,벨벳,Velvet,Wind,,,0.217498,C,False,5,8,41,False,II,Supporter,SSR,2026-01-29
@@ -57,15 +57,15 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 56,391,아인,Ein,Electric,,,0.190971,D,False,5,26,41,False,III,Attacker,SSR,2024-07-25
 57,353,헬름 : 아쿠아마린,Helm: Aquamarine,Iron,,,0.188347,D,False,5,38,41,False,II,Attacker,SSR,2023-08-10
 58,851,레이븐,Raven,Iron,,,0.188135,D,False,5,16,41,False,III,Attacker,SSR,2025-06-19
-59,431,볼륨,Volume,Wind,,,0.184762,D,False,5,41,41,False,I,Attacker,SSR,2022-11-04
+59,431,볼륨,Volume,Wind,,,0.184758,D,False,5,41,41,False,I,Attacker,SSR,2022-11-04
 60,314,소다 : 트윙클링 바니,Soda: Twinkling Bunny,Iron,,,0.174071,D,False,5,28,41,False,III,Attacker,SSR,2024-05-30
 61,270,블랑,Blanc,Wind,,,0.172908,D,False,5,40,41,False,II,Defender,SSR,2023-05-18
-62,832,마리,Mari,Electric,,,0.163178,D,False,5,25,41,False,II,Supporter,SSR,2024-09-05
+62,832,마리,Mari,Electric,,,0.163133,D,False,5,25,41,False,II,Supporter,SSR,2024-09-05
 63,580,팬텀,Phantom,Water,,,0.154468,D,True,2,2,41,True,III,Attacker,SSR,2024-10-10
 64,520,브래디,Bready,Water,,,0.150772,D,False,5,18,41,False,III,Attacker,SSR,2025-03-27
-65,390,츠바이,Zwei,Electric,,,0.142726,D,False,5,8,41,True,I,Supporter,SSR,2024-08-08
-66,220,스노우 화이트,Snow White,Iron,,,0.142424,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
-67,831,레이,Rei,Fire,,,0.139725,D,False,5,25,41,False,III,Attacker,SSR,2024-08-29
+65,831,레이,Rei,Fire,,,0.144536,D,False,5,25,41,False,III,Attacker,SSR,2024-08-29
+66,390,츠바이,Zwei,Electric,,,0.142726,D,False,5,8,41,True,I,Supporter,SSR,2024-08-08
+67,220,스노우 화이트,Snow White,Iron,,,0.142424,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
 68,271,누아르,Noir,Wind,,,0.137827,D,False,5,40,41,False,III,Attacker,SSR,2023-05-25
 69,283,로산나 : 시크 오션,Rosanna: Chic Ocean,Wind,,,0.126218,D,False,5,27,41,False,II,Supporter,SSR,2024-07-11
 70,860,치사토,Chisato,Iron,,,0.122833,D,False,5,8,41,False,III,Attacker,SSR,2026-02-12
@@ -76,15 +76,15 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 75,222,홍련,Scarlet,Electric,,,0.102348,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
 76,143,밀크 : 블루밍 바니,Milk: Blooming Bunny,Iron,,,0.08646,D,False,5,13,41,False,III,Attacker,SSR,2025-09-11
 77,210,엑시아,Exia,Electric,,,0.07924,D,False,5,28,41,True,I,Supporter,SSR,2022-11-04
-78,233,도로시,Dorothy,Water,,,0.068467,D,False,5,41,41,False,I,Supporter,SSR,2023-04-27
+78,233,도로시,Dorothy,Water,,,0.06846,D,False,5,41,41,False,I,Supporter,SSR,2023-04-27
 79,284,사쿠라 : 블룸 인 서머,Sakura: Bloom in Summer,Wind,,,0.068065,D,False,5,27,41,False,III,Attacker,SSR,2024-07-04
 80,202,도라,Dolla,Wind,,,0.067215,D,False,5,41,41,False,II,Supporter,SSR,2022-11-04
-81,290,마나,Mana,Wind,,,0.06156,D,False,5,20,41,False,III,Attacker,SSR,2025-01-16
+81,290,마나,Mana,Wind,,,0.061554,D,False,5,20,41,False,III,Attacker,SSR,2025-01-16
 82,382,레오나,Leona,Water,,,0.049992,D,False,5,32,41,False,II,Supporter,SSR,2024-01-11
 83,412,트리나,Trina,Electric,,,0.049134,D,False,5,18,41,False,II,Supporter,SSR,2025-03-13
 84,023,델타 : 닌자 시프,Delta: Ninja Thief,Water,,,0.046015,D,False,5,11,41,False,II,Defender,SSR,2025-10-16
 85,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,Electric,,,0.043801,D,False,5,32,41,False,III,Attacker,SSR,2024-02-05
-86,830,아스카,Asuka,Fire,,,0.035269,D,False,5,25,41,False,III,Attacker,SSR,2024-08-22
+86,830,아스카,Asuka,Fire,,,0.035225,D,False,5,25,41,False,III,Attacker,SSR,2024-08-22
 87,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,Water,,,0.034394,D,False,5,22,41,False,III,Attacker,SSR,2024-12-12
 88,841,질,Jill,Electric,,,0.031978,D,False,5,12,41,False,III,Attacker,SSR,2025-10-02
 89,810,2B,2B,Fire,,,0.026635,D,False,5,37,41,False,III,Defender,SSR,2023-09-01
@@ -105,43 +105,43 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 104,811,A2,A2,Fire,,,0.007743,D,False,5,37,41,False,III,Attacker,SSR,2023-09-08
 105,820,렘,Rem,Water,,,0.00722,D,False,5,30,41,False,II,Supporter,SSR,2024-03-28
 106,430,노이즈,Noise,Electric,,,0.006774,D,False,5,41,41,False,I,Supporter,SSR,2022-11-04
-107,392,라이,Rei,Water,,,0.004684,D,False,5,41,41,False,I,Defender,SSR,2023-04-27
-108,132,메어리 : 베이 갓데스,Mary: Bay Goddess,Water,,,0.004629,D,False,5,39,41,False,I,Supporter,SSR,2023-06-15
-109,131,페퍼,Pepper,Wind,,,0.004468,D,False,5,41,41,False,I,Supporter,SSR,2022-11-04
-110,500,일레그,Elegg,Electric,,,0.003209,D,False,5,31,41,False,II,Supporter,SSR,2024-02-22
-111,800,마키마,Makima,Water,,,0.003163,D,False,5,41,41,False,II,Defender,SSR,2023-02-22
-112,821,에밀리아,Emilia,Water,,,0.002939,D,False,5,30,41,False,III,Attacker,SSR,2024-03-21
-113,062,미카 : 스노우 버디,Mica: Snow Buddy,Iron,,,0.002883,D,False,5,34,41,False,I,Supporter,SSR,2023-12-14
-114,232,노아,Noah,Wind,,,0.002748,D,False,5,41,41,False,II,Defender,SSR,2022-11-04
-115,282,사쿠라,Sakura,Fire,,,0.00237,D,False,5,41,41,False,I,Supporter,SSR,2023-03-30
-116,261,니힐리스타,Nihilister,Fire,,,0.001749,D,False,5,41,41,False,II,Attacker,SSR,2023-03-30
-117,113,E.H.,E.H.,Wind,,,0.001748,D,False,5,7,41,False,III,Attacker,SSR,2026-03-05
-118,041,K,K,Electric,,,0.001691,D,False,5,16,41,False,III,Attacker,SSR,2025-05-29
-119,121,앤 : 미라클 페어리,Anne: Miracle Fairy,Wind,,,0.001321,D,False,5,41,41,False,II,Supporter,SSR,2022-12-15
-120,150,율리아,Julia,Iron,,,0.001216,D,False,5,15,41,True,III,Attacker,SSR,2022-11-04
-121,091,베스티,Vesti,Water,,,0.000961,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
-122,111,자칼,Jackal,Iron,,,0.000928,D,False,5,41,41,False,I,Defender,SSR,2023-01-12
-123,582,레이블,Label,Iron,,,0.000895,D,False,5,8,41,False,I,Defender,SSR,2026-01-15
-124,432,아리아,Aria,Water,,,0.000839,D,False,5,41,41,False,II,Attacker,SSR,2022-11-04
-125,190,루드밀라,Ludmilla,Water,,,0.000807,D,False,5,41,41,False,I,Defender,SSR,2022-11-04
-126,172,애드미,Admi,Wind,,,0.000692,D,False,5,41,41,False,II,Supporter,SSR,2022-11-04
-127,230,하란,Harran,Electric,,,0.000633,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
-128,200,루피,Rupee,Iron,,,0.000611,D,False,5,41,41,False,II,Attacker,SSR,2022-11-04
-129,402,퀀시,Quency,Electric,,,0.000557,D,False,5,41,41,False,II,Supporter,SSR,2023-01-12
-130,120,N102,N102,Water,,,0.000537,D,False,5,41,41,False,I,Supporter,SR,2022-11-04
-131,070,브리드,Brid,Water,,,0.000488,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
-132,040,D,D,Wind,,,0.000423,D,False,5,41,41,False,III,Attacker,SSR,2023-04-13
-133,181,메이든,Maiden,Electric,,,0.000419,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
-134,224,스노우 화이트 : 이노센트 데이즈,Snow White: Innocent Days,Iron,,,0.000364,D,False,5,35,41,False,III,Attacker,SSR,2023-11-02
-135,014,네온 : 블루 오션,Neon: Blue Ocean,Water,,,0.000338,D,False,5,39,41,False,III,Attacker,SSR,2023-06-22
-136,072,디젤,Diesel,Wind,,,0.000326,D,False,5,28,41,True,II,Defender,SSR,2022-11-04
-137,311,코코아,Cocoa,Fire,,,0.000325,D,False,5,41,41,False,I,Supporter,SSR,2023-02-01
-138,011,네온,Neon,Fire,,,0.000323,D,False,5,41,41,False,I,Supporter,SR,2022-11-04
-139,071,솔린,Soline,Iron,,,0.000316,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
-140,331,차임,Chime,Iron,,,0.000225,D,False,5,11,41,False,II,Supporter,SSR,2025-10-30
-141,312,소다,Soda,Fire,,,0.000219,D,False,5,41,41,False,I,Supporter,SSR,2023-02-08
-142,203,루피 : 윈터 쇼퍼,Rupee: Winter Shopper,Electric,,,0.000215,D,False,5,41,41,False,I,Defender,SSR,2022-12-08
-143,092,은화,Eunhwa,Fire,,,0.000211,D,False,5,41,41,False,II,Attacker,SSR,2022-11-04
+107,132,메어리 : 베이 갓데스,Mary: Bay Goddess,Water,,,0.004629,D,False,5,39,41,False,I,Supporter,SSR,2023-06-15
+108,131,페퍼,Pepper,Wind,,,0.004468,D,False,5,41,41,False,I,Supporter,SSR,2022-11-04
+109,500,일레그,Elegg,Electric,,,0.003209,D,False,5,31,41,False,II,Supporter,SSR,2024-02-22
+110,800,마키마,Makima,Water,,,0.003163,D,False,5,41,41,False,II,Defender,SSR,2023-02-22
+111,821,에밀리아,Emilia,Water,,,0.002939,D,False,5,30,41,False,III,Attacker,SSR,2024-03-21
+112,062,미카 : 스노우 버디,Mica: Snow Buddy,Iron,,,0.002883,D,False,5,34,41,False,I,Supporter,SSR,2023-12-14
+113,232,노아,Noah,Wind,,,0.002748,D,False,5,41,41,False,II,Defender,SSR,2022-11-04
+114,282,사쿠라,Sakura,Fire,,,0.00237,D,False,5,41,41,False,I,Supporter,SSR,2023-03-30
+115,261,니힐리스타,Nihilister,Fire,,,0.001749,D,False,5,41,41,False,II,Attacker,SSR,2023-03-30
+116,113,E.H.,E.H.,Wind,,,0.001748,D,False,5,7,41,False,III,Attacker,SSR,2026-03-05
+117,041,K,K,Electric,,,0.001691,D,False,5,16,41,False,III,Attacker,SSR,2025-05-29
+118,121,앤 : 미라클 페어리,Anne: Miracle Fairy,Wind,,,0.001321,D,False,5,41,41,False,II,Supporter,SSR,2022-12-15
+119,150,율리아,Julia,Iron,,,0.001216,D,False,5,15,41,True,III,Attacker,SSR,2022-11-04
+120,091,베스티,Vesti,Water,,,0.000961,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
+121,111,자칼,Jackal,Iron,,,0.000928,D,False,5,41,41,False,I,Defender,SSR,2023-01-12
+122,582,레이블,Label,Iron,,,0.000895,D,False,5,8,41,False,I,Defender,SSR,2026-01-15
+123,432,아리아,Aria,Water,,,0.000839,D,False,5,41,41,False,II,Attacker,SSR,2022-11-04
+124,190,루드밀라,Ludmilla,Water,,,0.000807,D,False,5,41,41,False,I,Defender,SSR,2022-11-04
+125,172,애드미,Admi,Wind,,,0.000692,D,False,5,41,41,False,II,Supporter,SSR,2022-11-04
+126,230,하란,Harran,Electric,,,0.000633,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
+127,200,루피,Rupee,Iron,,,0.000611,D,False,5,41,41,False,II,Attacker,SSR,2022-11-04
+128,402,퀀시,Quency,Electric,,,0.000557,D,False,5,41,41,False,II,Supporter,SSR,2023-01-12
+129,120,N102,N102,Water,,,0.000537,D,False,5,41,41,False,I,Supporter,SR,2022-11-04
+130,070,브리드,Brid,Water,,,0.000488,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
+131,040,D,D,Wind,,,0.000423,D,False,5,41,41,False,III,Attacker,SSR,2023-04-13
+132,181,메이든,Maiden,Electric,,,0.000419,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
+133,224,스노우 화이트 : 이노센트 데이즈,Snow White: Innocent Days,Iron,,,0.000364,D,False,5,35,41,False,III,Attacker,SSR,2023-11-02
+134,014,네온 : 블루 오션,Neon: Blue Ocean,Water,,,0.000338,D,False,5,39,41,False,III,Attacker,SSR,2023-06-22
+135,072,디젤,Diesel,Wind,,,0.000326,D,False,5,28,41,True,II,Defender,SSR,2022-11-04
+136,311,코코아,Cocoa,Fire,,,0.000325,D,False,5,41,41,False,I,Supporter,SSR,2023-02-01
+137,011,네온,Neon,Fire,,,0.000323,D,False,5,41,41,False,I,Supporter,SR,2022-11-04
+138,071,솔린,Soline,Iron,,,0.000316,D,False,5,41,41,False,III,Attacker,SSR,2022-11-04
+139,331,차임,Chime,Iron,,,0.000225,D,False,5,11,41,False,II,Supporter,SSR,2025-10-30
+140,312,소다,Soda,Fire,,,0.000219,D,False,5,41,41,False,I,Supporter,SSR,2023-02-08
+141,203,루피 : 윈터 쇼퍼,Rupee: Winter Shopper,Electric,,,0.000215,D,False,5,41,41,False,I,Defender,SSR,2022-12-08
+142,092,은화,Eunhwa,Fire,,,0.000211,D,False,5,41,41,False,II,Attacker,SSR,2022-11-04
+143,392,라이,Rei,Water,,,0.000203,D,False,5,41,41,False,I,Defender,SSR,2023-04-27
 144,380,네로,Nero,Fire,,,0.000168,D,False,5,39,41,False,II,Defender,SSR,2023-07-06
 145,242,폴크방,Folkwang,Water,,,0.000147,D,False,5,41,41,False,II,Defender,SSR,2022-11-04
 146,193,네베,Neve,Water,,,0.000146,D,False,5,41,41,False,III,Attacker,SR,2022-12-08

@@ -127,6 +127,25 @@ def test_a_shared_name_context_cannot_settle_is_reported(resolver):
     assert unresolved == [("Rei", "392;831")]
 
 
+def test_a_pinned_name_means_its_unit_from_that_units_release_on(tmp_path):
+    """enikk's Rei is 레이 - in a Water-weak season too - but before 레이 existed it is 라이."""
+    path = tmp_path / "ranking_names.csv"
+    path.write_text("name,unit_id,reason\nRei,831,아야나미 레이\n", encoding="utf-8")
+    assert raids.load_ranking_names(path) == {"rei": "831"}
+    resolver = UnitResolver(build_name_index(ROSTER), FACTS, SEASONS, raids.load_ranking_names(path))
+    names = ["Liter", "Crown", "Modernia", "Rei"]
+
+    def rei(season):
+        entries, unresolved = parse_document(document(ranker(1, "p", "KR", [deck(10, names)])), RankingMapping(),
+                                             resolver, season=season)
+        assert unresolved == []
+        return entries[-1].unit_id
+
+    assert rei(22) == "831"  # the boss weakness alone said 라이
+    assert rei(31) == "831"  # context alone could not tell
+    assert rei(6) == "392"  # before 레이 was released
+
+
 def test_build_reads_the_newest_snapshot_of_each_season(tmp_path, resolver):
     for players in (["old"], ["new-1", "new-2"]):
         writer = SnapshotWriter(raids.SOURCE, root=tmp_path)

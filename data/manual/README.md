@@ -48,11 +48,32 @@ exists, `treasure` (or `애장품`) from the unit's treasure on - for a skill th
 treasure changed. Those go to the roster's `treasure_elements` column instead,
 and the unit counts as that element only in the seasons played with its
 treasure (the treasure date itself comes from the update notices, not from
-here; a row written before the treasure is out waits for it). Unlike the other
-two files these rows are not temporary: they last as long as the skill does. A
+here; a row written before the treasure is out waits for it). Unlike the
+override and alias files these rows are not temporary: they last as long as the skill does. A
 `unit_id` the roster does not have, or a `since` the build does not know, is
 reported by `nikke check` (`extra_element_unknown_unit`,
 `extra_element_unknown_since`).
+
+## `ranking_names.csv`
+
+Which unit a name in the Solo Raid rankings (enikk) means, for a name two units
+share. The site gives English display names only, and 라이 (392) and 레이 (831,
+Ayanami Rei) are both `Rei`. Without a row the build settles such a name from
+context (release date, the burst stage the deck lacks, the boss weakness) - and
+for `Rei` that guessed 라이 in Water-weak seasons, where the decks (with Asuka and
+Mari) show it was 레이.
+
+```csv
+name,unit_id,reason
+Rei,831,"enikk 랭킹의 Rei 는 레이(아야나미 레이)..."
+```
+
+A row holds from the named unit's release on; before it the name is settled
+from context as usual (`Rei` before 2024-08-29 is 라이, the only Rei there was).
+Like `extra_elements.csv` these rows last as long as the site names units that
+way. A name listed in `data/processed/raid_unresolved_names.csv` with two
+candidates is the signal one may be needed; a `unit_id` the roster does not
+have is reported by `nikke check` (`ranking_name_unknown_unit`).
 
 ## `unit_aliases.csv`
 

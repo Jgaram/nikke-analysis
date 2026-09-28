@@ -226,7 +226,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null }) {
         }));
       }
     });
-    axis.append(s("text", { class: "ax", x: m.l, y: H - 4 }, "시즌"));
+    axis.append(s("text", { class: "ax", x: m.l - 8, y: base + (band >= 13 ? 32 : 16), "text-anchor": "end" }, "시즌"));
     svg.append(axis);
 
     // crosshair and the hit area: each season's whole band

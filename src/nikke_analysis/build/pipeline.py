@@ -41,11 +41,6 @@ def availability(rows: list[dict[str, str]]) -> dict[str, str]:
     return out
 
 
-def replacement(rows: list[dict[str, str]]) -> dict[str, str]:
-    """``{unit_id: ISO instant}`` at which a unit left the pool: its treasure came out."""
-    return {row["unit_id"]: row["treasure_at"] for row in rows if row.get("treasure_at")}
-
-
 def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
     directory = out_dir or processed_dir()
     steps: dict[str, Any] = {}
@@ -80,12 +75,10 @@ def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
         out_dir=directory,
     )
 
-    units = _roster_rows(directory)
     steps["soloraid"] = soloraid.build(
         notice_list,
         enikk_meta.load_seasons(),
-        releases=availability(units),
-        replaced=replacement(units),
+        releases=availability(_roster_rows(directory)),
         out_dir=directory,
     )
 

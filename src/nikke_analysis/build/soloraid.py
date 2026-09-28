@@ -607,12 +607,9 @@ def build(
     enikk: dict[int, EnikkSeason],
     *,
     releases: dict[str, str] | None = None,
-    replaced: dict[str, str] | None = None,
     out_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Write the season tables. ``releases`` maps unit id -> release instant (ISO),
-    ``replaced`` unit id -> when it left the pool (its treasure came out, and the
-    unit it became has a release of its own)."""
+    """Write the season tables. ``releases`` maps unit id -> release instant (ISO)."""
     events = extract_all(notices)
     seasons = group_seasons(events)
     for season in seasons:
@@ -624,7 +621,6 @@ def build(
     release_times = sorted(
         (datetime.fromisoformat(at), unit) for unit, at in (releases or {}).items() if at
     )
-    gone = {unit: datetime.fromisoformat(at) for unit, at in (replaced or {}).items() if at}
 
     target = out_dir or processed_dir()
     target.mkdir(parents=True, exist_ok=True)
@@ -677,7 +673,7 @@ def build(
                 end = season.periods[-1].end
                 row["start_at"], row["end_at"] = _iso(start), _iso(end)
                 if end is not None and release_times:
-                    available = [u for t, u in release_times if t <= end.at and not (u in gone and gone[u] <= end.at)]
+                    available = [u for t, u in release_times if t <= end.at]
                     fresh = [u for t, u in release_times if previous_end < t <= end.at]
                     row["units_available"] = len(available)
                     row["new_units"] = ";".join(fresh)

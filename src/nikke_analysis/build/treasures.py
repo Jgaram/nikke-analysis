@@ -1,10 +1,11 @@
 """Treasure (애장품) releases, read out of update notices.
 
 A treasure upgrades one unit's skills for good - enough that the unit plays like
-a different one. So from the moment its treasure comes out the unit is counted
-as a unit of its own, its base's id and names with a heart (``221♥``,
-``라플라스♥``): the rankings from then on are its record, not the base's, and the
-base leaves the pool. ``roster.csv`` carries both (build/roster.py).
+a different one, and every ranked player fields it with the treasure once it is
+out. So a unit's tiers are reckoned apart before and after its treasure: a view
+of a moment after it stands on the seasons since (analyze/tiers.py), while the
+unit's history stays one line with the treasure marked on it. ``roster.csv``
+carries the moment as ``treasure_at``.
 
 The update that brings treasures lists the units on one line, in a shape that
 has held since the first batch (2024-05):

@@ -8,9 +8,6 @@ yet still reads - it is just the one row with a name in it.
 Pieces are laid out with matplotlib's offset boxes, sized in points: an icon and
 a fallback word sit on one baseline and stay the same size however long the
 chart is.
-
-A unit with its treasure (``221♥``) is drawn as its base's face with a heart in
-the corner - the same face, marked as the other unit it counts as.
 """
 
 from __future__ import annotations
@@ -23,15 +20,13 @@ from matplotlib.colors import to_rgb
 from matplotlib.offsetbox import AnnotationBbox, HPacker, OffsetImage, TextArea
 
 from ..paths import burst_icon_path, element_icon_path, icons_dir, unit_icon_path
-from ..util.names import treasure_base
 from .theme import Theme
 
 # Share of the face's side rounded off each corner - the charts' marks have
 # rounded ends, and a square photo next to them looks pasted on.
 FACE_CORNER = 0.14
-# The treasure mark: a heart this share of the face's side, in the bottom-right
-# corner, filled in this colour inside a white rim that keeps it off the face.
-HEART_SHARE = 0.5
+# The treasure (애장품) mark on a unit's timeline: a heart in this colour, inside a
+# white rim that keeps it readable over a line or a coloured cell.
 HEART_COLOR = (0.93, 0.23, 0.42)
 HEART_RIM = 0.8  # the fill's size relative to the rim
 
@@ -98,22 +93,11 @@ def _over(base: np.ndarray, color: tuple[float, float, float], coverage: np.ndar
     base[..., 3] = out_alpha
 
 
-def heart(size: int) -> np.ndarray:
-    """The treasure mark on its own, ``size`` pixels square."""
+def heart(size: int = 64) -> np.ndarray:
+    """The treasure mark, ``size`` pixels square: where on a unit's timeline its treasure came."""
     out = np.zeros((size, size, 4))
     _over(out, (1.0, 1.0, 1.0), _heart_coverage(size))
     _over(out, HEART_COLOR, _heart_coverage(size, HEART_RIM))
-    return out
-
-
-def with_heart(rgba: np.ndarray, share: float = HEART_SHARE) -> np.ndarray:
-    """A face with the treasure mark in its bottom-right corner."""
-    out = rgba.copy()
-    height, width = out.shape[:2]
-    size = max(1, int(round(min(height, width) * share)))
-    corner = out[height - size:, width - size:]
-    _over(corner, (1.0, 1.0, 1.0), _heart_coverage(size))
-    _over(corner, HEART_COLOR, _heart_coverage(size, HEART_RIM))
     return out
 
 
@@ -145,13 +129,11 @@ class Icons:
         self.named_units: set[str] = set()
 
     def face(self, unit_id: str) -> np.ndarray | None:
-        """A unit's face; a unit with its treasure gets its base's, with the heart."""
         image = _read(unit_icon_path(str(unit_id), self.directory))
         if image is None:
             self.named_units.add(str(unit_id))
             return None
-        face = _round_corners(image, FACE_CORNER)
-        return with_heart(face) if treasure_base(str(unit_id)) else face
+        return _round_corners(image, FACE_CORNER)
 
     def element(self, element: object) -> np.ndarray | None:
         return _read(element_icon_path(element, self.directory)) if isinstance(element, str) and element else None

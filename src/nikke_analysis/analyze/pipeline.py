@@ -18,7 +18,8 @@ Outputs:
                                unit's element, its element tier - as of the
                                season's end
 ``metrics_overall_tiers.csv``  per unit, as of the newest data: the overall tier
-                               and rank - the overall comparison table
+                               and rank - the overall comparison table; a unit with
+                               its treasure (``treasure``) on its seasons with it
 ``metrics_element_tiers.csv``  per element and unit of it, as of the newest data:
                                the tier and rank in that element, with the overall
                                tier beside - the element comparison tables. A unit
@@ -241,7 +242,8 @@ def run(
     newest = summary_table["collected_until"].max()
     info = roster.drop_duplicates("unit_id").set_index("unit_id")
     info = info[[c for c in metrics.UNIT_INFO if c in info.columns]]
-    standing = tiers.standings(table, summary_table, newest, config, replaced=metrics.replacement_instants(roster))
+    treasure = metrics.treasure_instants(roster)
+    standing = tiers.standings(table, summary_table, newest, config, treasured=treasure.index[treasure <= newest])
     overall, elements = comparison_tables(standing, info)
     changes = tiers.tier_changes(history, config)
     shift = metrics.meta_shift(table)

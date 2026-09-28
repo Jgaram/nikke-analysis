@@ -1,20 +1,20 @@
-"""Treasures (애장품): read from update notices, and the unit a treasure makes
-counted as a unit of its own from then on (``221♥``)."""
+"""Treasures (애장품): read from update notices, and a unit's tiers reckoned apart
+before and after its treasure while its record stays one line."""
 
 from datetime import datetime
 
-import numpy as np
 import pandas as pd
 import pytest
 
-from nikke_analysis.analyze import metrics, pipeline, tiers
-from nikke_analysis.build import raids, releases, treasures
+from nikke_analysis.analyze import pipeline, tiers
+from nikke_analysis.build import releases, treasures
 from nikke_analysis.build.notices import Notice
 from nikke_analysis.build.roster import build_alias_rows, merge_roster
-from nikke_analysis.tierlist import TierBook, find_unit, render_unit
+from nikke_analysis.tierlist import TierBook, render, render_unit
 from nikke_analysis.timeline import Timeline
 from nikke_analysis.util.kdate import KST
-from nikke_analysis.util.names import build_name_index, mark_treasure, treasure_base, treasure_id
+from nikke_analysis.util.names import build_name_index
+from nikke_analysis.viz import charts
 from nikke_analysis.viz import icons as icon_art
 from tests.synthetic import make_world, write_processed
 
@@ -109,153 +109,154 @@ def test_the_earliest_update_wins():
 
 
 # --------------------------------------------------------------------------
-# the unit a treasure makes
+# the roster and the tier split
 # --------------------------------------------------------------------------
 
-def test_the_mark_and_its_words():
-    assert treasure_id("100") == "100♥" and treasure_base("100♥") == "100" and treasure_base("100") is None
-    for query in ("라플라스 애장품", "라플라스(애장품)", "라플라스♡", "라플라스 ♥", "Laplace treasure"):
-        assert mark_treasure(query).endswith("♥"), query
-    assert mark_treasure("애장품") == "애장품"  # nothing left to mark
-    assert mark_treasure("라플라스") == "라플라스"
-
-
-def test_the_roster_gets_the_treasure_unit_beside_its_base():
+def test_the_roster_says_when_the_treasure_came():
     gamefiles = [{"unit_id": "140", "name_en": "Sugar", "name_ko": "슈가", "name_ja": "シュガー"}]
     utils = [{"unit_id": "140", "name_en": "Sugar", "element": "Iron", "burst": "I", "unit_class": "Defender",
               "rarity": "SSR", "datafile_added": "2022-04-11"}]
     roster = merge_roster(
-        gamefiles, utils, extra_elements={"140": ("Water",)}, launch_covered=True,
+        gamefiles, utils, launch_covered=True,
         treasures={"140": {"treasure_at": "2026-07-23T00:00:00+09:00", "treasure_date": "2026-07-23"}},
     )
-    by_id = {u.unit_id: u for u in roster}
-    base, marked = by_id["140"], by_id["140♥"]
-    assert base.treasure_at == "2026-07-23T00:00:00+09:00" and not base.treasure_of
-    assert (marked.name_ko, marked.name_en, marked.name_ja) == ("슈가♥", "Sugar♥", "シュガー♥")
-    assert (marked.element, marked.extra_elements, marked.burst) == ("Iron", "Water", "I")  # tiered in both, like the base
-    assert (marked.release_at, marked.release_date_source, marked.release_date_confidence) == (
-        "2026-07-23T00:00:00+09:00", "treasure", "high")
-    assert marked.treasure_of == "140" and not marked.treasure_at
-    # notices and rankings only ever name the base: the alias table has no marked unit
-    assert {row["unit_id"] for row in build_alias_rows(roster)} == {"140"}
+    [unit] = roster  # still one unit, under its own name
+    assert (unit.unit_id, unit.name_ko, unit.treasure_at) == ("140", "슈가", "2026-07-23T00:00:00+09:00")
+    assert {row["alias"] for row in build_alias_rows(roster)} >= {"Sugar", "슈가"}
 
 
-def test_a_ranked_name_is_the_treasure_unit_from_the_first_season_after_it():
-    index = build_name_index([{"unit_id": "352", "name_en": "Helm"}])
-    seasons = {21: {"start_at": "2025-01-09T12:00:00+09:00"}, 22: {"start_at": "2025-02-06T12:00:00+09:00"}}
-    resolver = raids.UnitResolver(index, seasons=seasons, treasures={"352": "2025-01-16T00:00:00+09:00"})
-    # season 21 ended on the update's morning: its record is the base's
-    assert resolver.in_season("352", 21) == "352"
-    assert resolver.in_season("352", 22) == "352♥"
-    assert resolver.in_season("100", 22) == "100"
+def _one_unit(lifts, treasure):
+    """One Fire unit over seasons 1..n, Fire-weak each, played with its treasure where ``treasure``."""
+    n = len(lifts)
+    ends = [pd.Timestamp("2025-01-08T00:00:00Z") + pd.Timedelta(days=30 * i) for i in range(n)]
+    table = pd.DataFrame({"season": range(1, n + 1), "unit_id": "a", "lift": lifts, "element": "Fire",
+                          "extra_elements": "", "treasure": treasure})
+    seasons = pd.DataFrame({"season": range(1, n + 1), "end_at": ends, "weak_element": "Fire", "final": True,
+                            "collected_on": ends})
+    return table, seasons, ends
 
 
-def test_find_unit_takes_the_mark_or_the_word():
-    units = pd.DataFrame({"unit_id": ["100", "100♥", "103"], "name_ko": ["라플라스", "라플라스♥", "라플라스 : 얼티밋 히어로"],
-                          "name_en": ["Laplace", "Laplace♥", "Laplace: Ultimate Hero"]})
-    index = build_name_index([{"unit_id": "100", "name_ko": "라플라스"}, {"unit_id": "103", "name_ko": "라플라스 : 얼티밋 히어로"}])
-    assert find_unit("라플라스", units, index) == "100"
-    for query in ("라플라스♥", "라플라스 애장품", "laplace♥", "100♥"):
-        assert find_unit(query, units, index) == "100♥", query
-    # a season after the treasure has only the unit it became: the base's name finds it
-    later = units[units["unit_id"] != "100"]
-    assert find_unit("라플라스", later, index) == "100♥"
+def test_a_view_stands_on_one_side_of_the_treasure():
+    table, seasons, ends = _one_unit([2.0, 2.0, 0.5], [False, False, True])
+    after = ends[-1] + pd.Timedelta(days=1)
+    with_it = tiers.standings(table, seasons, after, treasured=["a"])
+    without = tiers.standings(table, seasons, after, treasured=[])
+    assert with_it.elements.iloc[0]["element_lift"] == pytest.approx(0.5)  # only the season with it
+    assert with_it.elements.iloc[0]["element_seasons"] == 1 and bool(with_it.overall.iloc[0]["treasure"])
+    assert without.elements.iloc[0]["element_seasons"] == 2 and not bool(without.overall.iloc[0]["treasure"])
+    # by default a unit has its treasure once a counted season was played with it
+    assert tiers.standings(table, seasons, after).elements.iloc[0]["element_seasons"] == 1
 
 
-def test_the_heart_marks_the_corner_of_the_face():
-    face = np.zeros((40, 40, 4))
-    face[..., :3], face[..., 3] = 0.5, 1.0
-    marked = icon_art.with_heart(face)
-    assert np.allclose(marked[:10, :10], face[:10, :10])  # the rest of the face is untouched
-    red = marked[..., 0] - marked[..., 1]
-    assert red[20:, 20:].max() > 0.5 and red[:20, :20].max() < 1e-9
-    assert icon_art.heart(16).shape == (16, 16, 4)
+def test_right_after_the_treasure_a_unit_has_no_tier_yet():
+    table, seasons, ends = _one_unit([2.0, 2.0, 0.5], [False, False, True])
+    gap = ends[1] + pd.Timedelta(days=1)  # the treasure is out, no season played with it yet
+    assert tiers.standings(table, seasons, gap, treasured=["a"]).overall.empty
+
+
+def test_the_heart_is_a_mark_of_its_own():
+    mark = icon_art.heart(16)
+    assert mark.shape == (16, 16, 4)
+    red = mark[..., 0] - mark[..., 1]
+    assert red[8, 8] > 0.5 and mark[0, 0, 3] == 0.0  # red at the centre, clear in the corner
 
 
 # --------------------------------------------------------------------------
 # through the pipeline
 # --------------------------------------------------------------------------
 
-TREASURE_SEASON = 5  # the first season the treasure unit plays
+TREASURE_SEASON = 5  # the first season played with the treasure
 
 
 @pytest.fixture(scope="module")
 def world_with_treasure(tmp_path_factory):
-    """The synthetic world where the Water dealer gets its treasure between seasons 4 and 5."""
+    """The synthetic world where the Water dealer gets its treasure a week before season 5."""
     directory = tmp_path_factory.mktemp("treasure")
     world = make_world(seasons=8, rankers=15, fillers=24, seed=11)
-    base = world.element_dps["Water"]
-    marked = treasure_id(base)
+    unit = world.element_dps["Water"]
     start = pd.Timestamp(world.seasons.set_index("season").loc[TREASURE_SEASON, "start_at"])
-    at = (start - pd.Timedelta(days=7)).normalize().isoformat()
-    roster = world.roster.copy()
-    roster["treasure_at"], roster["treasure_of"] = "", ""
-    roster.loc[roster["unit_id"] == base, "treasure_at"] = at
-    row = roster[roster["unit_id"] == base].iloc[0].copy()
-    row["unit_id"], row["name_en"], row["name_ko"] = marked, f"{row['name_en']}♥", f"{row['name_ko']}♥"
-    row["release_date"], row["release_at"], row["release_date_source"] = at[:10], at, "treasure"
-    row["treasure_at"], row["treasure_of"] = "", base
-    world.roster = pd.concat([roster, row.to_frame().T], ignore_index=True)
-    entries = world.entries.copy()
-    later = (entries["unit_id"] == base) & (entries["season"] >= TREASURE_SEASON)
-    entries.loc[later, "unit_id"] = marked  # what build/raids does with the site's name
-    world.entries = entries
+    at = (start - pd.Timedelta(days=7)).normalize()
+    world.roster["treasure_at"] = ""
+    world.roster.loc[world.roster["unit_id"] == unit, "treasure_at"] = at.isoformat()
     write_processed(world, directory)
+    notice = (at - pd.Timedelta(days=3)).isoformat()
+    pd.DataFrame([{"unit_id": unit, "name": "Water Dealer", "treasure_at": at.isoformat(),
+                   "treasure_date": at.date().isoformat(), "after_maintenance": 1, "notice_id": "official:t",
+                   "notice_title": "업데이트 공지", "notice_published_at": notice, "evidence": ""}]
+                 ).to_csv(directory / "treasures.csv", index=False)
     pipeline.run(data_dir=directory)
-    return directory, world, base, marked
+    return directory, world, unit, at
 
 
-def test_each_season_has_the_base_or_the_treasure_unit_never_both(world_with_treasure):
-    directory, world, base, marked = world_with_treasure
-    table = pd.read_csv(directory / "metrics_unit_season.csv", dtype={"unit_id": str, "treasure_of": str})
-    seasons_of = table.groupby("unit_id")["season"].agg(set)
-    assert seasons_of[base] == set(range(1, TREASURE_SEASON))
-    assert seasons_of[marked] == set(range(TREASURE_SEASON, 9))
-    assert table.loc[table["unit_id"] == marked, "treasure_of"].eq(base).all()
+def _history(directory):
+    return pd.read_csv(directory / "metrics_unit_season.csv", dtype={"unit_id": str})
 
 
-def test_the_tables_of_now_list_the_treasure_unit_not_its_base(world_with_treasure):
-    directory, world, base, marked = world_with_treasure
-    overall = pd.read_csv(directory / "metrics_overall_tiers.csv", dtype={"unit_id": str})
-    elements = pd.read_csv(directory / "metrics_element_tiers.csv", dtype={"unit_id": str})
-    assert marked in set(overall["unit_id"]) and base not in set(overall["unit_id"])
-    assert base not in set(elements["unit_id"])
-    assert overall["overall_rank"].min() == 1 and overall["overall_rank"].max() <= len(overall)
+def test_the_seasons_played_with_the_treasure_are_flagged(world_with_treasure):
+    directory, world, unit, _ = world_with_treasure
+    rows = _history(directory).query("unit_id == @unit").sort_values("season")
+    assert list(rows["season"]) == list(range(1, 9))  # one unit, one line
+    assert list(rows["treasure"]) == [s >= TREASURE_SEASON for s in range(1, 9)]
+    assert not _history(directory).query("unit_id != @unit")["treasure"].any()
 
 
-def test_the_standings_leave_out_a_unit_once_its_treasure_is_out():
-    table = pd.DataFrame({"season": [1, 1], "unit_id": ["a", "b"], "lift": [2.0, 1.0], "element": ["Fire", "Fire"],
-                          "extra_elements": ["", ""]})
-    end = pd.Timestamp("2025-01-08T00:00:00Z")
-    seasons = pd.DataFrame({"season": [1], "end_at": [end], "weak_element": ["Fire"], "final": [True],
-                            "collected_on": [end]})
-    replaced = pd.Series([pd.Timestamp("2025-02-01T00:00:00Z")], index=["a"])
-    before = tiers.standings(table, seasons, pd.Timestamp("2025-01-20T00:00:00Z"), replaced=replaced)
-    after = tiers.standings(table, seasons, pd.Timestamp("2025-02-02T00:00:00Z"), replaced=replaced)
-    assert list(before.overall["unit_id"]) == ["a", "b"]
-    assert list(after.overall["unit_id"]) == ["b"] and after.overall["overall_rank"].tolist() == [1]
+def test_each_season_is_tiered_on_its_own_side(world_with_treasure):
+    """Water-weak seasons are 2 and 7: in 7 the element tier stands on 7 alone."""
+    directory, world, unit, _ = world_with_treasure
+    rows = _history(directory).query("unit_id == @unit").set_index("season")
+    assert rows.loc[2, "element_seasons"] == 1 and rows.loc[7, "element_seasons"] == 1
+    # the overall at the first season with the treasure knows only that season
+    assert rows.loc[TREASURE_SEASON, "overall"] != rows.loc[TREASURE_SEASON - 1, "overall"]
 
 
-def test_the_pool_swaps_the_base_for_the_treasure_unit(world_with_treasure):
-    directory, world, base, marked = world_with_treasure
-    timeline = Timeline.load(directory)
-    at = pd.Timestamp(world.roster.set_index("unit_id").loc[base, "treasure_at"]).to_pydatetime()
-    before = {u.unit_id for u in timeline.units_at(at - pd.Timedelta(hours=1))}
-    after = {u.unit_id for u in timeline.units_at(at)}
-    assert base in before and marked not in before
-    assert marked in after and base not in after and len(after) == len(before)
-    assert [u.unit_id for u in timeline.at(at + pd.Timedelta(days=1)).treasured_within(30)] == [marked]
+def test_the_step_into_the_treasure_is_a_tier_change(world_with_treasure):
+    directory, world, unit, _ = world_with_treasure
+    changes = pd.read_csv(directory / "metrics_tier_changes.csv", dtype={"unit_id": str})
+    marked = changes[changes["treasure"]]
+    assert list(zip(marked["unit_id"], marked["season_to"])) == [(unit, TREASURE_SEASON)]
 
 
-def test_a_units_record_points_to_the_unit_its_treasure_made(world_with_treasure):
-    directory, world, base, marked = world_with_treasure
+def test_a_view_of_a_moment_takes_the_side_the_unit_was_on(world_with_treasure):
+    directory, world, unit, at = world_with_treasure
     book = TierBook.load(directory)
-    name = world.roster.set_index("unit_id").loc[base, "name_ko"]
-    old = book.unit(name, "2026-01-01")
-    assert old.unit_id == base and old.successor == f"{name}♥"
-    assert old.profile is not None  # where it stood after its last season, not "no record"
-    assert "애장품이 나오기 전 마지막 시즌" in render_unit(old, book.config)
-    new = book.unit(f"{name} 애장품", "2026-01-01")
-    assert new.unit_id == marked and new.base == name
-    assert f"{name}의 애장품" in render_unit(new, book.config)
-    assert metrics.replacement_instants(world.roster).index.tolist() == [base]
+    name = world.roster.set_index("unit_id").loc[unit, "name_ko"]
+    before = book.unit(name, (at - pd.Timedelta(days=1)).to_pydatetime())
+    gap = book.unit(name, (at + pd.Timedelta(days=1)).to_pydatetime())
+    after = book.unit(name, "2026-01-01")
+    assert not before.treasured and before.profile["seasons_observed"] == TREASURE_SEASON - 1
+    assert gap.treasured and gap.profile is None
+    assert unit not in set(book.at((at + pd.Timedelta(days=1)).to_pydatetime()).overall["unit_id"])
+    assert after.treasured and after.profile["seasons_observed"] == 8 - TREASURE_SEASON + 1
+    assert after.profile["treasure"]
+
+
+def test_the_unit_is_shown_by_its_name_and_its_record_is_one_line(world_with_treasure):
+    directory, world, unit, at = world_with_treasure
+    book = TierBook.load(directory)
+    name = world.roster.set_index("unit_id").loc[unit, "name_ko"]
+    history = book.unit(name, "2026-01-01")
+    assert list(history.rows["season"]) == list(range(1, 9))
+    text = render_unit(history, book.config)
+    lines = text.splitlines()
+    marker = next(i for i, line in enumerate(lines) if line.lstrip().startswith("♥"))
+    assert lines[marker - 1].split()[0] == str(TREASURE_SEASON - 1)
+    assert lines[marker + 1].split()[0] == str(TREASURE_SEASON)
+    assert f"애장품 {at:%Y-%m-%d}" in lines[0]
+    assert "♥" not in render(book.at("2026-01-01"))  # the unit itself carries no mark
+
+
+def test_the_timeline_lists_treasures_but_keeps_one_unit(world_with_treasure):
+    directory, world, unit, at = world_with_treasure
+    timeline = Timeline.load(directory)
+    announced = timeline.at((at - pd.Timedelta(days=1)).to_pydatetime())
+    came = timeline.at((at + pd.Timedelta(days=1)).to_pydatetime())
+    assert [u.unit_id for u in announced.announced_treasures] == [unit]
+    assert [u.unit_id for u in came.treasured_within(30)] == [unit] and not came.announced_treasures
+    assert len(announced.units) == len(came.units)
+
+
+def test_the_charts_mark_the_treasure_on_the_units_line(world_with_treasure, tmp_path):
+    directory, world, unit, _ = world_with_treasure
+    name = world.roster.set_index("unit_id").loc[unit, "name_en"]
+    result = charts.render_all(data_dir=directory, out_dir=tmp_path, themes=("light",), units=[name])
+    assert {"tier-trajectories", "tier-heatmap"} <= set(result["written"])

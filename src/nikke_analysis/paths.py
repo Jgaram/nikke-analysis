@@ -9,8 +9,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from .util.names import treasure_base
-
 PACKAGE_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_ROOT.parent.parent
 
@@ -54,9 +52,8 @@ def icons_dir() -> Path:
 
 
 def unit_icon_path(unit_id: str, directory: Path | None = None) -> Path:
-    """A unit's face, by its three-digit roster id (``010`` is Rapi). A unit with
-    its treasure (``221♥``) has its base's face; the charts mark it."""
-    return (directory or icons_dir()) / "units" / f"{treasure_base(unit_id) or unit_id}.webp"
+    """A unit's face, by its three-digit roster id (``010`` is Rapi)."""
+    return (directory or icons_dir()) / "units" / f"{unit_id}.webp"
 
 
 def attribute_icon_path(kind: str, value: str, directory: Path | None = None) -> Path:

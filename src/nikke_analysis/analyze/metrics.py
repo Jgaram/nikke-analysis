@@ -27,9 +27,12 @@ rank 50), the discount used in ranking evaluation.
 **Availability.** A unit that did not exist during a season did not "fail to be
 picked". Season rows cover exactly the units released by the season's start
 (plus any unit the data shows was fielded), and every such unit gets a row, zero
-if nobody used it - so an unused unit reads as zero, not as missing. A unit whose
-treasure (애장품) had come out by then is not among them: it counts as the unit it
-became (``221♥``, released with the treasure), and the rankings are that unit's.
+if nobody used it - so an unused unit reads as zero, not as missing.
+
+**Treasure.** A unit whose treasure (애장품) was out when the season started
+played with it (every ranked player fields it once it exists): the row's
+``treasure`` flag. It is the same unit, so its rows stay one line; the element
+and overall tiers are the ones that tell the two apart (analyze/tiers.py).
 
 **Decks that were not fought.** A deck that dealt no damage was not fought with
 (rare: six decks in seasons 1-41), so it counts for nothing: not as a deck, and
@@ -61,8 +64,7 @@ log = logging.getLogger(__name__)
 ELEMENTS = ("Fire", "Water", "Wind", "Iron", "Electric")
 RANKER_KEYS = ["season", "server", "player"]
 DECK_KEYS = RANKER_KEYS + ["deck"]
-UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "rarity", "release_date",
-             "treasure_of"]
+UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "rarity", "release_date"]
 
 
 # --------------------------------------------------------------------------
@@ -113,9 +115,8 @@ def release_instants(roster: pd.DataFrame) -> pd.Series:
     return pd.Series(at.fillna(day).to_numpy(), index=roster["unit_id"].to_numpy())
 
 
-def replacement_instants(roster: pd.DataFrame) -> pd.Series:
-    """When each unit left the pool, UTC: its treasure came out, and from then on
-    it is the unit it became. Only units that left have an entry."""
+def treasure_instants(roster: pd.DataFrame) -> pd.Series:
+    """When each unit's treasure came out, UTC. Only units that have one."""
     if "treasure_at" not in roster.columns:
         return pd.Series(dtype="datetime64[ns, UTC]")
     at = pd.to_datetime(roster["treasure_at"], errors="coerce", utc=True)
@@ -233,6 +234,7 @@ def unit_season(
       ``avg_deck``        the average of that deck rank
       ``element_match``   the boss was weak to the unit's element, or to one its
                           skill adds (the roster's ``extra_elements``)
+      ``treasure``        the unit's treasure was out when the season started
     """
     if entries.empty:
         return pd.DataFrame()
@@ -274,13 +276,11 @@ def unit_season(
 
     # Every unit available that season gets a row, zero when nobody fielded it.
     released = release_instants(roster)
-    replaced = replacement_instants(roster)
     starts = seasons.set_index("season")["start_at"]
     frames = [per]
     for season in season_order(per["season"]):
         start = starts.get(season)
         available = set(released.index[released.le(start).fillna(False)]) if start is not None and not pd.isna(start) else set()
-        available -= set(replaced.index[replaced.le(start)]) if available else set()
         missing = sorted(available - set(per.loc[per["season"] == season, "unit_id"]))
         if missing:
             frames.append(pd.DataFrame({"season": season, "unit_id": missing, "rankers": 0, "presence": 0.0,
@@ -301,6 +301,11 @@ def unit_season(
     if "extra_elements" in table.columns:
         skill = [weak in str(extra).split(";") for weak, extra in zip(table["weak_element"], table["extra_elements"])]
         table["element_match"] |= pd.Series(skill, index=table.index) & table["weak_element"].notna()
+    treasure = treasure_instants(roster)
+    table["treasure"] = False
+    if not treasure.empty:
+        at = pd.to_datetime(table["unit_id"].map(treasure), utc=True)
+        table["treasure"] = (at <= table["start_at"]).fillna(False).astype(bool)
     return table.sort_values(["season", "lift", "unit_id"], ascending=[True, False, True]).reset_index(drop=True)
 
 

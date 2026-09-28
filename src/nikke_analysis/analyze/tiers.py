@@ -50,10 +50,13 @@ The season in progress counts too (``include_live``) once a snapshot of it was
 taken by the moment of the view: its rankings so far stand in for the season,
 and they change with every snapshot until it is over.
 
-A unit whose treasure (애장품) had come out by the moment of a view is not in it:
-it has become another unit (``221♥``), which starts its own record with the
-first season after the treasure. Its own record stays for views of the time
-before.
+A treasure (애장품) changes a unit for good, so its element and overall tiers are
+reckoned on one side of it only: a view of a moment when the unit had its
+treasure stands on the seasons played with it (the season rows' ``treasure``
+flag), a view of a moment before on the seasons before. Right after the
+treasure, before a season has been played with it, the unit has no tier yet -
+like a new release. Season tiers and the unit's history are not split: it is
+the same unit, one line, with the treasure marked where it came.
 """
 
 from __future__ import annotations
@@ -171,8 +174,9 @@ def tier_rank(label: str, config: TierConfig | None = None) -> int:
 # --------------------------------------------------------------------------
 
 OVERALL_COLUMNS = ["unit_id", "overall", "overall_tier", "overall_rank", "provisional", "elements_observed",
-                   "seasons_observed", "last_season"]
-ELEMENT_COLUMNS = ["unit_id", "element", "source", "element_lift", "element_tier", "element_seasons", "element_rank"]
+                   "seasons_observed", "last_season", "treasure"]
+ELEMENT_COLUMNS = ["unit_id", "element", "source", "element_lift", "element_tier", "element_seasons", "element_rank",
+                   "treasure"]
 SLOT_COLUMNS = ["unit_id", "element", "lift", "seasons"]
 
 
@@ -190,12 +194,21 @@ class Standings:
     in fewer than ``min_elements_observed`` boss weaknesses or not yet in the
     unit's own element. ``slots``: the five values the overall is made of, one
     row per unit and boss weakness (``element``), with the seasons behind each
-    (``seasons`` 0: not met yet, filled in).
+    (``seasons`` 0: not met yet, filled in). ``treasure`` says a unit's tiers
+    stand on the seasons played with its treasure.
     """
 
     overall: pd.DataFrame
     elements: pd.DataFrame
     slots: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=SLOT_COLUMNS))
+
+
+def played_with_treasure(rows: pd.DataFrame) -> pd.Series:
+    """The ``treasure`` flag of season rows as booleans (False where there is none),
+    whether it was computed or read back from a table as text."""
+    if "treasure" not in rows.columns:
+        return pd.Series(False, index=rows.index)
+    return rows["treasure"].astype(str).str.lower().isin(("true", "1"))
 
 
 def _decay(ages_days: pd.Series, half_life_days: float) -> pd.Series:
@@ -250,7 +263,7 @@ def standings(
     moment: pd.Timestamp,
     config: TierConfig | None = None,
     *,
-    replaced: pd.Series | None = None,
+    treasured: Any = None,
 ) -> Standings:
     """Every unit's element tiers and overall tier, as known at ``moment``.
 
@@ -259,17 +272,21 @@ def standings(
     view of the past never uses what happened after it. ``table`` is the season
     x unit table (with each unit's own ``element``) and ``seasons`` the season
     summary (it says which seasons are final and when each was collected).
-    ``replaced`` (unit id -> instant) leaves out the units that had left the
-    pool by ``moment`` - their treasure had come out - so the others rank
-    without them.
+
+    ``treasured`` - the units that had their treasure at ``moment`` - are
+    tiered on the seasons they played with it, every other unit on the seasons
+    without (the table's ``treasure`` flag). By default a unit counts as having
+    it once a counted season was played with it.
     """
     config = config or TierConfig()
     moment = _instant(moment)
     counted = counted_seasons(seasons, moment, config)
-    rows = table.loc[table["season"].isin(counted["season"]), ["season", "unit_id", "lift"]].merge(counted, on="season")
+    columns = ["season", "unit_id", "lift"] + (["treasure"] if "treasure" in table.columns else [])
+    rows = table.loc[table["season"].isin(counted["season"]), columns].merge(counted, on="season")
     rows = rows[rows["weak_element"].isin(ELEMENTS)]
-    if replaced is not None and len(replaced):
-        rows = rows[~rows["unit_id"].isin(replaced.index[replaced <= moment])]
+    has = played_with_treasure(rows)
+    treasured = set(rows.loc[has, "unit_id"]) if treasured is None else set(treasured)
+    rows = rows[has == rows["unit_id"].isin(treasured)]
     if rows.empty:
         return Standings(pd.DataFrame(columns=OVERALL_COLUMNS), pd.DataFrame(columns=ELEMENT_COLUMNS))
 
@@ -315,6 +332,7 @@ def standings(
     elements["position"] = elements["element"].map(ELEMENTS.index)
     elements = elements.sort_values(["position", "element_lift", "unit_id"], ascending=[True, False, True],
                                     na_position="last")
+    elements["treasure"] = elements["unit_id"].isin(treasured)
 
     overall = pd.DataFrame(index=unit.index)
     if config.overall == "mean":
@@ -335,6 +353,7 @@ def standings(
     overall["elements_observed"] = n_obs
     overall["seasons_observed"] = unit["seasons_observed"].astype(int)
     overall["last_season"] = unit["last_season"].astype(int)
+    overall["treasure"] = overall.index.isin(treasured)
     overall = overall.reset_index()[OVERALL_COLUMNS]
     overall = overall.sort_values(["overall", "unit_id"], ascending=[False, True]).reset_index(drop=True)
     slots = (estimate.rename_axis(index="unit_id", columns="element").stack().rename("lift").to_frame()
@@ -363,6 +382,8 @@ def tier_history(table: pd.DataFrame, seasons: pd.DataFrame, config: TierConfig 
     those are empty. For the season still in progress it is where u stands with
     that season so far (``include_live``; without it, where u stood after the
     last finished season): provisional, like the live season's own numbers.
+    A unit that played s with its treasure is tiered there on its seasons with
+    it, one that played without on its seasons without.
     """
     config = config or TierConfig()
     parts = []
@@ -372,14 +393,21 @@ def tier_history(table: pd.DataFrame, seasons: pd.DataFrame, config: TierConfig 
         moment = info["end_at"] if bool(info["final"]) else info["collected_until"]
         if pd.isna(moment):
             continue
-        standing = standings(table, seasons, moment, config)
-        overall = standing.overall.drop(columns=["overall_rank", "seasons_observed", "last_season"])
-        element = standing.elements.drop(columns=["source", "element_rank"]).rename(columns={"element": "weak_element"})
-        rows = table[table["season"] == season].merge(overall, on="unit_id", how="left")
+        here = table[table["season"] == season]
+        treasured = here.loc[played_with_treasure(here), "unit_id"]
+        standing = standings(table, seasons, moment, config, treasured=treasured)
+        overall = standing.overall.drop(columns=["overall_rank", "seasons_observed", "last_season", "treasure"])
+        element = (standing.elements.drop(columns=["source", "element_rank", "treasure"])
+                   .rename(columns={"element": "weak_element"}))
+        rows = here.merge(overall, on="unit_id", how="left")
         parts.append(rows.merge(element, on=["unit_id", "weak_element"], how="left"))
     history = pd.concat(parts, ignore_index=True) if parts else table.copy()
     history["final"] = history["season"].map(by_season["final"]).astype(bool)
     return history
+
+
+def _flag(value: Any) -> bool:
+    return str(value).lower() in ("true", "1")
 
 
 def _has_tier(value: Any) -> bool:
@@ -403,10 +431,15 @@ def tier_changes(history: pd.DataFrame, config: TierConfig | None = None) -> pd.
     (after the last season of that element). A unit's first season of an
     element gives it a tier there; that is not a move. Steps are positive for a
     promotion. This is the table that answers "what did this season change".
+    ``treasure`` marks the step into the first season a unit played with its
+    treasure - always listed: its element and overall tiers from there stand on
+    those seasons.
     """
     config = config or TierConfig()
     columns = ["unit_id", "name_ko", "name_en", "weak_element", "lift", "tier", "element_lift", "element_tier",
                "overall", "overall_tier"]
+    if "treasure" in history.columns:
+        columns.append("treasure")
     stood: dict[tuple[str, str], tuple[str, float]] = {}  # (unit, element) -> tier and lift there so far
     rows = []
     before, before_season = None, None
@@ -420,7 +453,8 @@ def tier_changes(history: pd.DataFrame, config: TierConfig | None = None) -> pd.
                 element = row["weak_element_to"] if _has_tier(row["element_tier_to"]) else ""
                 was_tier, was_lift = stood.get((unit_id, element), ("", np.nan))
                 element_steps = _steps(was_tier, row["element_tier_to"], config) if element else 0
-                if steps == 0 and element_steps == 0 and overall_steps == 0:
+                treasure = _flag(row.get("treasure_to")) and not _flag(row.get("treasure_from"))
+                if steps == 0 and element_steps == 0 and overall_steps == 0 and not treasure:
                     continue
                 rows.append(
                     {
@@ -445,6 +479,7 @@ def tier_changes(history: pd.DataFrame, config: TierConfig | None = None) -> pd.
                         "overall_steps": overall_steps,
                         "overall_from": row["overall_from"],
                         "overall_to": row["overall_to"],
+                        "treasure": treasure,
                     }
                 )
         for unit_id, row in after.iterrows():

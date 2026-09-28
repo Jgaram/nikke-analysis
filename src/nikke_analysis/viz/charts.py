@@ -47,10 +47,9 @@ from matplotlib.patches import Patch, PathPatch, Rectangle
 from matplotlib.path import Path as MplPath
 
 from ..analyze.metrics import ELEMENTS, season_order
-from ..analyze.tiers import load_tier_config
+from ..analyze.tiers import load_tier_config, played_with_treasure
 from ..paths import processed_dir, reports_dir
 from ..timeline import ELEMENT_KO
-from ..util.names import TREASURE_MARK
 from . import theme as th
 from .icons import Icons, heart, line, place
 
@@ -77,7 +76,7 @@ def _read(name: str, directory: Path) -> pd.DataFrame:
     path = directory / name
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
-    frame = pd.read_csv(path, dtype={"unit_id": str, "treasure_of": str})
+    frame = pd.read_csv(path, dtype={"unit_id": str})
     for column in SEASON_COLUMNS:
         if column in frame.columns:
             frame[column] = pd.to_numeric(frame[column], errors="coerce").astype("Int64")
@@ -254,11 +253,8 @@ def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons,
     height_pt = ax.get_window_extent().height * 72.0 / fig.dpi
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.45, -48.0 / height_pt), ncols=len(handles),
               frameon=False, handlelength=1.2, columnspacing=1.2)
-    note = note if isinstance(note, list) else [note] if note else []
-    if table["unit_id"].astype(str).str.endswith(TREASURE_MARK).any():
-        note = note + (["·"] if note else []) + [heart(64), "= 애장품을 받은 니케 (애장품이 나온 뒤로는 따로 센다)"]
     if note:
-        place(ax, line(note, height_pt=11, fontsize=8.5, color=theme.ink_muted),
+        place(ax, line(note if isinstance(note, list) else [note], height_pt=11, fontsize=8.5, color=theme.ink_muted),
               (0, 0), xycoords="axes fraction", offset=(0, -76), align=(0, 1))
     return fig, ax
 
@@ -385,10 +381,17 @@ def chart_element_tiers(elements: pd.DataFrame, overall: pd.DataFrame, element: 
     return out
 
 
+def _treasure_season(unit: pd.DataFrame) -> int | None:
+    """The first season a unit's rows say it played with its treasure, or None."""
+    played = unit.loc[played_with_treasure(unit), "season"]
+    return int(played.min()) if not played.empty else None
+
+
 def chart_trajectories(history: pd.DataFrame, overall: pd.DataFrame, elements: pd.DataFrame, theme: th.Theme,
                        out: Path, names: Names, icons: Icons, *, unit_ids: list[str]) -> Path | None:
     """Selected units, season by season: the season's lift and the overall score as it stood,
-    with their element and overall tier now above each panel."""
+    with their element and overall tier now above each panel. A heart marks where a unit's
+    treasure came; its overall from there stands on the seasons with it."""
     if history.empty or not unit_ids:
         return None
     config = load_tier_config()
@@ -400,6 +403,7 @@ def chart_trajectories(history: pd.DataFrame, overall: pd.DataFrame, elements: p
     ymax = max(2.3, float(history.loc[history["unit_id"].isin(unit_ids), "lift"].max()) * 1.05)
     overall_tier = overall.set_index("unit_id")["overall_tier"] if not overall.empty else pd.Series(dtype=str)
     live = history.loc[~history["final"].astype(str).str.lower().isin(("true", "1")), "season"]
+    marked = False
     for ax, unit_id in zip(axes, unit_ids):
         unit = history[history["unit_id"] == unit_id].sort_values("season")
         if unit.empty:
@@ -420,6 +424,12 @@ def chart_trajectories(history: pd.DataFrame, overall: pd.DataFrame, elements: p
                    edgecolor=theme.surface, linewidth=1.2, zorder=4)
         ax.plot(seasons_x, unit["overall"], color=theme.categorical[1], linewidth=2.0, zorder=5,
                 solid_capstyle="round", solid_joinstyle="round")
+        treasure = _treasure_season(unit)
+        if treasure is not None:
+            ax.axvline(treasure - 0.5, color=theme.ink_muted, linewidth=1.0, linestyle=(0, (3, 3)), zorder=1)
+            place(ax, line([heart()], height_pt=13, fontsize=8, color=theme.ink_muted), (treasure - 0.5, ymax),
+                  xycoords="data", align=(0.5, 1.0))
+            marked = True
         ax.set_xlim(s_min - 0.8, s_max + 0.8)
         ax.set_ylim(-0.08, ymax)
         ax.grid(False)
@@ -453,8 +463,10 @@ def chart_trajectories(history: pd.DataFrame, overall: pd.DataFrame, elements: p
     fig.text(0.05, 1.005, "니케별 티어 변화", fontsize=14, fontweight="bold",
              color=theme.ink_primary, ha="left", va="bottom")
     cuts = " · ".join(f"{label} {cut:g}" for label, cut in config.cuts[:-1])
-    fig.text(0.05, 0.982, f"가로줄 = 티어 컷({cuts}) · 음영 = 진행 중 시즌(지금까지 수집분)",
-             fontsize=9, color=theme.ink_muted, ha="left", va="bottom")
+    note = f"가로줄 = 티어 컷({cuts}) · 음영 = 진행 중 시즌(지금까지 수집분)"
+    if marked:
+        note += " · 하트 = 애장품이 나온 때(그 뒤 종합 점수는 애장품을 낀 시즌만으로)"
+    fig.text(0.05, 0.982, note, fontsize=9, color=theme.ink_muted, ha="left", va="bottom")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -481,11 +493,17 @@ def chart_tier_heatmap(history: pd.DataFrame, theme: th.Theme, out: Path, names:
     ax.set_xlim(-0.5, n_cols - 0.5)
     ax.set_ylim(n_rows - 0.5, -1.9)
     gap = 0.07
+    marked = False
     for r, unit in enumerate(units.itertuples()):
         cells = history[history["unit_id"] == unit.unit_id]
         for cell in cells.itertuples():
             ax.add_patch(Rectangle((column[int(cell.season)] - 0.5 + gap, r - 0.5 + gap), 1 - 2 * gap, 1 - 2 * gap,
                                    facecolor=_tier_color(cell.tier, theme, order), linewidth=0, zorder=2))
+        treasure = _treasure_season(cells)
+        if treasure is not None:
+            place(ax, line([heart()], height_pt=9, fontsize=7, color=theme.ink_muted), (column[treasure] - 0.5, r),
+                  xycoords="data")
+            marked = True
     for s in seasons:
         image = icons.element(weak.get(s, ""))
         if image is not None:
@@ -509,8 +527,10 @@ def chart_tier_heatmap(history: pd.DataFrame, theme: th.Theme, out: Path, names:
     ])
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.06), ncols=len(handles),
               frameon=False, handlelength=1.2)
-    _frame(fig, ax, theme, title=f"시즌별 티어 — S 이상을 {min_seasons}번 이상 받은 니케",
-           subtitle="출시 순 · 맨 윗줄 = 그 시즌 보스의 약점 속성 · 얼굴 옆 = 그 니케의 속성과 버스트")
+    subtitle = ["출시 순 · 맨 윗줄 = 그 시즌 보스의 약점 속성 · 얼굴 옆 = 그 니케의 속성과 버스트"]
+    if marked:
+        subtitle += ["·", heart(), "= 애장품이 나온 때"]
+    _frame(fig, ax, theme, title=f"시즌별 티어 — S 이상을 {min_seasons}번 이상 받은 니케", subtitle=subtitle)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -620,13 +640,11 @@ def default_units(overall: pd.DataFrame, top_n: int) -> list[str]:
 
 
 def resolve_units(queries: list[str], history: pd.DataFrame) -> list[str]:
-    """Unit ids for names or ids; ``라플라스 애장품`` asks for ``라플라스♥``."""
-    from ..util.names import mark_treasure, normalize_name
+    from ..util.names import normalize_name
 
     units = history.drop_duplicates("unit_id")
     found = []
     for query in queries:
-        query = mark_treasure(query)
         key = normalize_name(query)
         match = units[(units["name_ko"].map(normalize_name) == key) | (units["name_en"].map(normalize_name) == key)
                       | (units["unit_id"] == query)]

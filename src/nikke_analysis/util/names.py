@@ -50,39 +50,6 @@ def normalize_unit_id(value: str | int) -> str:
     return f"{int(match.group(1)):03d}"
 
 
-# A unit whose treasure (애장품) came out plays differently enough to count as a
-# unit of its own from then on. That unit is its base's id and names with this
-# mark: ``221♥``, ``라플라스♥``. The game has no id for it; see build/treasures.py.
-TREASURE_MARK = "♥"
-
-# What people write for the mark: "라플라스 애장품", "라플라스(애장품)", "라플라스♡".
-_TREASURE_WORDS_RE = re.compile(
-    r"\s*(?:[(（]\s*)?(?:애장품|애장|treasure|favorite\s*item)(?:\s*[)）])?\s*$|\s*[♥♡❤]️?\s*$",
-    re.IGNORECASE,
-)
-
-
-def treasure_id(unit_id: str) -> str:
-    """``221`` -> ``221♥``: the unit ``221`` became once its treasure came out."""
-    return f"{unit_id}{TREASURE_MARK}"
-
-
-def treasure_base(unit_id: str) -> str | None:
-    """``221♥`` -> ``221``; a unit without the mark -> ``None``."""
-    text = str(unit_id)
-    return text[: -len(TREASURE_MARK)] if text.endswith(TREASURE_MARK) and len(text) > len(TREASURE_MARK) else None
-
-
-def mark_treasure(query: str) -> str:
-    """A query that asks for a treasure unit in words, with the mark instead:
-    ``라플라스 애장품`` -> ``라플라스♥``. Anything else comes back as it was."""
-    text = str(query).strip()
-    match = _TREASURE_WORDS_RE.search(text)
-    if not match or not text[: match.start()].strip():
-        return text
-    return text[: match.start()].strip() + TREASURE_MARK
-
-
 def variant_suffix(display_name: str) -> str | None:
     """``"Rapi: Red Hood"`` -> ``"Red Hood"``; a base unit -> ``None``.
 

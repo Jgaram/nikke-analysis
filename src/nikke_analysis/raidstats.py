@@ -41,9 +41,9 @@ import pandas as pd
 from .analyze import metrics, tiers
 from .paths import processed_dir
 from .servers import ServerError, ServerFilter, describe, ordered
-from .tierlist import ELEMENT_KO, TREASURE_NOTE, find_unit, load_index
+from .tierlist import ELEMENT_KO, find_unit, load_index
 from .timeline import Season, Timeline, resolve_moment
-from .util.names import TREASURE_MARK, NameIndex
+from .util.names import NameIndex
 from .util.text import pad, rjust, width
 
 SPLIT = metrics.DECK_SPLIT
@@ -111,7 +111,7 @@ def unit_record(row: pd.Series) -> dict[str, Any]:
 def _read(path: Path) -> pd.DataFrame:
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
-    return pd.read_csv(path, dtype={"unit_id": str, "treasure_of": str}, keep_default_na=False, na_values=[""])
+    return pd.read_csv(path, dtype={"unit_id": str}, keep_default_na=False, na_values=[""])
 
 
 class RaidBook:
@@ -272,11 +272,8 @@ class RaidBook:
             unit_id = find_unit(query, usage.rows, self.index)
         except LookupError:
             unit_id = find_unit(query, self.table, self.index)  # exists, just not in this season
-            unit = self.table[self.table["unit_id"] == unit_id].iloc[0]
-            release, name = unit["release_date"], unit["name_ko"]
-            if isinstance(unit.get("treasure_of"), str) and unit["treasure_of"]:
-                raise QueryError(f"{name} 은(는) 시즌 {usage.number} 당시 아직 애장품이 나오기 전이었다 "
-                                 f"({release} 애장품)") from None
+            release = self.table.loc[self.table["unit_id"] == unit_id, "release_date"].iloc[0]
+            name = self.table.loc[self.table["unit_id"] == unit_id, "name_ko"].iloc[0]
             raise QueryError(f"{name} 은(는) 시즌 {usage.number} 당시 아직 출시 전이었다 ({release} 출시)") from None
         return usage.rows[usage.rows["unit_id"] == unit_id].iloc[0]
 
@@ -327,7 +324,6 @@ def render_season(usage: SeasonUsage, *, include_unused: bool = False) -> str:
         "덱 순위 = 한 사람의 덱 5개를 딜량 순으로 세운 순서 (1덱 = 딜량 1등 덱)",
         "1덱~5덱 = 그 니케를 쓴 사람 중 그 덱에 넣은 비율 · 평균 = 평균 덱 순위 · 티어 = 이 표본의 시즌 티어와 기여도",
         "기여도 = 랭커 대미지를 덱에 든 니케끼리 나눠 가진 몫 (25명이 똑같이 나누면 1.0, 0 = 아무도 안 씀)",
-        *([TREASURE_NOTE] if usage.rows["unit_id"].astype(str).str.endswith(TREASURE_MARK).any() else []),
         "",
         _row("순위", "니케", "사용", "사용률", [f"{d}덱" for d in metrics.DECK_RANKS], "평균", "티어", names=names),
     ]

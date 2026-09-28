@@ -6,8 +6,9 @@
     nikke tier                       tiers now: last season, the live one, the next one, overall
     nikke tier 2주년                 the same, as the data stood then
     nikke tier --unit 크라운         one unit's tier, season by season
+    nikke tier --exclude NA          any of these on another server sample (--server KR,JP)
     nikke raid                       the newest season: units by usage, with the deck split
-    nikke raid 40 크라운             one unit in one season (--server KR, --top 10 narrow it)
+    nikke raid 40 크라운             one unit in one season (--server, --exclude, --top narrow it)
     nikke check                      does the timeline need a human? (exit 1 if so)
 
     nikke collect roster             fetch the roster sources
@@ -20,6 +21,11 @@
     nikke build raids                snapshots -> raid_entries.csv
     nikke analyze                    processed tables -> metric tables
     nikke viz                        metric tables -> reports/*.png
+
+Rankings pool every server (GLOBAL, JP, KR, NA, SEA, TW-HK) unless
+config/tiers.yaml says otherwise. --server keeps only the servers named,
+--exclude drops them; both take any case, Korean names (한국, 일본, 북미,
+동남아, 대만) and comma-separated lists, and neither changes committed tables.
     nikke refresh                    the whole pipeline, in order
     nikke status                     what exists on disk right now
 
@@ -49,6 +55,13 @@ def _emit(payload: object) -> None:
     print(json.dumps(payload, indent=2, ensure_ascii=False, default=str))
 
 
+def _servers(args: argparse.Namespace):
+    """The server choice on the command line; empty when neither option was given."""
+    from .servers import ServerFilter
+
+    return ServerFilter.of(args.server or (), args.exclude or ())
+
+
 # --------------------------------------------------------------------------
 # questions about the past
 # --------------------------------------------------------------------------
@@ -67,7 +80,11 @@ def cmd_asof(args: argparse.Namespace) -> int:
 def cmd_tier(args: argparse.Namespace) -> int:
     from .tierlist import TierBook, render, render_unit
 
-    book = TierBook.load()
+    try:
+        book = TierBook.load(servers=_servers(args))
+    except (LookupError, RuntimeError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
     if args.unit:
         try:
             history = book.unit(args.unit, args.moment)
@@ -75,7 +92,8 @@ def cmd_tier(args: argparse.Namespace) -> int:
             print(exc, file=sys.stderr)
             return 1
         if args.json:
-            _emit({"unit": history.info, "profile": history.profile, "seasons": history.rows.to_dict(orient="records")})
+            _emit({"unit": history.info, "sample": history.sample.to_dict() if history.sample else None,
+                   "profile": history.profile, "seasons": history.rows.to_dict(orient="records")})
         else:
             print(render_unit(history, book.config))
         return 0
@@ -90,11 +108,10 @@ def cmd_tier(args: argparse.Namespace) -> int:
 def cmd_raid(args: argparse.Namespace) -> int:
     from .raidstats import RaidBook, render_season, render_unit, unit_record
 
-    servers = [s for value in args.server or [] for s in value.split(",")]
     try:
         book = RaidBook.load()
         number, unit = book.parse(args.target, args.unit)
-        usage = book.season(number, servers=servers, top=args.top)
+        usage = book.season(number, servers=args.server or (), exclude=args.exclude or (), top=args.top)
         row = book.unit(usage, unit) if unit else None
     except LookupError as exc:
         print(exc, file=sys.stderr)
@@ -321,6 +338,9 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         steps["analyze"] = analysis.run(content=args.content)
     except RuntimeError as exc:
         steps["analyze"] = {"skipped": str(exc)}
+    except LookupError as exc:  # config/tiers.yaml names a server the rankings do not have
+        steps["analyze"] = {"failed": str(exc)}
+        failures["analyze"] = f"config/tiers.yaml 의 서버 설정: {exc}"
     else:
         from .viz import charts
 
@@ -343,17 +363,41 @@ def cmd_refresh(args: argparse.Namespace) -> int:
 # --------------------------------------------------------------------------
 
 def cmd_analyze(args: argparse.Namespace) -> int:
+    """The committed metric tables; with --server/--exclude, the same tables on
+    that sample under data/interim/servers/ (not committed)."""
     from .analyze import pipeline
 
-    _emit(pipeline.run(content=args.content))
+    chosen = _servers(args)
+    try:
+        if chosen:
+            _emit(pipeline.run_servers(chosen, content=args.content, reuse=False))
+        else:
+            _emit(pipeline.run(content=args.content))
+    except LookupError as exc:
+        print(exc, file=sys.stderr)
+        return 1
     return 0
 
 
 def cmd_viz(args: argparse.Namespace) -> int:
+    """Charts of the committed tables into reports/; with --server/--exclude,
+    charts of that sample into reports/servers/<choice>/."""
     from .viz import charts
 
     units = [u.strip() for u in args.units.split(",") if u.strip()] if args.units else None
-    _emit(charts.render_all(top_n=args.top, units=units))
+    chosen = _servers(args)
+    if not chosen:
+        _emit(charts.render_all(top_n=args.top, units=units))
+        return 0
+    from .analyze import pipeline
+
+    try:
+        tables = pipeline.run_servers(chosen)
+    except (LookupError, RuntimeError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    _emit(charts.render_all(data_dir=Path(tables["out_dir"]), out_dir=paths.reports_dir() / "servers" / chosen.slug,
+                            top_n=args.top, units=units, sample=chosen.english))
     return 0
 
 
@@ -384,6 +428,14 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 # --------------------------------------------------------------------------
 
+def _server_options(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--server", action="append", default=None, metavar="NAME",
+                   help="only these servers (GLOBAL, JP, KR, NA, SEA, TW-HK, or 한국, 일본 ...); "
+                        "repeat or comma-separate")
+    p.add_argument("--exclude", action="append", default=None, metavar="NAME",
+                   help="every server but these; repeat or comma-separate")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="nikke",
@@ -403,6 +455,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("moment", nargs="?", default=None, help="2024-11-04, 2024-11-04T15:00 or 2주년 (default: now)")
     p.add_argument("--unit", default=None, help="one unit's season-by-season record, by Korean or English name")
     p.add_argument("--all", action="store_true", help="also list C and D")
+    _server_options(p)
     p.add_argument("--json", action="store_true", help="machine-readable output")
     p.set_defaults(func=cmd_tier)
 
@@ -410,8 +463,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("target", nargs="?", default=None,
                    help="season number, a moment (2024-11-04, 2주년), or a unit name (default: newest season)")
     p.add_argument("unit", nargs="?", default=None, help="one unit, by Korean or English name or id")
-    p.add_argument("--server", action="append", default=None,
-                   help="only these servers (GLOBAL, JP, KR, NA, SEA, TW-HK); repeat or comma-separate")
+    _server_options(p)
     p.add_argument("--top", type=int, default=None, help="only ranks 1..N of each server")
     p.add_argument("--all", action="store_true", help="also list the units available then that nobody fielded")
     p.add_argument("--json", action="store_true", help="machine-readable output")
@@ -472,11 +524,13 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("analyze", help="compute metric tables")
     p.add_argument("--content", default="soloraid")
+    _server_options(p)
     p.set_defaults(func=cmd_analyze)
 
     p = sub.add_parser("viz", help="render charts")
     p.add_argument("--top", type=int, default=6, help="units in the trajectory chart (strongest overall)")
     p.add_argument("--units", default=None, help="comma-separated unit names for the trajectory chart instead")
+    _server_options(p)
     p.set_defaults(func=cmd_viz)
 
     p = sub.add_parser("refresh", help="run the whole pipeline in dependency order")

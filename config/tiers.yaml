@@ -10,9 +10,17 @@
 # and a deck's share equally over its five members.)
 
 # Which leaderboard entries count.
+#
+# Every server by default: GLOBAL, JP, KR, NA, SEA and TW-HK run the same game
+# version, boss and patches, so each server's top 50 is another look at the same
+# meta. Narrow it here to change the committed tables; for one look at another
+# sample, use --server / --exclude on the command line instead (it replaces
+# these two lines for that run and writes nothing that is committed). Names take
+# any case and Korean (한국, 일본, 글로벌, 북미, 동남아, 대만).
 population:
   top_n: 50              # ranks 1..N of every server (enikk serves the top 50)
-  servers: []            # [] = every server; e.g. [KR] for the Korean server alone
+  servers: []            # only these; [] = every server. e.g. [KR] for the Korean server alone
+  exclude_servers: []    # every server but these, e.g. [NA, SEA]
   rank_weighting: dcg    # dcg: 1/log2(rank+1), so rank 1 = 1.00, rank 50 = 0.18; or uniform
 
 # Season tier: fixed cuts on lift, best to worst. Fixed rather than percentile,

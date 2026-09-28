@@ -35,6 +35,32 @@ unit_id, unit_name_raw, unit_cp, unit_cores, collected_at
 근처에서 100%로 포화되고 서열을 가르지 못한다. 서열을 가르는 건 **어느 덱에
 있었나**다. 메인 덱은 한 사람 대미지의 30% 안팎, 다섯째 덱은 13% 안팎을 낸다.
 
+### 서버: 기본은 전부 합친다
+
+여섯 서버는 같은 게임 버전, 같은 보스, 같은 패치로 돌아간다. 전투 환경이 같으니
+서버마다의 상위 50명은 **같은 메타를 여섯 번 관측**한 것이고, 합치면 표본이 여섯
+배다(시즌마다 300명 · 덱 1,500개). 순위 가중은 서버 안 순위로 매기므로 한 서버의
+랭커가 다른 서버의 1위를 밀어내지 않는다. 그래서 기본값은 전 서버
+(`population.servers: []`)이고 커밋되는 표도 전 서버 기준이다. 시즌 5·6은 enikk 가
+4개 서버(GLOBAL · JP · NA · SEA)만 추적했다.
+
+일부 서버만 보려면:
+
+| 어디서 | 어떻게 | 바뀌는 것 |
+|---|---|---|
+| 명령줄 | `--server KR,JP` (그 서버만) · `--exclude NA,SEA` (그 서버만 빼고) | `nikke tier` · `tier --unit` · `raid` · `analyze` · `viz` 그 한 번. tiers.yaml 의 서버 설정을 **대신한다**. 커밋된 표는 그대로 |
+| `config/tiers.yaml` | `population.servers` · `population.exclude_servers` | 커밋되는 표 자체 (`nikke analyze` · `refresh` 가 다시 계산) |
+
+서버 이름은 대소문자를 가리지 않고 한글과 줄임말도 받는다: `한국` · `일본` ·
+`글로벌` · `북미` · `동남아` · `대만`(= TW-HK), `tw` · `hk`. 여러 개는 쉼표로 잇거나
+옵션을 반복한다. 데이터에 없는 이름은 오류다 — 오타가 "전 서버"로 조용히 넘어가지
+않게.
+
+명령줄로 고른 표본의 표는 `data/interim/servers/<선택>/`(예: `excl-NA`, `KR+JP`)에
+만들어 두고, 입력 표·인자·코드가 그대로면 다시 쓴다. 처음 한 번은 10초 남짓, 그다음은
+바로 나온다. 차트는 `reports/servers/<선택>/` 에 그리고 부제 끝에 표본을 적는다
+(`all servers but NA`). 둘 다 커밋하지 않는다.
+
 ---
 
 ## 1. lift — 한 시즌에서의 가치
@@ -235,6 +261,7 @@ nikke raid 40                     # 시즌 40: 사용 순위, 사용률, 1덱~5�
 nikke raid 2주년                  # 그때 진행 중(없으면 직전에 끝난) 시즌
 nikke raid 40 크라운              # 한 니케 (순서는 바꿔도 된다: nikke raid 크라운 40)
 nikke raid 40 --server KR --top 10    # 표본을 좁혀서 다시 센다 (티어도 그 표본 기준)
+nikke raid 40 --exclude NA,SEA    # 그 서버만 빼고
 nikke raid 40 --all               # 당시 출시돼 있었는데 아무도 안 쓴 니케까지
 nikke raid 40 --json
 ```
@@ -246,8 +273,9 @@ nikke raid 40 --json
   구간의 서열은 사용률이 아니라 덱 분포와 lift 가 가른다 — 둘 다 100%인 두 니케가
   하나는 1덱 94%, 하나는 4덱 65%일 수 있다.
 - 전체 표본(서버마다 상위 50위)은 커밋된 `metrics_unit_season.csv` 를 그대로 읽는다.
-  `--server` · `--top` 으로 좁힌 표본은 `raid_entries.csv` 에서 그 자리에서 다시
-  계산한다(없으면 `nikke build raids`, 오프라인으로 몇 초).
+  `--server` · `--exclude` · `--top` 으로 좁힌 표본은 `raid_entries.csv` 에서 그
+  자리에서 다시 계산한다(없으면 `nikke build raids`, 오프라인으로 몇 초). 표본 줄에
+  어느 서버인지 적힌다(`NA·SEA 제외 4개 서버 상위 50위`).
 - 진행 중인 시즌은 enikk 가 마지막으로 모은 때까지의 순위라고 표시한다.
 
 ---
@@ -256,7 +284,7 @@ nikke raid 40 --json
 
 | 파일 | 한 행 | 내용 |
 |---|---|---|
-| `metrics_seasons.csv` | 시즌 | 서버 수, 인원·덱 수(친 덱만), 메인 덱 몫, 수집일, `final` |
+| `metrics_seasons.csv` | 시즌 | 서버 수와 이름(`server_names`), 인원·덱 수(친 덱만), 메인 덱 몫, 수집일, `final` |
 | `metrics_unit_season.csv` | 시즌 × 니케 | 위 1절의 모든 값(사용률·덱 순위 분포 포함), 시즌 티어, 그 시즌 종료 시점의 속성 칸·종합·역할 |
 | `metrics_element_tiers.csv` | 니케 | 최신 데이터 기준 속성 칸 5개와 티어, 종합, 최고 속성, 커버리지, 역할 |
 | `metrics_tier_changes.csv` | 니케 × 시즌 전환 | 시즌 티어나 종합 티어가 바뀐 경우 |
@@ -268,6 +296,9 @@ nikke raid 40 --json
 차트(`nikke viz` → `reports/`, 라이트·다크): `tier-snapshot`, `tier-trajectories`,
 `tier-heatmap`, `element-tiers`, `tier-distribution`, `meta-shift`, `patch-impact`.
 
+`--server` · `--exclude` 로 고른 표본은 같은 표를 `data/interim/servers/<선택>/` 에,
+차트를 `reports/servers/<선택>/` 에 만든다(커밋 안 함, [서버](#서버-기본은-전부-합친다)).
+
 ---
 
 ## 조정 가능한 인자 (`config/tiers.yaml`)
@@ -275,7 +306,8 @@ nikke raid 40 --json
 | 인자 | 기본값 | 뜻 |
 |---|---|---|
 | `population.top_n` | 50 | 서버별 몇 위까지 |
-| `population.servers` | `[]` (전부) | 예: `[KR]` 이면 한국 서버만 |
+| `population.servers` | `[]` (전부) | 쓸 서버만. 예: `[KR]` 이면 한국 서버만 |
+| `population.exclude_servers` | `[]` | 뺄 서버. 예: `[NA, SEA]` 이면 그 둘만 빼고 전부 |
 | `population.rank_weighting` | `dcg` | `dcg` 또는 `uniform` |
 | `cuts` | SS 1.4 · S 1.1 · A 0.8 · B 0.5 · C 0.2 · D 0 | 시즌 티어 컷 (lift) |
 | `element.half_life_days` | 180 | 이만큼 지난 시즌은 절반만 반영 (0 = 감쇠 없음) |

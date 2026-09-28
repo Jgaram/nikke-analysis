@@ -6,6 +6,7 @@
     nikke raid 40 크라운           one unit: usage, rank, deck split
     nikke raid 크라운              the same, in the newest season
     nikke raid 40 --server KR      one server (repeat, or comma-separate, for more)
+    nikke raid 40 --exclude NA,SEA every server but these
     nikke raid 40 --top 10         ranks 1..10 of each server
     nikke raid 40 --all            also the units available then that nobody fielded
 
@@ -22,9 +23,10 @@ This is the raw count behind the tiers (``nikke tier``), which weigh the same
 decks by the damage they did.
 
 The whole sample (every server's top 50) reads the committed
-``metrics_unit_season.csv``. A narrower one (``--server``, ``--top``) is
-recomputed from ``raid_entries.csv``, which ``nikke build raids`` rebuilds from
-the committed snapshots in a few seconds.
+``metrics_unit_season.csv``. A narrower one (``--server``, ``--exclude``,
+``--top``) is recomputed from ``raid_entries.csv``, which ``nikke build raids``
+rebuilds from the committed snapshots in a few seconds. Server names take any
+case and Korean (``한국``, ``대만``); see ``servers.py``.
 """
 
 from __future__ import annotations
@@ -38,6 +40,7 @@ import pandas as pd
 
 from .analyze import metrics, tiers
 from .paths import processed_dir
+from .servers import ServerError, ServerFilter, describe, ordered
 from .tierlist import ELEMENT_KO, find_unit, load_index
 from .timeline import Season, Timeline, resolve_moment
 from .util.names import NameIndex
@@ -58,10 +61,11 @@ class SeasonUsage:
     rankers: int
     decks: int
     servers: int  # how many servers the sample spans
-    filter_servers: tuple[str, ...]  # the ones asked for, if any
+    server_filter: ServerFilter  # how they were chosen; empty = every server
     top: int | None
     collected_on: str
     final: bool
+    server_names: tuple[str, ...] = ()  # the servers in the sample
 
     @property
     def used(self) -> pd.DataFrame:
@@ -75,7 +79,8 @@ class SeasonUsage:
             "boss_ko": self.season.boss_ko if self.season else "",
             "weak_element": self.season.weak_element if self.season else "",
             "servers": self.servers,
-            "server_filter": list(self.filter_servers),
+            "server_names": list(self.server_names),
+            "server_filter": self.server_filter.to_dict(),
             "top": self.top,
             "rankers": self.rankers,
             "decks": self.decks,
@@ -200,26 +205,40 @@ class RaidBook:
             self._loaded = inputs
         return self._loaded
 
-    def season(self, number: int, *, servers: Iterable[str] = (), top: int | None = None) -> SeasonUsage:
-        """One season's usage; ``servers`` and ``top`` narrow the sample."""
-        chosen = tuple(s.strip() for s in servers if s and s.strip())
+    def season(
+        self,
+        number: int,
+        *,
+        servers: Iterable[str] | str = (),
+        exclude: Iterable[str] | str = (),
+        top: int | None = None,
+    ) -> SeasonUsage:
+        """One season's usage; ``servers`` (only these), ``exclude`` (all but
+        these) and ``top`` narrow the sample. Server names replace the configured
+        server choice; ``top`` alone keeps it."""
+        asked = ServerFilter.of(servers, exclude)
+        chosen = asked or self.config.server_filter
         summary = self.seasons[self.seasons["season"].astype(int) == number].iloc[0]
-        if not chosen and not top:
+        if not asked and not top:
             rows = self.table[self.table["season"].astype(int) == number]
             rankers, decks = int(summary["rankers"]), int(summary["decks"])
             spanned = int(summary["servers"])
+            names = summary.get("server_names")
+            served = tuple(n for n in names.split(";") if n) if isinstance(names, str) else ()
         else:
             inputs = self._inputs()
+            everywhere = inputs["entries"]["server"].unique()
             entries = inputs["entries"][inputs["entries"]["season"] == number]
-            served = sorted(set(entries["server"]))
-            if chosen:
-                known = {s.upper(): s for s in served}
-                missing = [s for s in chosen if s.upper() not in known]
-                if missing:
-                    raise QueryError(f"시즌 {number} 에 없는 서버: {', '.join(missing)} (있는 서버: {', '.join(served)})")
-                chosen = tuple(known[s.upper()] for s in chosen)
+            here = ordered(entries["server"].unique())
+            try:
+                chosen.check(everywhere)
+            except ServerError as exc:
+                raise QueryError(str(exc)) from None
+            missing = [s for s in chosen.include if s not in here]
+            if missing:
+                raise QueryError(f"시즌 {number} 에 없는 서버: {', '.join(missing)} (있는 서버: {', '.join(here)})")
             population = metrics.select_population(
-                entries, top_n=top or self.config.top_n, servers=chosen or self.config.servers
+                entries, top_n=top or self.config.top_n, servers=chosen.include, exclude=chosen.exclude
             )
             if population.empty:
                 raise QueryError(f"시즌 {number} 에서 그 조건에 맞는 랭커가 없다")
@@ -228,7 +247,8 @@ class RaidBook:
             rows = tiers.season_tiers(rows, self.config)
             decks_table = metrics.deck_table(population)
             rankers, decks = decks_table.drop_duplicates(metrics.RANKER_KEYS).shape[0], len(decks_table)
-            spanned = int(population["server"].nunique())
+            served = tuple(ordered(population["server"].unique()))
+            spanned = len(served)
         rows = rows.sort_values(["usage_rank", "avg_deck", "unit_id"], na_position="last").reset_index(drop=True)
         collected = pd.Timestamp(summary["collected_on"]) if summary.get("collected_on") else None
         final = str(summary["final"]).lower() in ("true", "1")
@@ -239,10 +259,11 @@ class RaidBook:
             rankers=rankers,
             decks=decks,
             servers=spanned,
-            filter_servers=chosen,
+            server_filter=chosen,
             top=top,
             collected_on=collected.tz_convert("Asia/Seoul").date().isoformat() if collected is not None and collected.tzinfo else (str(summary["collected_on"])[:10]),
             final=final,
+            server_names=served,
         )
 
     def unit(self, usage: SeasonUsage, query: str) -> pd.Series:
@@ -281,7 +302,7 @@ def _header(usage: SeasonUsage) -> list[str]:
         head += f" · {season.boss} · 보스 {_element(season.element)} / 약점 {_element(season.weak_element)}"
         if season.start and season.end:
             head += f" · {season.start:%Y-%m-%d} ~ {season.end:%m-%d}"
-    where = "·".join(usage.filter_servers) if usage.filter_servers else f"{usage.servers}개 서버"
+    where = describe(usage.server_filter, usage.server_names) if usage.server_names else f"{usage.servers}개 서버"
     scope = f"{usage.top}위까지" if usage.top else "상위 50위"
     sample = f"표본  {where} {scope} = {usage.rankers:,}명 · 덱 {usage.decks:,}개 (enikk {usage.collected_on} 수집"
     sample += ", 진행 중인 시즌이라 그때까지의 순위)" if not usage.final else ")"

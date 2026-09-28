@@ -5,6 +5,11 @@ whole analysis can be re-run offline and reviewed as a diff. Nothing reads the
 clock: "current" means "as of the newest ranking snapshot", so the same inputs
 give byte-identical outputs.
 
+The committed tables are computed on the server sample config/tiers.yaml names
+(every server by default). ``run_servers`` computes the same tables on another
+sample (``--server``/``--exclude``) into ``data/interim/servers/<choice>/``,
+which is not committed, and reuses them while their inputs stay the same.
+
 Outputs:
 
 ``metrics_seasons.csv``        per season: players, decks, whether it is final
@@ -21,14 +26,19 @@ Outputs:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
-from ..paths import processed_dir
+from .. import servers as server_names
+from ..paths import interim_dir, processed_dir
+from ..servers import ServerFilter
 from . import metrics, tiers
 
 log = logging.getLogger(__name__)
@@ -39,6 +49,9 @@ SEASONS_CSV = "soloraid_seasons.csv"
 NOTICES_CSV = "notices.csv"
 BANNERS_CSV = "banners.csv"
 RELEASES_CSV = "unit_releases.csv"
+
+INPUTS = (ENTRIES_CSV, ROSTER_CSV, SEASONS_CSV, NOTICES_CSV, BANNERS_CSV, RELEASES_CSV)
+STAMP = "stamp.json"
 
 OUTPUTS = (
     "metrics_seasons.csv",
@@ -170,8 +183,12 @@ def run(
     content: str = "soloraid",
     data_dir: Path | None = None,
     config: tiers.TierConfig | None = None,
+    out_dir: Path | None = None,
 ) -> dict[str, Any]:
+    """Every metric table from the processed tables in ``data_dir``, written to
+    ``out_dir`` (default: ``data_dir`` itself)."""
     directory = data_dir or processed_dir()
+    target = out_dir or directory
     config = config or tiers.load_tier_config()
     inputs = load_inputs(directory)
     roster, entries, seasons = inputs["roster"], inputs["entries"], inputs["seasons"]
@@ -187,7 +204,12 @@ def run(
 
     if "content" in entries.columns:
         entries = entries[entries["content"] == content]
-    entries = metrics.select_population(entries, top_n=config.top_n, servers=config.servers)
+    chosen = config.server_filter
+    if chosen:
+        chosen.check(entries["server"].unique())  # a misspelt server must not pass as "every server"
+    entries = metrics.select_population(
+        entries, top_n=config.top_n, servers=config.servers, exclude=config.exclude_servers
+    )
     if entries.empty:
         raise RuntimeError(f"no raid entries for content={content!r} in the configured population")
 
@@ -210,9 +232,10 @@ def run(
     arcs = metrics.trajectories(table)
     impact = patch_impact(shift, inputs["patches"], inputs["releases"], seasons)
 
+    target.mkdir(parents=True, exist_ok=True)
     written: dict[str, str] = {}
     for name, frame in zip(OUTPUTS, (summary_table, history, current, changes, shift, pairs, arcs, impact)):
-        path = directory / name
+        path = target / name
         _write(frame, path)
         written[name] = str(path)
 
@@ -220,6 +243,8 @@ def run(
     live = summary_table[~summary_table["final"]]
     summary = {
         "content": content,
+        "servers": server_names.ordered(entries["server"].unique()),
+        "server_filter": chosen.to_dict(),
         "seasons": len(summary_table),
         "final_seasons": len(final),
         "live_season": int(live["season"].max()) if not live.empty else None,
@@ -232,3 +257,73 @@ def run(
     }
     log.info("analysis complete: %s seasons, %s players", summary["seasons"], summary["rankers"])
     return summary
+
+
+# --------------------------------------------------------------------------
+# another server sample
+# --------------------------------------------------------------------------
+
+def server_dir(chosen: ServerFilter, cache_dir: Path | None = None) -> Path:
+    """Where the tables for a server choice live: ``data/interim/servers/<choice>/``."""
+    return (cache_dir or interim_dir() / "servers") / chosen.slug
+
+
+def _plain(value: Any) -> Any:
+    return value.item() if hasattr(value, "item") else str(value)
+
+
+def _fingerprint(directory: Path, config: tiers.TierConfig, content: str) -> dict[str, Any]:
+    """Everything the tables depend on: the input tables (size and mtime), the
+    parameters, and the analysis code itself."""
+    inputs = {}
+    for name in INPUTS:
+        path = directory / name
+        if path.is_file():
+            stat = path.stat()
+            inputs[name] = [stat.st_size, stat.st_mtime_ns]
+    code = hashlib.sha256()
+    for module in (metrics.__file__, tiers.__file__, __file__, server_names.__file__):
+        code.update(Path(module).read_bytes())
+    stamp = {
+        "data_dir": str(directory.resolve()),
+        "content": content,
+        "config": asdict(config),
+        "inputs": inputs,
+        "code": code.hexdigest(),
+    }
+    return json.loads(json.dumps(stamp, default=_plain))
+
+
+def run_servers(
+    chosen: ServerFilter,
+    *,
+    content: str = "soloraid",
+    data_dir: Path | None = None,
+    config: tiers.TierConfig | None = None,
+    cache_dir: Path | None = None,
+    reuse: bool = True,
+) -> dict[str, Any]:
+    """The metric tables on the servers ``chosen`` picks, in ``server_dir(chosen)``.
+
+    ``chosen`` replaces the configured server sample; every other parameter
+    stays. The tables are reused while the inputs, the parameters and the code
+    are unchanged (``reused`` in the result says which happened), so a second
+    look at the same sample is instant. The committed tables are not touched.
+    """
+    directory = data_dir or processed_dir()
+    config = (config or tiers.load_tier_config()).with_servers(chosen)
+    target = server_dir(chosen, cache_dir)
+    fingerprint = _fingerprint(directory, config, content)
+    stamp = target / STAMP
+    if reuse and stamp.is_file() and all((target / name).is_file() for name in OUTPUTS):
+        try:
+            saved = json.loads(stamp.read_text(encoding="utf-8"))
+        except ValueError:
+            saved = {}
+        if saved.get("fingerprint") == fingerprint:
+            return {**saved["summary"], "out_dir": str(target), "reused": True}
+    summary = run(content=content, data_dir=directory, config=config, out_dir=target)
+    summary = json.loads(json.dumps(summary, default=_plain))
+    stamp.write_text(json.dumps({"fingerprint": fingerprint, "summary": summary}, ensure_ascii=False, indent=2),
+                     encoding="utf-8")
+    return {**summary, "out_dir": str(target), "reused": False}

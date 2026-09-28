@@ -13,6 +13,9 @@ Seven charts, each answering one question:
 Every chart is rendered in both light and dark. The dark version uses its own
 validated steps rather than an inverted copy of the light one. Unit names are in
 Korean when a Hangul font is installed, in English otherwise.
+
+Charts of another server sample (``nikke viz --exclude NA``) say so at the end
+of every subtitle, so a copied image does not pass for the whole population.
 """
 
 from __future__ import annotations
@@ -41,6 +44,10 @@ log = logging.getLogger(__name__)
 SEASON_COLUMNS = ("season", "season_from", "season_to")
 ELEMENT_SHORT = {"Fire": "Fire", "Water": "Water", "Wind": "Wind", "Iron": "Iron", "Electric": "Elec."}
 ELEMENT_INITIAL = {"Fire": "F", "Water": "Wa", "Wind": "Wi", "Iron": "I", "Electric": "E"}
+
+# The server sample when it is not the configured one ("all servers but NA");
+# render_all sets it for the length of a run and every subtitle ends with it.
+_sample_caption = ""
 
 
 def _read(name: str, directory: Path) -> pd.DataFrame:
@@ -78,6 +85,8 @@ def _frame(fig, ax, theme: th.Theme, *, title: str, subtitle: str = "", legend_c
     below the plot where it can never overlap a mark.
     """
     ax.set_title("")
+    if _sample_caption:
+        subtitle = f"{subtitle} · {_sample_caption}" if subtitle else _sample_caption
     ax.annotate(title, (0, 1), xycoords="axes fraction", textcoords="offset points", xytext=(0, 34),
                 fontsize=14, fontweight="bold", color=theme.ink_primary, va="bottom", annotation_clip=False)
     if subtitle:
@@ -475,7 +484,14 @@ def render_all(
     themes: tuple[str, ...] = ("light", "dark"),
     top_n: int = 6,
     units: list[str] | None = None,
+    sample: str = "",
 ) -> dict[str, Any]:
+    """Every chart from the metric tables in ``data_dir``, into ``out_dir``.
+
+    ``sample`` names a server sample other than the configured one; it is
+    appended to every subtitle.
+    """
+    global _sample_caption
     directory = data_dir or processed_dir()
     target = out_dir or reports_dir()
     target.mkdir(parents=True, exist_ok=True)
@@ -492,23 +508,27 @@ def render_all(
     names = Names()
     written: list[str] = []
     skipped: list[str] = []
-    for theme_name in themes:
-        theme = th.THEMES[theme_name]
-        th.apply(theme)
-        suffix = "" if theme_name == "light" else "-dark"
-        jobs = [
-            ("tier-snapshot", lambda p, t=theme: chart_tier_snapshot(history, seasons, t, p, names)),
-            ("tier-trajectories", lambda p, t=theme: chart_trajectories(history, current, t, p, names, unit_ids=picks)),
-            ("tier-heatmap", lambda p, t=theme: chart_tier_heatmap(history, t, p, names)),
-            ("element-tiers", lambda p, t=theme: chart_element_tiers(current, t, p, names)),
-            ("tier-distribution", lambda p, t=theme: chart_tier_distribution(history, t, p)),
-            ("meta-shift", lambda p, t=theme: chart_meta_shift(shift, t, p)),
-            ("patch-impact", lambda p, t=theme: chart_patch_impact(impact, t, p)),
-        ]
-        for name, render in jobs:
-            path = target / f"{name}{suffix}.png"
-            result = render(path)
-            (written if result else skipped).append(f"{name}{suffix}")
+    _sample_caption = sample
+    try:
+        for theme_name in themes:
+            theme = th.THEMES[theme_name]
+            th.apply(theme)
+            suffix = "" if theme_name == "light" else "-dark"
+            jobs = [
+                ("tier-snapshot", lambda p, t=theme: chart_tier_snapshot(history, seasons, t, p, names)),
+                ("tier-trajectories", lambda p, t=theme: chart_trajectories(history, current, t, p, names, unit_ids=picks)),
+                ("tier-heatmap", lambda p, t=theme: chart_tier_heatmap(history, t, p, names)),
+                ("element-tiers", lambda p, t=theme: chart_element_tiers(current, t, p, names)),
+                ("tier-distribution", lambda p, t=theme: chart_tier_distribution(history, t, p)),
+                ("meta-shift", lambda p, t=theme: chart_meta_shift(shift, t, p)),
+                ("patch-impact", lambda p, t=theme: chart_patch_impact(impact, t, p)),
+            ]
+            for name, render in jobs:
+                path = target / f"{name}{suffix}.png"
+                result = render(path)
+                (written if result else skipped).append(f"{name}{suffix}")
+    finally:
+        _sample_caption = ""
 
     log.info("rendered %s charts -> %s", len(written), target)
     return {"out_dir": str(target), "written": written, "skipped_no_data": sorted(set(skipped)),

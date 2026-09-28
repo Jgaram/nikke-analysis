@@ -4,11 +4,17 @@
                                  progress, the next one, and the overall tiers
     nikke tier 2주년             the same, as the data stood at the anniversary
     nikke tier --unit 크라운     one unit, season by season
+    nikke tier --exclude NA      the same on another server sample (--server KR,JP
+                                 keeps only those); works with the two above
 
 Reads the metric tables (``metrics_unit_season.csv``, ``metrics_seasons.csv``)
 and the timeline, so it works offline from committed data. A view of the past
 uses only what was known then: seasons that had ended by that moment, and the
 season in progress only if its snapshot had been taken by then.
+
+The committed tables pool every server (config/tiers.yaml). Another sample is
+computed from ``raid_entries.csv`` on first use (~10 s) and reused after that;
+see ``analyze.pipeline.run_servers``.
 
     from nikke_analysis.tierlist import TierBook
 
@@ -16,6 +22,8 @@ season in progress only if its snapshot had been taken by then.
     view = book.at("2주년")
     view.overall.head()              # element slots, overall tier, role per unit
     book.unit("크라운").rows         # the unit's season-by-season record
+
+    TierBook.load(servers=ServerFilter.of(exclude="NA"))   # every server but NA
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ import pandas as pd
 from .analyze import tiers as tiering
 from .analyze.metrics import ELEMENTS
 from .paths import processed_dir
+from .servers import ServerFilter, describe, ordered
 from .timeline import ELEMENT_KO, Season, Timeline, resolve_moment
 from .util.names import NameIndex, normalize_name, normalize_unit_id
 from .util.text import pad, rjust
@@ -52,10 +61,10 @@ def _utc(value: Any) -> pd.Timestamp:
     return stamp.tz_localize("UTC") if stamp.tzinfo is None else stamp.tz_convert("UTC")
 
 
-def _read(path: Path) -> pd.DataFrame:
+def _read(path: Path, **kwargs: Any) -> pd.DataFrame:
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
-    return pd.read_csv(path, dtype={"unit_id": str})
+    return pd.read_csv(path, dtype={"unit_id": str}, **kwargs)
 
 
 def _name(row: Any) -> str:
@@ -119,6 +128,24 @@ class SeasonBlock:
 
 
 @dataclass
+class Sample:
+    """The rankers the tiers stand on: which servers, and ranks 1..``top_n`` of each."""
+
+    servers: list[str]  # the servers in the tables
+    chosen: ServerFilter  # how they were chosen; empty = every server
+    top_n: int
+
+    def __str__(self) -> str:
+        where = describe(self.chosen, self.servers)
+        if self.servers and (not self.chosen or self.chosen.exclude):
+            where += f"({'·'.join(self.servers)})"
+        return f"{where} × 상위 {self.top_n}위"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {"servers": self.servers, **self.chosen.to_dict(), "top_n": self.top_n}
+
+
+@dataclass
 class TierView:
     moment: datetime
     finished: SeasonBlock | None
@@ -127,6 +154,7 @@ class TierView:
     overall: pd.DataFrame
     final_seasons: list[int]
     config: tiering.TierConfig
+    sample: Sample | None = None
 
     def to_dict(self) -> dict[str, Any]:
         def block(b: SeasonBlock | None) -> dict[str, Any] | None:
@@ -143,6 +171,7 @@ class TierView:
 
         return {
             "moment": self.moment.isoformat(),
+            "sample": self.sample.to_dict() if self.sample else None,
             "final_seasons": self.final_seasons,
             "finished": block(self.finished),
             "current": block(self.current),
@@ -163,6 +192,7 @@ class UnitHistory:
     rows: pd.DataFrame
     profile: dict[str, Any] | None
     moment: datetime
+    sample: Sample | None = None
 
 
 class TierBook:
@@ -181,10 +211,27 @@ class TierBook:
         self.index = index
 
     @classmethod
-    def load(cls, data_dir: Path | None = None, config: tiering.TierConfig | None = None) -> "TierBook":
+    def load(
+        cls,
+        data_dir: Path | None = None,
+        config: tiering.TierConfig | None = None,
+        *,
+        servers: ServerFilter | None = None,
+        cache_dir: Path | None = None,
+    ) -> "TierBook":
+        """The committed tables, or with ``servers`` the same tables on that
+        server sample (computed once from ``raid_entries.csv``, then reused)."""
         directory = data_dir or processed_dir()
-        history = _read(directory / "metrics_unit_season.csv")
-        seasons = _read(directory / "metrics_seasons.csv")
+        tables = directory
+        if servers:
+            from .analyze.pipeline import run_servers
+
+            if not (directory / "raid_entries.csv").is_file():
+                raise RuntimeError("서버를 고르려면 raid_entries.csv 가 필요하다: `nikke build raids` (오프라인, 몇 초)")
+            config = (config or tiering.load_tier_config()).with_servers(servers)
+            tables = Path(run_servers(servers, data_dir=directory, config=config, cache_dir=cache_dir)["out_dir"])
+        history = _read(tables / "metrics_unit_season.csv")
+        seasons = _read(tables / "metrics_seasons.csv", keep_default_na=False, na_values=[""])  # the NA server
         if history.empty or seasons.empty:
             raise RuntimeError("no metric tables; run `nikke build raids` and `nikke analyze` first")
         for column in ("start_at", "end_at", "collected_on", "collected_until"):
@@ -193,6 +240,13 @@ class TierBook:
         seasons["final"] = seasons["final"].astype(str).str.lower().isin(("true", "1"))
         history["end_at"] = pd.to_datetime(history["end_at"], errors="coerce", utc=True)
         return cls(history, seasons, Timeline.load(directory), config, load_index(directory))
+
+    @property
+    def sample(self) -> Sample:
+        """Which servers' rankers the tables stand on (``server_names`` of the season table)."""
+        names = self.seasons["server_names"] if "server_names" in self.seasons.columns else pd.Series(dtype=str)
+        servers = ordered(n for value in names.dropna().astype(str) for n in value.split(";") if n)
+        return Sample(servers, self.config.server_filter, self.config.top_n)
 
     # ------------------------------------------------------------------
 
@@ -240,7 +294,7 @@ class TierBook:
             elif number not in final_seasons:
                 current = self._expected(snapshot.season, profiles)
         upcoming = self._expected(snapshot.next_season, profiles) if snapshot.next_season is not None else None
-        return TierView(moment, finished, current, upcoming, profiles, final_seasons, self.config)
+        return TierView(moment, finished, current, upcoming, profiles, final_seasons, self.config, self.sample)
 
     # ------------------------------------------------------------------
 
@@ -254,7 +308,8 @@ class TierBook:
         profiles = tiering.element_profiles(self.history, self.seasons, _utc(moment), self.config)
         match = profiles[profiles["unit_id"] == unit_id]
         info = rows.iloc[-1][["unit_id", "name_ko", "name_en", "element", "burst", "unit_class", "release_date"]].to_dict()
-        return UnitHistory(unit_id, info, rows, match.iloc[0].to_dict() if not match.empty else None, moment)
+        return UnitHistory(unit_id, info, rows, match.iloc[0].to_dict() if not match.empty else None, moment,
+                           self.sample)
 
 
 def _kst():
@@ -301,7 +356,8 @@ def render(view: TierView, *, show_all: bool = False) -> str:
     span = f"완료 시즌 {view.final_seasons[0]}–{view.final_seasons[-1]}" if view.final_seasons else "완료 시즌 없음"
     out = [
         f"{view.moment:%Y-%m-%d %H:%M} KST 기준 티어 · {span} · 최근 가중 반감기 {config.half_life_days:g}일",
-        "  lift: 상위 50위 × 서버 랭커의 대미지 중 그 니케 몫, 1.0 = 한 사람이 쓰는 25명의 평균 몫",
+        f"  표본: {view.sample or f'서버마다 상위 {config.top_n}위'}",
+        "  lift: 표본 랭커의 대미지 중 그 니케 몫, 1.0 = 한 사람이 쓰는 25명의 평균 몫",
     ]
     upcoming = view.upcoming
     same_element = (
@@ -350,6 +406,8 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
         f"{CLASS_KO.get(info.get('unit_class', ''), info.get('unit_class', ''))} · "
         f"버스트 {info.get('burst', '')} · 출시 {info.get('release_date', '')}"
     ]
+    if history.sample is not None and history.sample.chosen:
+        out.append(f"표본: {history.sample}")
     profile = history.profile
     if profile:
         role = ROLE_KO.get(profile["role"], profile["role"])

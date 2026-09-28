@@ -7,7 +7,7 @@
 지표보다 먼저 필요한 것이 **시간축**이다. "2주년 당시 메타"를 분석하려면 그때
 어떤 솔로 레이드가 열려 있었고, 어떤 니케가 존재했는지를 먼저 정확히 알아야 한다.
 그래서 공지를 자동으로 모아 **시점별 니케 풀과 솔로 레이드 일정**을 복원하고,
-그 위에서 시즌 1–41의 랭킹(서버별 상위 50명 × 5덱)으로 **시즌 티어·속성별 티어·
+그 위에서 시즌 1–41의 랭킹(6개 서버 전체, 서버별 상위 50명 × 5덱)으로 **시즌 티어·속성별 티어·
 종합 티어**를 계산한다. 어느 시점이든 "그때 알 수 있던 것만으로" 볼 수 있다.
 
 핵심 제약 하나: **런타임에 AI를 쓰지 않는다.** 새 패치, 새 니케, 새 시즌, 시즌
@@ -29,10 +29,11 @@
 | 시점 티어 `nikke tier` | ✅ 직전 시즌, 진행 중 시즌(잠정), 다음 시즌 예상, 종합 — 과거 시점도 그때 기준으로 |
 | 캐릭터별 티어 변화 | ✅ `nikke tier --unit`, 차트 7종 (`nikke viz`) |
 | 시즌 사용률 `nikke raid` | ✅ 시즌별 사용 순위·사용률·덱 순위 분포(1덱~5덱), 서버·순위로 좁히기 |
+| 서버 선택 | ✅ 기본은 6개 서버 전체. `--server`(그 서버만) · `--exclude`(그 서버만 빼고)를 `tier`·`raid`·`analyze`·`viz` 에서, 기본 표본은 `config/tiers.yaml` 에서 |
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 | 작업 반영 | ✅ 브랜치는 `main` 하나. 세션 브랜치(`claude/*`)에 push 하면 테스트 통과 후 main 에 자동 병합, 브랜치 삭제 (`.github/workflows/merge-to-main.yml`) |
 
-`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 159개.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 202개.
 
 ---
 
@@ -48,8 +49,9 @@ nikke seasons              # 솔로 레이드 전 시즌 일람
 nikke tier                 # 지금의 티어: 직전 시즌, 진행 중 시즌, 다음 시즌 예상, 종합
 nikke tier 2주년           # 그때 알 수 있던 것만으로 본 티어
 nikke tier --unit 크라운   # 한 니케의 시즌별 티어 변화
+nikke tier --exclude NA    # NA 서버만 빼고 본 티어 (--server KR,JP 는 그 서버만)
 nikke raid 40              # 시즌 40 사용률: 누가 몇 명에게 쓰였고 몇 번째 덱에 들어갔나
-nikke raid 40 크라운       # 한 니케의 그 시즌 (--server KR, --top 10 으로 표본 좁히기)
+nikke raid 40 크라운       # 한 니케의 그 시즌 (--server KR, --exclude NA, --top 10 으로 표본 좁히기)
 nikke refresh              # 수집 → 빌드 → 지표 → 차트, 의존 순서대로 전부
 nikke check                # 사람이 봐야 할 게 있는지 (있으면 종료 코드 1)
 pytest -q
@@ -60,6 +62,7 @@ pytest -q
 ```
 $ nikke tier
 2026-09-28 10:51 KST 기준 티어 · 완료 시즌 1–40 · 최근 가중 반감기 180일
+  표본: 6개 서버(GLOBAL·JP·KR·NA·SEA·TW-HK) × 상위 50위
 
 ■ 직전 시즌 40 · 사치스러운 거미 (Luxurious Spider) · 약점 작열
   SS  아니스 : 스타 1.58 · 라피 : 레드 후드 1.58 · 브리드 : 사일런트 트랙 1.57 · 프리바티 1.52 · 미하라 : 본딩 체인 1.51
@@ -114,6 +117,32 @@ $ nikke raid 40
 enikk 가 주는 덱 순서는 플레이어의 배치 순서라 딜량 순이 아니므로 다시 줄 세운다.
 대미지 0 인 덱은 치지 않은 덱이라 세지 않는다. 자세히는
 [docs/metrics.md](docs/metrics.md#11-시즌-사용률--nikke-raid).
+
+### 서버 고르기
+
+여섯 서버(GLOBAL · JP · KR · NA · SEA · TW-HK)는 게임 버전·보스·패치가 같으니 기본은
+**전부 합쳐서** 본다 — 시즌마다 300명, 덱 1,500개. 일부만 보려면 `--server`(그 서버만)나
+`--exclude`(그 서버만 빼고)를 붙인다. `tier`, `tier --unit`, `raid`, `analyze`, `viz`
+모두 받는다.
+
+```
+$ nikke tier --exclude NA
+2026-09-28 17:02 KST 기준 티어 · 완료 시즌 1–40 · 최근 가중 반감기 180일
+  표본: NA 제외 5개 서버(GLOBAL·JP·KR·SEA·TW-HK) × 상위 50위
+  ...
+$ nikke raid 40 --server 한국,일본
+표본  KR·JP 상위 50위 = 100명 · 덱 500개 (enikk 2026-08-28 수집)
+```
+
+- 이름은 대소문자 무관, 한글·줄임말도 된다(`한국`, `북미`, `대만` = TW-HK). 쉼표로 잇거나
+  옵션을 반복한다. 데이터에 없는 이름은 오류다.
+- 명령줄로 고른 표본은 커밋된 표를 건드리지 않는다. 표는 `data/interim/servers/<선택>/`,
+  차트는 `reports/servers/<선택>/` 에 만들고(커밋 안 함), 입력이 그대로면 다시 쓴다 —
+  처음 10초 남짓, 그다음은 바로.
+- 커밋되는 표 자체의 표본을 바꾸려면 `config/tiers.yaml` 의 `population.servers` /
+  `population.exclude_servers` 를 고치고 `nikke analyze` 를 돌린다.
+- 시즌 5·6은 enikk 가 4개 서버(GLOBAL · JP · NA · SEA)만 추적했다. `--server KR` 로
+  보면 그 두 시즌은 빠진다.
 
 ### 시점 조회
 
@@ -304,7 +333,7 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 | `unit_aliases.csv` | 표기 | 니케마다 알려진 모든 표기 |
 | `timeline_issues.csv` | 점검 결과 | 규칙이 처리하지 못한 것, 약한 출처를 쓴 것 (`nikke check`) |
 | `raid_unresolved_names.csv` | 표기 | 랭킹에서 로스터와 못 맞춘 니케 이름 (지표에서 빠짐) |
-| `metrics_seasons.csv` | 시즌 | 서버 수, 랭커·덱 수(친 덱만), 메인 덱 몫, 수집일, 끝난 시즌인지 |
+| `metrics_seasons.csv` | 시즌 | 서버 수와 이름, 랭커·덱 수(친 덱만), 메인 덱 몫, 수집일, 끝난 시즌인지 |
 | `metrics_unit_season.csv` | 시즌 × 니케 | 사용 수·사용률·사용 순위·덱 순위 분포(1덱~5덱), lift·덱 몫·메인 덱 비율·덱 효과, 시즌 티어, 그 시즌 종료 시점의 속성별 티어·종합·역할 |
 | `metrics_element_tiers.csv` | 니케 | 지금의 속성별 티어 5칸, 종합 티어, 최고 속성, 커버리지, 역할 |
 | `metrics_tier_changes.csv` | 니케 × 시즌 전환 | 시즌 티어나 종합 티어가 바뀐 경우 |
@@ -349,7 +378,7 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 |---|---|
 | `data/manual/release_overrides.csv` | 출시일 수동 보정 (사유 필수, 공지 기반 날짜보다 우선) |
 | `data/manual/unit_aliases.csv` | 자동으로 못 찾는 표기의 수동 별칭 |
-| `config/tiers.yaml` | 티어 컷, 모집단(서버·순위·가중), 속성별 티어의 최근성·종합 방식, 역할 기준 — 인자 전체는 [docs/metrics.md](docs/metrics.md#조정-가능한-인자-configtiersyaml) |
+| `config/tiers.yaml` | 티어 컷, 모집단(쓸 서버·뺄 서버·순위·가중), 속성별 티어의 최근성·종합 방식, 역할 기준 — 인자 전체는 [docs/metrics.md](docs/metrics.md#조정-가능한-인자-configtiersyaml) |
 | `config/enikk.yaml` | 랭킹 GraphQL 쿼리와 응답 필드 위치 |
 
 ---
@@ -384,5 +413,5 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 
 아직 안 한 것. 데이터는 이미 있다.
 
-- **서버 간 비교** — 같은 시즌의 서버별 메타 차이. 지금은 `nikke raid 40 --server KR`
-  처럼 서버 하나씩 볼 수만 있다.
+- **서버 간 비교** — 같은 시즌의 서버별 메타 차이. 지금은 `--server` / `--exclude` 로
+  표본을 하나씩 골라 볼 수만 있고, 서버끼리 나란히 놓은 표는 없다.

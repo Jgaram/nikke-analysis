@@ -52,6 +52,8 @@ import math
 import numpy as np
 import pandas as pd
 
+from ..servers import ordered
+
 log = logging.getLogger(__name__)
 
 ELEMENTS = ("Fire", "Water", "Wind", "Iron", "Electric")
@@ -108,12 +110,21 @@ def release_instants(roster: pd.DataFrame) -> pd.Series:
     return pd.Series(at.fillna(day).to_numpy(), index=roster["unit_id"].to_numpy())
 
 
-def select_population(entries: pd.DataFrame, *, top_n: int = 50, servers: tuple[str, ...] = ()) -> pd.DataFrame:
+def select_population(
+    entries: pd.DataFrame,
+    *,
+    top_n: int = 50,
+    servers: tuple[str, ...] = (),
+    exclude: tuple[str, ...] = (),
+) -> pd.DataFrame:
     """The decks the metrics are defined on: ranks 1..``top_n`` of the chosen
-    servers, and only decks that were fought (dealt damage)."""
+    servers (``servers``, or every server when empty, less ``exclude``), and only
+    decks that were fought (dealt damage)."""
     work = entries[(entries["rank"] >= 1) & (entries["rank"] <= top_n) & (entries["deck_score"] > 0)]
     if servers:
         work = work[work["server"].isin(servers)]
+    if exclude:
+        work = work[~work["server"].isin(exclude)]
     return work
 
 
@@ -156,7 +167,8 @@ def deck_split(entries: pd.DataFrame, decks: pd.DataFrame | None = None) -> pd.D
 # --------------------------------------------------------------------------
 
 def season_summary(entries: pd.DataFrame, seasons: pd.DataFrame, *, weighting: str = "dcg") -> pd.DataFrame:
-    """Per season: how many players and decks, when enikk last saw it, and whether it is over.
+    """Per season: which servers, how many players and decks, when enikk last saw it,
+    and whether it is over.
 
     ``collected_on`` is the (UTC) day enikk last collected the season and
     ``collected_until`` the end of that day. A season is ``final`` once that
@@ -170,7 +182,7 @@ def season_summary(entries: pd.DataFrame, seasons: pd.DataFrame, *, weighting: s
     collected = pd.to_datetime(entries.groupby("season")["collected_at"].max(), errors="coerce", utc=True)
     out = (
         decks.groupby("season")
-        .agg(servers=("server", "nunique"), decks=("deck", "size"))
+        .agg(servers=("server", "nunique"), server_names=("server", lambda s: ";".join(ordered(s))), decks=("deck", "size"))
         .join(decks.drop_duplicates(RANKER_KEYS).groupby("season").size().rename("rankers"))
         .join(entries.groupby("season")["unit_id"].nunique().rename("units_fielded"))
         .join(((main["w"] * main["share"]).groupby(main["season"]).sum() / main.groupby("season")["w"].sum()).rename("main_deck_share"))

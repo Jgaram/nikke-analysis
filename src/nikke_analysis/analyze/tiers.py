@@ -40,7 +40,7 @@ flatters a specialist, so its overall tier is shown but marked.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +49,7 @@ import pandas as pd
 import yaml
 
 from ..paths import REPO_ROOT
+from ..servers import ServerFilter, split
 from .metrics import ELEMENTS, season_order
 
 DEFAULT_TIER_CONFIG = REPO_ROOT / "config" / "tiers.yaml"
@@ -71,7 +72,8 @@ SLOT = {e: e.lower() for e in ELEMENTS}
 class TierConfig:
     # population
     top_n: int = 50
-    servers: tuple[str, ...] = ()
+    servers: tuple[str, ...] = ()  # () = every server
+    exclude_servers: tuple[str, ...] = ()
     rank_weighting: str = "dcg"
     # season tier
     cuts: list[tuple[str, float]] = field(default_factory=lambda: list(DEFAULT_CUTS))
@@ -100,6 +102,14 @@ class TierConfig:
             raise ValueError("roles.viable_fraction and roles.universal_min_share must be in (0, 1]")
 
     @property
+    def server_filter(self) -> ServerFilter:
+        return ServerFilter(self.servers, self.exclude_servers)
+
+    def with_servers(self, chosen: ServerFilter) -> "TierConfig":
+        """The same parameters on another server sample (replacing, not narrowing, this one's)."""
+        return replace(self, servers=chosen.include, exclude_servers=chosen.exclude)
+
+    @property
     def tier_order(self) -> list[str]:
         return [label for label, _ in self.cuts]
 
@@ -120,7 +130,8 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
     cuts = doc.get("cuts")
     return TierConfig(
         top_n=int(population.get("top_n", defaults.top_n)),
-        servers=tuple(str(s) for s in population.get("servers") or ()),
+        servers=split(population.get("servers") or ()),
+        exclude_servers=split(population.get("exclude_servers") or ()),
         rank_weighting=str(population.get("rank_weighting", defaults.rank_weighting)),
         cuts=[(str(c["label"]), float(c["min_lift"])) for c in cuts] if cuts else list(DEFAULT_CUTS),
         half_life_days=float(element.get("half_life_days", defaults.half_life_days)),

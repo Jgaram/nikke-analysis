@@ -322,7 +322,8 @@ def render_season(usage: SeasonUsage, *, include_unused: bool = False) -> str:
     lines += [
         "",
         "덱 순위 = 한 사람의 덱 5개를 딜량 순으로 세운 순서 (1덱 = 딜량 1등 덱)",
-        "1덱~5덱 = 그 니케를 쓴 사람 중 그 덱에 넣은 비율 · 평균 = 평균 덱 순위 · 티어 = 이 표본의 시즌 티어(lift)",
+        "1덱~5덱 = 그 니케를 쓴 사람 중 그 덱에 넣은 비율 · 평균 = 평균 덱 순위 · 티어 = 이 표본의 시즌 티어와 기여도",
+        "기여도 = 랭커 대미지를 덱에 든 니케끼리 나눠 가진 몫 (25명이 똑같이 나누면 1.0, 0 = 아무도 안 씀)",
         "",
         _row("순위", "니케", "사용", "사용률", [f"{d}덱" for d in metrics.DECK_RANKS], "평균", "티어", names=names),
     ]
@@ -366,5 +367,5 @@ def render_unit(usage: SeasonUsage, row: pd.Series) -> str:
         label = "  덱 순위   " if deck == 1 else "             "
         lines.append(f"{label}{deck}덱 {_bar(share)} {rjust(_percent(share), 6)}  ({int(row[column])}명)")
     lines.append(f"  평균 덱 순위 {row['avg_deck']:.2f}")
-    lines.append(f"  시즌 티어  {row['tier']} (lift {row['lift']:.2f}) — 시즌별 변화는 `nikke tier --unit {name}`")
+    lines.append(f"  시즌 티어  {row['tier']} (기여도 {row['lift']:.2f}) — 시즌별 변화는 `nikke tier --unit {name}`")
     return "\n".join(lines)

@@ -97,7 +97,8 @@ def cmd_tier(args: argparse.Namespace) -> int:
             return 1
         if args.json:
             _emit({"unit": history.info, "sample": history.sample.to_dict() if history.sample else None,
-                   "profile": history.profile, "seasons": history.rows.to_dict(orient="records")})
+                   "profile": history.profile, "live_seasons": history.live_seasons,
+                   "seasons": history.rows.to_dict(orient="records")})
         else:
             print(render_unit(history, book.config))
         return 0
@@ -425,7 +426,7 @@ def cmd_viz(args: argparse.Namespace) -> int:
         print(exc, file=sys.stderr)
         return 1
     _emit(charts.render_all(data_dir=Path(tables["out_dir"]), out_dir=paths.reports_dir() / "servers" / chosen.slug,
-                            top_n=args.top, units=units, sample=chosen.english))
+                            top_n=args.top, units=units, sample=chosen.caption))
     return 0
 
 

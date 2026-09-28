@@ -18,6 +18,8 @@ eye:
 
 from __future__ import annotations
 
+import functools
+import logging
 from dataclasses import dataclass
 
 import matplotlib
@@ -76,9 +78,9 @@ THEMES = {"light": LIGHT, "dark": DARK}
 
 FONT_STACK = ["DejaVu Sans", "Noto Sans CJK KR", "Noto Sans KR", "sans-serif"]
 
-# Fonts that carry Hangul, in order of preference. Unit names are drawn in
-# Korean when one of these is installed and in English otherwise, so a machine
-# without them still renders readable charts instead of empty boxes.
+# Fonts that carry Hangul, in order of preference. Every word on a chart is
+# Korean, so one of these must be installed (CI installs fonts-nanum); without
+# one, Hangul shows as empty boxes and `nikke viz` says so.
 HANGUL_FONTS = (
     "Noto Sans CJK KR",
     "Noto Sans KR",
@@ -90,18 +92,36 @@ HANGUL_FONTS = (
     "AppleGothic",
     "WenQuanYi Zen Hei",
 )
+# File names of those fonts, to find one installed after matplotlib cached its font list.
+HANGUL_FILES = ("notosanscjk", "notosanskr", "sourcehansans", "nanumgothic", "nanumbarungothic", "malgun",
+                "applesdgothic", "applegothic", "wqy-zenhei")
 
 
+@functools.lru_cache(maxsize=1)
 def hangul_font() -> str | None:
-    """The first installed font that can draw Korean unit names, if any."""
+    """The first installed font that can draw Korean, if any (looked up once per process)."""
+    from pathlib import Path
+
     from matplotlib import font_manager
 
-    installed = {f.name for f in font_manager.fontManager.ttflist}
-    return next((name for name in HANGUL_FONTS if name in installed), None)
+    def first() -> str | None:
+        installed = {f.name for f in font_manager.fontManager.ttflist}
+        return next((name for name in HANGUL_FONTS if name in installed), None)
+
+    found = first()
+    if found is None:
+        for path in font_manager.findSystemFonts():
+            if any(key in Path(path).name.lower().replace(" ", "") for key in HANGUL_FILES):
+                font_manager.fontManager.addfont(path)
+        found = first()
+    return found
 
 
 def apply(theme: Theme) -> None:
     """Set the rcParams a chart should never have to repeat."""
+    # NanumGothicBold declares weight 600, so every bold title logs "Failed to find font
+    # weight bold" although it is drawn in the right file. A missing glyph still warns.
+    logging.getLogger("matplotlib.font_manager").setLevel(logging.ERROR)
     korean = hangul_font()
     matplotlib.rcParams.update(
         {

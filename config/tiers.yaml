@@ -1,32 +1,30 @@
-# Tier parameters.
+# 티어 인자.
 #
-# Every judgement call in the analysis lives here, so changing one is a
-# reviewable diff and re-running (`nikke analyze`) reproduces the whole history
-# under the new definition. docs/metrics.md explains each number.
+# 판단이 들어가는 값은 전부 여기 있다. 하나를 바꾸면 리뷰할 수 있는 diff 가 되고,
+# `nikke analyze` 를 다시 돌리면 전 기간이 새 정의로 다시 계산된다.
+# 숫자 하나하나의 뜻은 docs/metrics.md 에 있다.
 #
-# The unit of measurement is LIFT: a unit's share of the top players' damage,
-# scaled so that 1.0 is what an average member of a player's 25 units carries.
-# (Each player's damage is split over their five decks by each deck's share,
-# and a deck's share equally over its five members.)
+# 재는 단위는 기여도(표의 열 이름은 lift)다. 상위 랭커의 대미지를 덱에 든 니케끼리 나눠
+# 가진 몫으로, 한 사람이 쓰는 25명(5덱 × 5명)이 똑같이 나누면 모두 1.0 이다.
+# (한 사람의 대미지를 다섯 덱에 각 덱이 낸 비율대로 나누고, 덱의 몫은 덱의 다섯 명이
+# 똑같이 나눈다.)
 
-# Which leaderboard entries count.
+# 어떤 랭킹을 셀까.
 #
-# Every server by default: GLOBAL, JP, KR, NA, SEA and TW-HK run the same game
-# version, boss and patches, so each server's top 50 is another look at the same
-# meta. Narrow it here to change the committed tables; for one look at another
-# sample, use --server / --exclude on the command line instead (it replaces
-# these two lines for that run and writes nothing that is committed). Names take
-# any case and Korean (한국, 일본, 글로벌, 북미, 동남아, 대만).
+# 기본은 전 서버. GLOBAL·JP·KR·NA·SEA·TW-HK 는 게임 버전·보스·패치가 같아서, 서버마다의
+# 상위 50명은 같은 메타를 한 번 더 본 것이다. 여기를 바꾸면 커밋되는 표가 바뀐다. 다른 표본을
+# 한 번만 보려면 명령줄의 --server / --exclude 를 쓴다(그 실행에서만 아래 두 줄을 대신하고,
+# 커밋되는 것은 건드리지 않는다). 서버 이름은 대소문자를 가리지 않고 한글도 된다
+# (한국, 일본, 글로벌, 북미, 동남아, 대만).
 population:
-  top_n: 50              # ranks 1..N of every server (enikk serves the top 50)
-  servers: []            # only these; [] = every server. e.g. [KR] for the Korean server alone
-  exclude_servers: []    # every server but these, e.g. [NA, SEA]
-  rank_weighting: dcg    # dcg: 1/log2(rank+1), so rank 1 = 1.00, rank 50 = 0.18; or uniform
+  top_n: 50              # 서버마다 1..N 위 (enikk 는 상위 50명까지 준다)
+  servers: []            # 이 서버만. [] = 전 서버. 예: [KR] 이면 한국 서버만
+  exclude_servers: []    # 이 서버만 빼고. 예: [NA, SEA]
+  rank_weighting: dcg    # dcg: 순위가 높을수록 크게 친다, 1/log2(순위+1) 이라 1위 1.00 · 50위 0.18. uniform: 모두 같게
 
-# Season tier: fixed cuts on lift, best to worst. Fixed rather than percentile,
-# so the number of SS units can differ from season to season - that is information.
-# With these values a season has on average ~4 SS (0-9: a dominant main deck
-# gives five), ~8 S-or-better and ~22 B-or-better units.
+# 시즌 티어: 기여도에 대는 고정 컷, 높은 티어부터. 백분위가 아니라 고정값이라 시즌마다 SS
+# 인원이 달라질 수 있다 - 그 자체가 정보다. 이 값이면 한 시즌에 SS 가 평균 약 4명(0~9명,
+# 압도적인 메인 덱이 있으면 다섯), S 이상 약 8명, B 이상 약 22명이다.
 cuts:
   - { label: SS, min_lift: 1.4 }
   - { label: S,  min_lift: 1.1 }
@@ -35,38 +33,38 @@ cuts:
   - { label: C,  min_lift: 0.2 }
   - { label: D,  min_lift: 0.0 }
 
-# Element and overall tiers.
+# 속성 티어와 종합 티어.
 #
-# Element tier: what a unit is worth in its own element - its lift in the
-# seasons whose boss was weak to that element. Overall tier: what it is worth
-# over the whole rotation - its lift estimated per boss weakness (five slots,
-# kept internal) and combined into one number. The slots follow the boss's
-# weakness, not the unit's element: a Water support fielded in Wind-weak seasons
-# earns its overall there, while its Water tier stays low. A unit whose skill
-# adds an element (data/manual/extra_elements.csv) has an element tier in each.
+# 속성 티어: 자기 속성 안에서의 가치 - 보스 약점이 그 니케의 속성이던 시즌들의 기여도.
+# 종합 티어: 속성 로테이션 전체에서의 가치 - 보스 약점 다섯 가지마다 기여도 평균을 따로 내고
+# (내부 칸 다섯 개) 하나로 합친다. 칸은 니케의 속성이 아니라 보스의 약점을 따른다: 풍압 약점
+# 시즌에 나오는 수냉 서포터는 종합을 거기서 벌고, 수냉 속성 티어는 낮은 채로 있다. 스킬로
+# 속성이 더해지는 니케(data/manual/extra_elements.csv)는 두 속성 모두에서 속성 티어를 받는다.
+#
+# 아직 못 겪은 약점 칸은 같은 쪽 기록으로만 채운다. 다른 속성 칸은 겪은 다른 속성 칸들의
+# 평균(다른 속성을 하나도 못 겪었으면 임시로 자기 속성 값), 자기 속성 칸은 0 이다(다른 속성
+# 기록으로 짐작하지 않는다). 속성 티어는 그 속성 시즌을 겪기 전까지 비어 있다.
 element:
-  # A season this many days before the moment of the view counts half as much.
-  # Days rather than seasons, because each element comes around only every few
-  # months and the gaps are uneven.
+  # 이만큼 지난 시즌은 절반만 친다. 시즌 수가 아니라 날짜로 세는 이유: 같은 약점은 몇 달에
+  # 한 번씩만 돌아오고 간격도 들쭉날쭉하다.
   half_life_days: 180
-  # Pseudo-seasons that pull a slot toward the unit's all-element level.
-  # 0 = trust the observed seasons as they are. A positive value damps a slot
-  # seen only once, but it also drags a specialist's own element toward its
-  # (low) all-element average, so it is off by default. A slot with no season
-  # at all since release takes the all-element level in the overall; the
-  # element tier stays empty until the unit meets a season of its element.
+  # 칸을 그 니케의 전체 평균 쪽으로 당기는 가상 시즌 수. 0 = 겪은 시즌을 그대로 믿는다.
+  # 양수면 한 번만 본 칸의 우연을 줄이지만, 특화 니케의 주력 속성까지 (낮은) 전체 평균 쪽으로
+  # 끌어내리므로 기본은 꺼 둔다.
   prior_strength: 0
-  # One number from the five slots:
-  #   mean      - equal weight per element; does not depend on which elements
-  #               came up lately (default)
-  #   frequency - weight each element by how often (recently) bosses were weak to it
-  #   max       - the best element only
+  # 다섯 칸을 한 숫자로:
+  #   mean      - 속성마다 똑같이. 최근 어떤 약점이 몰렸는지에 흔들리지 않는다 (기본)
+  #   frequency - 최근 보스 약점으로 자주 나온 속성일수록 크게
+  #   max       - 가장 잘한 속성만
   overall: mean
-  # Seen in fewer boss weaknesses than this: the overall tier is provisional,
-  # because the unseen slots borrow the level of the few that were seen.
+  # 겪은 보스 약점이 이보다 적거나 자기 속성 시즌을 아직 못 겪었으면 종합이 잠정(*)이다.
+  # 못 겪은 칸은 채워 넣은 값이기 때문이다.
   min_elements_observed: 3
+  # 진행 중인 시즌도 지금까지 수집한 순위로 속성·종합 티어에 넣는다(잠정, 수집할 때마다
+  # 바뀐다). false 면 끝난 시즌만 센다.
+  include_live: true
 
-# Numbers reported alongside the tiers, not part of them.
+# 티어와 같이 내는 숫자. 티어에는 들어가지 않는다.
 diagnostics:
-  deck_effect_ridge: 20      # ridge penalty of the within-player deck regression
-  synergy_min_decks: 20      # a pair must share at least this many decks in a season
+  deck_effect_ridge: 20      # 같은 사람의 덱끼리 비교하는 회귀의 릿지 세기
+  synergy_min_decks: 20      # 한 시즌에 이만큼 이상 같은 덱에 든 쌍만 시너지로 센다

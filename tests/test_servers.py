@@ -57,8 +57,8 @@ def test_labels_say_what_was_chosen():
     both = ServerFilter.of("kr,jp,na", "na")
     assert (ServerFilter.of("kr,jp").label, ServerFilter.of(exclude="na,sea").label, both.label) == (
         "KR·JP", "NA·SEA 제외", "KR·JP·NA 중 NA 제외")
-    assert ServerFilter.of(exclude="na").english == "all servers but NA"
-    assert ServerFilter.of("kr").english == "servers KR" and ServerFilter().english == ""
+    assert ServerFilter.of(exclude="na").caption == "NA 제외 전 서버" and both.caption == "KR·JP·NA 중 NA 제외"
+    assert ServerFilter.of("kr").caption == "KR 서버만" and ServerFilter().caption == ""
     assert (ServerFilter.of("kr,jp").slug, ServerFilter.of(exclude="na,tw").slug, both.slug, ServerFilter().slug) == (
         "KR+JP", "excl-NA+TW-HK", "KR+JP+NA_excl-NA", "all")
     assert describe(ServerFilter(), SERVERS) == "6개 서버"

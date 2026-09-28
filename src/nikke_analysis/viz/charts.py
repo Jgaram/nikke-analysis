@@ -22,8 +22,9 @@ validated steps rather than an inverted copy of the light one.
 Units are drawn as their faces, and elements and burst stages as their
 icons (``data/assets/icons/``, fetched by ``nikke collect icons``), so no
 chart spells out a unit's name or an element. A unit whose face is not on disk
-yet falls back to its name - in Korean when a Hangul font is installed, in
-English otherwise - and so does an attribute without its icon.
+yet falls back to its Korean name, and an element without its icon to its
+Korean name. Every word on a chart is Korean, so a Hangul font must be
+installed (``theme.hangul_font``); without one, ``render_all`` warns.
 
 Charts of another server sample (``nikke viz --exclude NA``) say so at the end
 of every subtitle, so a copied image does not pass for the whole population.
@@ -48,13 +49,14 @@ from matplotlib.path import Path as MplPath
 from ..analyze.metrics import ELEMENTS, season_order
 from ..analyze.tiers import load_tier_config
 from ..paths import processed_dir, reports_dir
+from ..timeline import ELEMENT_KO
 from . import theme as th
 from .icons import Icons, line, place
 
 log = logging.getLogger(__name__)
 
 SEASON_COLUMNS = ("season", "season_from", "season_to")
-ELEMENT_INITIAL = {"Fire": "F", "Water": "Wa", "Wind": "Wi", "Iron": "I", "Electric": "E"}
+LIFT_AXIS = "기여도 (1.0 = 한 사람이 쓰는 25명이 대미지를 똑같이 나눴을 때의 몫)"
 
 # The server sample when it is not the configured one ("all servers but NA");
 # render_all sets it for the length of a run and every subtitle ends with it.
@@ -82,18 +84,19 @@ def _read(name: str, directory: Path) -> pd.DataFrame:
 
 
 class Names:
-    """Korean display names when the font can draw them, English otherwise."""
-
-    def __init__(self) -> None:
-        self.korean = th.hangul_font() is not None
+    """A unit's Korean name; its English one only when it has none yet."""
 
     def __call__(self, row: Any) -> str:
         ko, en = row.get("name_ko"), row.get("name_en")
-        if self.korean and isinstance(ko, str) and ko:
+        if isinstance(ko, str) and ko:
             return ko
         if isinstance(en, str) and en:
             return en
         return str(row.get("unit_id", ""))
+
+
+def _element_ko(element: Any) -> str:
+    return ELEMENT_KO.get(element, element) if isinstance(element, str) and element else ""
 
 
 def _frame(fig, ax, theme: th.Theme, *, title: str | list, subtitle: str | list = "", legend_cols: int = 0) -> None:
@@ -153,11 +156,11 @@ def _tier_legend(order: list[str], theme: th.Theme, *, shown: list[str] | None =
 
 
 def _element_part(icons: Icons, element: Any, height_pt: float, *, word: str = "{}") -> Any:
-    """An element's icon at ``height_pt``, or the element's name when there is none."""
+    """An element's icon at ``height_pt``, or the element's Korean name when there is none."""
     image = icons.element(element)
     if image is not None:
         return (image, height_pt)
-    return word.format(element) if isinstance(element, str) and element else ""
+    return word.format(_element_ko(element)) if isinstance(element, str) and element else ""
 
 
 def _burst_part(icons: Icons, burst: Any, height_pt: float) -> Any:
@@ -170,7 +173,7 @@ def _burst_part(icons: Icons, burst: Any, height_pt: float) -> Any:
 
 def _unit_parts(icons: Icons, names: Names, row: Any, face_pt: float, *, elements: list | None = None) -> list:
     """A unit as its face with its elements and burst stage beside it; its name
-    and element initials when the face is missing. ``elements`` are the element
+    and element names when the face is missing. ``elements`` are the element
     icons to draw: by default the unit's own and any its skill adds."""
     unit_id = str(row.get("unit_id", ""))
     if elements is None:
@@ -180,7 +183,7 @@ def _unit_parts(icons: Icons, names: Names, row: Any, face_pt: float, *, element
     burst = _burst_part(icons, row.get("burst"), face_pt * 0.5)
     if face is not None:
         return [(face, face_pt)] + [_element_part(icons, e, face_pt * 0.62) for e in elements] + [burst]
-    tags = [_element_part(icons, e, face_pt * 0.62, word="") or f"({ELEMENT_INITIAL.get(e, '?')})" for e in elements]
+    tags = [_element_part(icons, e, face_pt * 0.62, word="({})") or "(?)" for e in elements]
     return [names(row)] + tags + [burst]
 
 
@@ -240,7 +243,7 @@ def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons,
     ax.grid(False)
     for side in ("top", "right", "left"):
         ax.spines[side].set_visible(False)
-    ax.set_xlabel("Lift (1.0 = an average member of a player's 25 units)")
+    ax.set_xlabel(LIFT_AXIS)
     extra = [Line2D([], [], marker="|", linestyle="none", markersize=12, markeredgewidth=2.2,
                     color=theme.ink_primary, label=tick_label)]
     if starred is not None and any(starred) and star_label:
@@ -254,6 +257,33 @@ def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons,
         place(ax, line(note if isinstance(note, list) else [note], height_pt=11, fontsize=8.5, color=theme.ink_muted),
               (0, 0), xycoords="axes fraction", offset=(0, -76), align=(0, 1))
     return fig, ax
+
+
+def _boss(meta: Any) -> str:
+    """A season's boss by its Korean name, its English one when it has none."""
+    for column in ("boss_ko", "boss_en"):
+        value = meta.get(column)
+        if isinstance(value, str) and value:
+            return value
+    return "?"
+
+
+def _recency(config: Any) -> str:
+    if config.half_life_days <= 0:
+        return "모든 시즌을 똑같이 침"
+    return f"최근 시즌일수록 크게 침({config.half_life_days:g}일 지난 시즌은 절반만)"
+
+
+def _live_note(seasons: pd.DataFrame) -> str:
+    """``진행 중 시즌 41(09/28 수집분)도 잠정으로 들어감`` when the tier tables count a season in progress."""
+    if seasons.empty or not load_tier_config().include_live:
+        return ""
+    live = seasons[~_is_true(seasons["final"])]
+    if live.empty:
+        return ""
+    row = live.sort_values("season").iloc[-1]
+    day = pd.Timestamp(row["collected_on"]).tz_convert("Asia/Seoul") if pd.notna(row.get("collected_on")) else None
+    return f"진행 중 시즌 {int(row['season'])}" + (f"({day:%m/%d} 수집분)" if day is not None else "") + "도 잠정으로 들어감"
 
 
 def chart_tier_snapshot(history: pd.DataFrame, seasons: pd.DataFrame, theme: th.Theme, out: Path,
@@ -276,20 +306,21 @@ def chart_tier_snapshot(history: pd.DataFrame, seasons: pd.DataFrame, theme: th.
     if table.empty:
         return None
     fig, ax = _tier_bars(theme, table, names, icons, value="lift", tier="tier", ticks=[[v] for v in table["overall"]],
-                         tick_label="Overall score after the season")
-    boss = meta.get("boss_en") if isinstance(meta.get("boss_en"), str) else "?"
-    _frame(fig, ax, theme, title=f"Season {season} tiers",
-           subtitle=[f"{boss} · weak to", _element_part(icons, meta.get("weak_element"), 13) or "?",
-                     "· bar = lift that season (colour = tier) · beside each face = its element and burst"])
+                         tick_label="시즌이 끝났을 때의 종합 점수")
+    boss = _boss(meta)
+    _frame(fig, ax, theme, title=f"시즌 {season} 티어",
+           subtitle=[f"{boss} · 약점", _element_part(icons, meta.get("weak_element"), 13) or "?",
+                     "· 막대 = 그 시즌 기여도(색 = 티어) · 얼굴 옆 = 그 니케의 속성과 버스트"])
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
 
 
 def chart_overall_tiers(overall: pd.DataFrame, elements: pd.DataFrame, theme: th.Theme, out: Path, names: Names,
-                        icons: Icons, *, limit: int = 60) -> Path | None:
+                        icons: Icons, *, limit: int = 60, live: str = "") -> Path | None:
     """Every unit worth anything overall, by overall score, with its element score as the tick
-    (one tick per element for a unit whose skill adds one).
+    (one tick per element for a unit whose skill adds one). ``live`` says the
+    season in progress is counted.
 
     A tick far past its bar is a specialist; a tick short of it, a support that
     carries other elements' decks.
@@ -304,23 +335,24 @@ def chart_overall_tiers(overall: pd.DataFrame, elements: pd.DataFrame, theme: th
     lifts = elements.groupby("unit_id")["element_lift"].agg(list) if not elements.empty else pd.Series(dtype=object)
     fig, ax = _tier_bars(theme, table, names, icons, value="overall", tier="overall_tier",
                          ticks=[lifts.get(u, []) for u in table["unit_id"]],
-                         tick_label="Score in its element", starred=list(_is_true(table["provisional"])),
-                         star_label=f"* seen in < {config.min_elements_observed} boss weaknesses: provisional",
-                         note=f"Recent seasons weigh more (half-life {config.half_life_days:g} days) · a unit whose "
-                              f"skill adds an element has a tick for each of its two")
-    _frame(fig, ax, theme, title="Overall tiers — every unit over the whole element rotation",
-           subtitle="Bar = mean over the five boss weaknesses, colour = overall tier · tick = score in its element")
+                         tick_label="속성 티어 점수", starred=list(_is_true(table["provisional"])),
+                         star_label=f"* 잠정: 겪은 보스 약점 {config.min_elements_observed}가지 미만이거나 자기 속성 못 겪음",
+                         note=" · ".join(filter(None, [_recency(config), "스킬로 속성이 둘인 니케는 눈금도 둘", live])))
+    _frame(fig, ax, theme, title="종합 티어 — 보스 약점 다섯 가지 전체에서",
+           subtitle="막대 = 보스 약점 다섯 가지 성적의 평균(색 = 종합 티어) · 눈금 = 속성 티어 점수 · "
+                    "못 겪은 약점은 겪은 다른 속성 값으로(자기 속성은 0)")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
 
 
 def chart_element_tiers(elements: pd.DataFrame, overall: pd.DataFrame, element: str, theme: th.Theme, out: Path,
-                        names: Names, icons: Icons) -> Path | None:
+                        names: Names, icons: Icons, *, live: str = "") -> Path | None:
     """One element's units by their score in seasons whose boss was weak to it, the overall score as the tick.
 
     A unit whose skill adds this element is listed too, with its own element's
     icon beside its face; a unit of this element has none (they all share it).
+    ``live`` says the season in progress is counted.
     """
     if elements.empty or overall.empty:
         return None
@@ -333,16 +365,17 @@ def chart_element_tiers(elements: pd.DataFrame, overall: pd.DataFrame, element: 
     guests = table["source"] == "skill"
     labels = [_unit_parts(icons, names, r, 21, elements=[r["own_element"]] if guest else [])
               for (_, r), guest in zip(table.iterrows(), guests)]
-    icon = _element_part(icons, element, 13) or element
-    note = [f"Recent seasons weigh more (half-life {config.half_life_days:g} days)"]
+    icon = _element_part(icons, element, 13) or _element_ko(element)
+    note = [_recency(config)]
     if guests.any():
-        note += ["· an element icon beside a face = that unit's own; its skill adds", icon]
+        note += ["· 얼굴 옆 속성 아이콘 = 그 니케의 본래 속성(스킬로", icon, "우월 코드를 더한 니케)"]
+    if live:
+        note += [f"· {live}"]
     fig, ax = _tier_bars(theme, table, names, icons, value="element_lift", tier="element_tier",
-                         ticks=[[v] for v in table["overall"]], tick_label="Overall score", labels=labels,
-                         starred=list(_is_true(table["provisional"])),
-                         star_label=f"* overall seen in < {config.min_elements_observed} boss weaknesses", note=note)
-    _frame(fig, ax, theme, title=[_element_part(icons, element, 17) or element, "units — tiers within the element"],
-           subtitle=["Bar = lift when the boss was weak to", icon, "· colour = element tier · tick = overall score"])
+                         ticks=[[v] for v in table["overall"]], tick_label="종합 티어 점수", labels=labels,
+                         starred=list(_is_true(table["provisional"])), star_label="* 종합이 잠정", note=note)
+    _frame(fig, ax, theme, title=[_element_part(icons, element, 17) or _element_ko(element), "니케끼리 비교한 속성 티어"],
+           subtitle=["막대 = 보스 약점이", icon, "인 시즌의 기여도 평균(색 = 속성 티어) · 눈금 = 종합 티어 점수"])
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -391,32 +424,32 @@ def chart_trajectories(history: pd.DataFrame, overall: pd.DataFrame, elements: p
         parts = _unit_parts(icons, names, info, 30)
         mine = elements[elements["unit_id"] == unit_id] if not elements.empty else elements
         if not mine.empty:
-            parts += ["·  tier in"]
+            parts += ["·  속성 티어"]
             for _, standing in mine.sort_values("source", kind="stable").iterrows():
                 tier = standing["element_tier"] if isinstance(standing["element_tier"], str) else "?"
-                parts += [_element_part(icons, standing["element"], 14) or standing["element"], tier]
+                parts += [_element_part(icons, standing["element"], 14) or _element_ko(standing["element"]), tier]
         if isinstance(overall_tier.get(unit_id), str):
-            parts += [f"·  overall {overall_tier[unit_id]}"]
+            parts += [f"·  종합 {overall_tier[unit_id]}"]
         place(ax, line(parts, height_pt=14, fontsize=10, color=theme.ink_secondary, sep_pt=4), (0, 1),
               xycoords="axes fraction", offset=(0, 6), align=(0, 0))
     for ax in axes[len(unit_ids):]:
         ax.set_visible(False)
     for ax in axes[-cols:]:
-        ax.set_xlabel("Solo Raid season")
+        ax.set_xlabel("솔로 레이드 시즌")
     for ax in axes[::cols]:
-        ax.set_ylabel("Lift")
+        ax.set_ylabel("기여도")
     handles = [
         Line2D([], [], color=theme.categorical[0], linewidth=1.0, marker="o", markersize=6,
                markerfacecolor=theme.categorical[0], markeredgecolor=theme.surface,
-               label="Season lift · filled = boss weak to the unit's element"),
-        Line2D([], [], color=theme.categorical[1], linewidth=2.0, label="Overall score as it stood"),
+               label="시즌 기여도 · 채운 점 = 보스 약점이 그 니케의 속성인 시즌"),
+        Line2D([], [], color=theme.categorical[1], linewidth=2.0, label="그 시즌이 끝났을 때의 종합 점수"),
     ]
     fig.tight_layout(rect=(0, 0, 1, 0.93))
     fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.045, 0.935), ncols=2, frameon=False)
-    fig.text(0.05, 1.005, "How these units' tiers moved", fontsize=14, fontweight="bold",
+    fig.text(0.05, 1.005, "니케별 티어 변화", fontsize=14, fontweight="bold",
              color=theme.ink_primary, ha="left", va="bottom")
     cuts = " · ".join(f"{label} {cut:g}" for label, cut in config.cuts[:-1])
-    fig.text(0.05, 0.982, f"Gridlines = tier cuts ({cuts}) · shaded column = season in progress",
+    fig.text(0.05, 0.982, f"가로줄 = 티어 컷({cuts}) · 음영 = 진행 중 시즌(지금까지 수집분)",
              fontsize=9, color=theme.ink_muted, ha="left", va="bottom")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
@@ -455,9 +488,9 @@ def chart_tier_heatmap(history: pd.DataFrame, theme: th.Theme, out: Path, names:
             place(ax, line([image], height_pt=13, fontsize=7, color=theme.ink_secondary), (column[s], -1.05),
                   xycoords="data")
         else:
-            ax.annotate(ELEMENT_INITIAL.get(weak.get(s, ""), ""), (column[s], -1.05), ha="center", va="center",
+            ax.annotate(_element_ko(weak.get(s, ""))[:1], (column[s], -1.05), ha="center", va="center",
                         fontsize=7, color=theme.ink_secondary, annotation_clip=False)
-    ax.annotate("boss weak to", (-0.9, -1.05), ha="right", va="center", fontsize=7.5, color=theme.ink_muted,
+    ax.annotate("보스 약점", (-0.9, -1.05), ha="right", va="center", fontsize=7.5, color=theme.ink_muted,
                 annotation_clip=False)
     _label_rows(ax, theme, [_unit_parts(icons, names, u._asdict(), 19) for u in units.itertuples()], face_pt=19)
     ax.set_xticks(range(n_cols))
@@ -466,15 +499,14 @@ def chart_tier_heatmap(history: pd.DataFrame, theme: th.Theme, out: Path, names:
     ax.grid(False)
     for side in ax.spines.values():
         side.set_visible(False)
-    ax.set_xlabel("Solo Raid season  (* = in progress)")
+    ax.set_xlabel("솔로 레이드 시즌 (* = 진행 중)")
     handles = _tier_legend(order, theme, extra=[
-        Patch(facecolor=theme.surface, edgecolor=theme.axis, linewidth=0.8, label="blank = not released")
+        Patch(facecolor=theme.surface, edgecolor=theme.axis, linewidth=0.8, label="빈칸 = 출시 전")
     ])
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.06), ncols=len(handles),
               frameon=False, handlelength=1.2)
-    _frame(fig, ax, theme, title=f"Every season's tiers — units at S or better in {min_seasons}+ seasons",
-           subtitle="Rows by release date · top row = the element each season's boss was weak to "
-                    "· beside each face = the unit's own element and burst")
+    _frame(fig, ax, theme, title=f"시즌별 티어 — S 이상을 {min_seasons}번 이상 받은 니케",
+           subtitle="출시 순 · 맨 윗줄 = 그 시즌 보스의 약점 속성 · 얼굴 옆 = 그 니케의 속성과 버스트")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -502,12 +534,12 @@ def chart_tier_distribution(history: pd.DataFrame, theme: th.Theme, out: Path) -
         bottom = [b + v for b, v in zip(bottom, values)]
     ax.set_xticks(list(x))
     ax.set_xticklabels([str(s) for s in seasons], fontsize=7)
-    ax.set_xlabel("Season")
-    ax.set_ylabel("Units")
+    ax.set_xlabel("시즌")
+    ax.set_ylabel("니케 수")
     th.strip_chrome(ax)
     handles, labels = ax.get_legend_handles_labels()
-    _frame(fig, ax, theme, title="How many units reach each tier",
-           subtitle="Fixed lift cuts, so a season with one dominant deck has more SS than a spread-out one")
+    _frame(fig, ax, theme, title="시즌마다 티어별 니케 수",
+           subtitle="기여도에 고정 컷을 대므로, 한 덱이 압도한 시즌일수록 SS 가 많다")
     ax.legend(handles[::-1], labels[::-1], loc="upper center", bbox_to_anchor=(0.5, -0.14), ncols=len(shown),
               frameon=False)
     fig.savefig(out, bbox_inches="tight")
@@ -528,8 +560,8 @@ def chart_meta_shift(shift: pd.DataFrame, theme: th.Theme, out: Path) -> Path | 
     x = range(len(labels))
     fig, ax = plt.subplots(figsize=(11, 4.6))
     series = [
-        ("Meta shift (total variation)", shift["total_variation"], theme.categorical[0]),
-        ("Share taken by units unused the season before", shift["newcomer_share"], theme.categorical[1]),
+        ("메타 변화량", shift["total_variation"], theme.categorical[0]),
+        ("직전 시즌에 안 쓰인 니케가 가져간 몫", shift["newcomer_share"], theme.categorical[1]),
     ]
     for label, values, color in series:
         ax.plot(list(x), values, color=color, marker="o", markersize=4, label=label, zorder=3)
@@ -541,8 +573,8 @@ def chart_meta_shift(shift: pd.DataFrame, theme: th.Theme, out: Path) -> Path | 
     ax.margins(x=0.03)
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
     th.strip_chrome(ax)
-    _frame(fig, ax, theme, title="How much the meta moved each season",
-           subtitle="Share of the top players' damage that changed hands between consecutive seasons", legend_cols=2)
+    _frame(fig, ax, theme, title="시즌마다 메타가 얼마나 바뀌었나",
+           subtitle="이어진 두 시즌 사이에 다른 니케로 옮겨 간 상위권 대미지의 비율", legend_cols=2)
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -566,8 +598,8 @@ def chart_patch_impact(impact: pd.DataFrame, theme: th.Theme, out: Path) -> Path
     ax.set_xticklabels(labels, rotation=60, ha="right", fontsize=7)
     ax.yaxis.set_major_formatter(lambda v, _: f"{v:.0%}")
     th.strip_chrome(ax)
-    _frame(fig, ax, theme, title="Meta movement per patch window",
-           subtitle="Total variation between consecutive seasons · +n = units released in the window")
+    _frame(fig, ax, theme, title="패치 구간별 메타 변화",
+           subtitle="이어진 두 시즌 사이의 메타 변화량 · +n = 그 사이에 출시된 니케 수")
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out
@@ -593,7 +625,7 @@ def resolve_units(queries: list[str], history: pd.DataFrame) -> list[str]:
         match = units[(units["name_ko"].map(normalize_name) == key) | (units["name_en"].map(normalize_name) == key)
                       | (units["unit_id"] == query)]
         if match.empty:
-            raise LookupError(f"no unit named {query!r} in the ranking data")
+            raise LookupError(f"'{query}' 에 해당하는 니케가 랭킹 기록에 없다")
         found.append(str(match["unit_id"].iloc[0]))
     return found
 
@@ -629,6 +661,11 @@ def render_all(
     picks = resolve_units(units, history) if units else default_units(overall, top_n)
 
     names = Names()
+    font = th.hangul_font()
+    if font is None:
+        log.warning("no Hangul font: the charts' Korean text will show as boxes "
+                    "(install one, e.g. `sudo apt-get install fonts-nanum`)")
+    live = _live_note(seasons)
     named_units: set[str] = set()
     written: list[str] = []
     skipped: list[str] = []
@@ -646,10 +683,11 @@ def render_all(
                 ("tier-trajectories", lambda p, t=theme, i=icons: chart_trajectories(
                     history, overall, elements, t, p, names, i, unit_ids=picks)),
                 ("tier-heatmap", lambda p, t=theme, i=icons: chart_tier_heatmap(history, t, p, names, i)),
-                ("overall-tiers", lambda p, t=theme, i=icons: chart_overall_tiers(overall, elements, t, p, names, i)),
+                ("overall-tiers", lambda p, t=theme, i=icons: chart_overall_tiers(
+                    overall, elements, t, p, names, i, live=live)),
             ] + [
                 (f"element-tiers-{element.lower()}", lambda p, t=theme, i=icons, e=element: chart_element_tiers(
-                    elements, overall, e, t, p, names, i))
+                    elements, overall, e, t, p, names, i, live=live))
                 for element in ELEMENTS
             ] + [
                 ("tier-distribution", lambda p, t=theme: chart_tier_distribution(history, t, p)),
@@ -669,4 +707,4 @@ def render_all(
         log.warning("no icon for %s unit(s), drawn by name: %s (run `nikke collect icons`)",
                     len(named_units), ", ".join(sorted(named_units)))
     return {"out_dir": str(target), "written": written, "skipped_no_data": sorted(set(skipped)),
-            "korean_names": names.korean, "named_units": sorted(named_units)}
+            "font": font, "named_units": sorted(named_units)}

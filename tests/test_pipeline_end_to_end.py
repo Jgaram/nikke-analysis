@@ -127,6 +127,20 @@ def test_the_season_in_progress_is_provisional(processed):
     assert "아직 수집분 없음" in render(early)
 
 
+def test_the_live_season_counts_in_the_tiers_once_collected(processed):
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    live_start = pd.Timestamp(world.seasons.set_index("season").loc[world.live_season, "start_at"])
+    view = book.at((live_start + pd.Timedelta(days=4)).isoformat())
+    assert view.live_seasons == [world.live_season] and view.final_seasons[-1] == world.live_season - 1
+    assert f"진행 중 시즌 {world.live_season}(잠정)" in render(view)
+    weak = world.seasons.set_index("season").loc[world.live_season, "weak_element"]
+    assert view.element_seasons(weak)[-1] == world.live_season
+    assert f"{world.live_season}(진행 중)" in render_element(view, weak)
+    assert view.to_dict()["live_seasons"] == [world.live_season]
+    assert book.at((live_start + pd.Timedelta(hours=2)).isoformat()).live_seasons == []  # no snapshot yet
+
+
 def test_unit_history_reads_every_season_since_release(processed):
     directory, world, _ = processed
     book = TierBook.load(directory)
@@ -134,12 +148,30 @@ def test_unit_history_reads_every_season_since_release(processed):
     assert history.unit_id == world.newcomer
     assert list(history.rows["season"]) == list(range(world.newcomer_season, world.live_season + 1))
     text = render_unit(history, book.config)
-    assert "종합 티어" in text and "속성 티어" in text
-    # Electric, but no Electric-weak season has ended since its release: no element tier yet
+    assert "종합 티어" in text and "속성 티어" in text and "기여도" in text and "lift" not in text
+    # Electric, but no Electric-weak season since its release: no element tier yet
     assert [(e["element"], e["element_lift"]) for e in history.profile["elements"]] == [("Electric", None)]
     assert "미관측" in text
     with pytest.raises(LookupError):
         book.unit("Filler")  # matches many
+
+
+def test_a_unit_shows_what_its_overall_is_made_of(processed):
+    """The newcomer (Electric) has met Fire, Water and - in progress - Wind, never Electric: its Electric slot
+    counts 0, the two others it has not met take the mean of those it has, and the overall is provisional."""
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    history = book.unit("Newcomer")
+    assert history.live_seasons == [world.live_season]
+    slots = {s["element"]: s for s in history.profile["slots"]}
+    assert (slots["Electric"]["seasons"], slots["Electric"]["lift"]) == (0, 0.0)
+    met = [slots[e]["lift"] for e in ("Fire", "Water", "Wind")]
+    assert slots["Iron"]["seasons"] == 0 and slots["Iron"]["lift"] == pytest.approx(sum(met) / 3)
+    assert history.profile["overall"] == pytest.approx((sum(met) + slots["Iron"]["lift"]) / 5)
+    text = render_unit(history, book.config)
+    assert "잠정(자기 속성 시즌을 아직 못 겪음)" in text and "▶전격 (0.00)" in text
+    assert "다른 속성은 겪은 다른 속성의 평균, 자기 속성은 0" in text
+    assert f"진행 중 시즌 {world.live_season}도 지금까지 수집분으로 잠정 반영" in text
 
 
 def test_analyze_refuses_without_ranking_data(tmp_path):
@@ -338,6 +370,6 @@ def test_charts_of_another_sample_say_so_and_leave_no_trace(processed, tmp_path)
     directory, _, _ = processed
     tables = pipeline.run_servers(ServerFilter.of(exclude="s2"), data_dir=directory, cache_dir=tmp_path / "t")
     result = charts.render_all(data_dir=Path(tables["out_dir"]), out_dir=tmp_path / "c",
-                               themes=("light",), sample="all servers but S2")
+                               themes=("light",), sample="S2 제외 전 서버")
     assert len(result["written"]) == 12
     assert charts._sample_caption == "" and charts._extras == {}

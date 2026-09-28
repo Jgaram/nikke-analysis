@@ -1,202 +1,205 @@
 element,element_rank,unit_id,name_ko,name_en,source,element_lift,element_tier,element_seasons,overall_tier,overall,overall_rank,provisional
-Fire,1,016,라피 : 레드 후드,Rapi: Red Hood,own,1.430556,SS,6,A,1.043907,7,False
-Fire,2,073,브리드 : 사일런트 트랙,Brid: Silent Track,own,1.354326,S,3,C,0.270865,42,False
-Fire,3,162,미하라 : 본딩 체인,Mihara: Bonding Chain,own,1.295832,S,5,B,0.512681,22,False
-Fire,4,871,유키코,Yukiko,own,1.091173,A,1,A,1.091173,5,True
-Fire,5,870,퀸(마코토),Queen (Makoto),own,1.091097,A,1,A,1.091097,6,True
-Fire,6,075,디젤 : 윈터 스위츠,Diesel: Winter Sweets,own,1.07818,A,3,C,0.408647,30,False
-Fire,7,583,아르카나 : 포츈 메이트,Arcana: Fortune Mate,own,0.85797,A,2,C,0.422159,28,False
-Fire,8,191,앨리스,Alice,own,0.783599,B,9,C,0.352324,34,False
-Fire,9,101,드레이크,Drake,own,0.772511,B,9,B,0.506467,23,False
-Fire,10,260,모더니아,Modernia,own,0.768582,B,9,C,0.22716,48,False
-Fire,11,514,그레이브,Grave,own,0.755143,B,6,C,0.447305,26,False
-Fire,12,831,레이,Rei,own,0.698625,B,7,D,0.139725,65,False
-Fire,13,032,미란다,Miranda,own,0.563521,B,9,B,0.557748,20,False
-Fire,14,043,D : 킬러 와이프,D: Killer Wife,own,0.473767,C,8,C,0.295637,38,False
-Fire,15,830,아스카,Asuka,own,0.126345,D,7,D,0.041006,82,False
-Fire,16,810,2B,2B,own,0.099852,D,9,D,0.026996,85,False
-Fire,17,095,은화 : 택티컬 업,Eunhwa: Tactical Upgrade,own,0.071579,D,4,D,0.014568,94,False
-Fire,18,093,엠마 : 택티컬 업,Emma: Tactical Upgrade,own,0.06399,D,4,D,0.013051,95,False
-Fire,19,094,베스티 : 택티컬 업,Vesti: Tactical Upgrade,own,0.049795,D,4,D,0.009959,99,False
-Fire,20,811,A2,A2,own,0.028428,D,9,D,0.007865,102,False
-Fire,21,261,니힐리스타,Nihilister,own,0.008336,D,9,D,0.00175,116,False
-Fire,22,282,사쿠라,Sakura,own,0.0082,D,9,D,0.002527,115,False
-Fire,23,171,율하,Yulha,own,0.005002,D,9,D,0.020136,88,False
+Fire,1,016,라피 : 레드 후드,Rapi: Red Hood,own,1.430556,SS,6,A,1.025012,5,False
+Fire,2,073,브리드 : 사일런트 트랙,Brid: Silent Track,own,1.354326,S,3,C,0.270865,40,False
+Fire,3,162,미하라 : 본딩 체인,Mihara: Bonding Chain,own,1.295832,S,5,C,0.495023,22,False
+Fire,4,871,유키코,Yukiko,own,1.091173,A,1,C,0.218235,48,True
+Fire,5,870,퀸(마코토),Queen (Makoto),own,1.091097,A,1,C,0.218219,49,True
+Fire,6,075,디젤 : 윈터 스위츠,Diesel: Winter Sweets,own,1.07818,A,3,C,0.362642,31,False
+Fire,7,583,아르카나 : 포츈 메이트,Arcana: Fortune Mate,own,0.85797,A,2,C,0.41023,28,False
+Fire,8,191,앨리스,Alice,own,0.783599,B,9,C,0.319306,35,False
+Fire,9,101,드레이크,Drake,own,0.772511,B,9,C,0.434217,25,False
+Fire,10,260,모더니아,Modernia,own,0.768582,B,9,C,0.218382,47,False
+Fire,11,514,그레이브,Grave,own,0.755143,B,6,C,0.410461,27,False
+Fire,12,831,레이,Rei,own,0.698625,B,7,D,0.139725,63,False
+Fire,13,032,미란다,Miranda,own,0.563521,B,9,B,0.583468,16,False
+Fire,14,043,D : 킬러 와이프,D: Killer Wife,own,0.473767,C,8,C,0.269799,41,False
+Fire,15,830,아스카,Asuka,own,0.126345,D,7,D,0.035269,86,False
+Fire,16,810,2B,2B,own,0.099852,D,9,D,0.026635,89,False
+Fire,17,095,은화 : 택티컬 업,Eunhwa: Tactical Upgrade,own,0.071579,D,4,D,0.014568,96,False
+Fire,18,093,엠마 : 택티컬 업,Emma: Tactical Upgrade,own,0.06399,D,4,D,0.013051,99,False
+Fire,19,094,베스티 : 택티컬 업,Vesti: Tactical Upgrade,own,0.049795,D,4,D,0.009959,102,False
+Fire,20,811,A2,A2,own,0.028428,D,9,D,0.007743,104,False
+Fire,21,261,니힐리스타,Nihilister,own,0.008336,D,9,D,0.001749,118,False
+Fire,22,282,사쿠라,Sakura,own,0.0082,D,9,D,0.00237,116,False
+Fire,23,171,율하,Yulha,own,0.005002,D,9,D,0.018722,92,False
 Fire,24,092,은화,Eunhwa,own,0.000911,D,9,D,0.000211,147,False
-Fire,25,380,네로,Nero,own,0.000676,D,9,D,0.000172,149,False
-Fire,26,312,소다,Soda,own,0.000647,D,9,D,0.000254,140,False
-Fire,27,090,엠마,Emma,own,0.000154,D,9,D,7.9e-05,153,False
-Fire,28,022,시그널,Signal,own,6.8e-05,D,9,D,1.4e-05,164,False
-Fire,29,801,파워,Power,own,4.6e-05,D,9,D,8.8e-05,152,False
-Fire,30,501,트로니,Trony,own,4.2e-05,D,7,D,8e-06,168,False
-Fire,31,160,유니,Yuni,own,2.9e-05,D,9,D,3.9e-05,158,False
-Fire,32,303,프로덕트 12,Product 12,own,7e-06,D,9,D,1e-06,170,False
-Fire,33,010,라피,Rapi,own,0.0,D,9,D,0.0,171,False
-Fire,33,011,네온,Neon,own,0.0,D,9,D,0.000325,138,False
-Fire,33,110,크로우,Crow,own,0.0,D,9,D,3e-06,169,False
-Fire,33,201,얀,Yan,own,0.0,D,9,D,9e-06,167,False
-Fire,33,240,루마니,Rumani,own,0.0,D,6,D,0.0,171,False
-Fire,33,306,솔져 O.W.,Soldier OW,own,0.0,D,9,D,0.0,171,False
-Fire,33,311,코코아,Cocoa,own,0.0,D,9,D,0.000407,136,False
-Fire,33,361,킬로,Kilo,own,0.0,D,7,D,0.0,171,False
-Fire,33,550,베이,Bay,own,0.0,D,7,D,0.0,171,False
-Water,1,471,스노우 화이트 : 헤비암즈,Snow White: Heavy Arms,own,1.364004,S,2,B,0.797456,9,False
-Water,2,234,도로시 : 세렌디피티,Dorothy: Serendipity,own,1.147353,S,3,B,0.520175,21,False
-Water,3,074,솔린 : 프로스트 티켓,Soline: Frost Ticket,own,1.114627,S,2,C,0.429511,27,False
-Water,4,194,루드밀라 : 윈터 오너,Ludmilla: Winter Owner,own,1.083708,A,8,C,0.375165,32,False
-Water,5,352,헬름,Helm,own,1.002947,A,10,B,0.689952,15,False
-Water,6,502,일레그 : 붐 앤 쇼크,Elegg: Boom and Shock,own,0.98455,A,3,D,0.196983,53,False
-Water,7,192,토브,Tove,own,0.974722,A,8,B,0.571069,19,False
-Water,8,354,마스트 : 로망틱 메이드,Mast: Romantic Maid,own,0.974289,A,5,S,1.266433,3,False
-Water,9,355,앵커 : 이노센트 메이드,Anchor: Innocent Maid,own,0.968262,A,5,B,0.771999,11,False
-Water,10,520,브래디,Bready,own,0.828294,A,4,D,0.165659,61,False
-Water,11,170,프리바티,Privaty,own,0.794521,B,10,B,0.79507,10,False
-Water,12,403,퀀시 : 이스케이프 퀸,Quency: Escape Queen,own,0.706692,B,6,D,0.142516,64,False
-Water,13,601,프리카,Prika,own,0.41128,C,1,B,0.66115,16,False
-Water,14,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,own,0.283061,C,5,D,0.056612,78,False
-Water,15,233,도로시,Dorothy,own,0.192723,D,10,D,0.083488,72,False
-Water,16,112,바이퍼,Viper,own,0.165825,D,10,D,0.033361,83,False
-Water,17,382,레오나,Leona,own,0.139664,D,7,D,0.060832,77,False
-Water,18,580,팬텀,Phantom,own,0.089941,D,5,D,0.018008,90,False
-Water,19,195,앨리스 : 원더랜드 바니,Alice: Wonderland Bunny,own,0.076212,D,6,D,0.020756,87,False
-Water,20,820,렘,Rem,own,0.054357,D,7,D,0.011526,97,False
-Water,21,392,라이,Rei,own,0.035891,D,10,D,0.00738,103,False
-Water,22,821,에밀리아,Emilia,own,0.024161,D,7,D,0.004852,108,False
-Water,23,030,폴리,Poli,own,0.021009,D,10,D,0.008416,101,False
-Water,24,132,메어리 : 베이 갓데스,Mary: Bay Goddess,own,0.007317,D,9,D,0.005202,106,False
-Water,25,091,베스티,Vesti,own,0.006081,D,10,D,0.001435,120,False
-Water,26,432,아리아,Aria,own,0.005715,D,10,D,0.001284,121,False
-Water,27,070,브리드,Brid,own,0.003792,D,10,D,0.000784,127,False
-Water,28,014,네온 : 블루 오션,Neon: Blue Ocean,own,0.002659,D,9,D,0.000546,132,False
-Water,29,140,슈가,Sugar,skill,0.002221,D,10,D,0.003634,111,False
-Water,30,023,델타 : 닌자 시프,Delta: Ninja Thief,own,0.001991,D,2,D,0.046214,80,False
-Water,31,190,루드밀라,Ludmilla,own,0.001634,D,10,D,0.000934,124,False
-Water,32,193,네베,Neve,own,0.001194,D,10,D,0.000239,143,False
-Water,33,242,폴크방,Folkwang,own,0.000869,D,10,D,0.000215,146,False
-Water,34,521,크러스트,Crust,own,0.000737,D,3,D,0.000188,148,False
-Water,35,120,N102,N102,own,0.000553,D,10,D,0.00058,130,False
-Water,36,800,마키마,Makima,own,0.000524,D,10,D,0.003203,113,False
-Water,37,130,메어리,Mary,own,0.000356,D,10,D,7.4e-05,154,False
-Water,38,141,밀크,Milk,own,0.000167,D,10,D,0.000245,141,False
-Water,39,161,미하라,Mihara,own,2.6e-05,D,10,D,5.7e-05,156,False
-Water,40,305,iDoll 오션,iDoll Ocean,own,0.0,D,10,D,0.0,171,False
-Water,40,620,백학,Snow Crane,own,0.0,D,1,D,0.0,171,False
-Water,40,836,사쿠라,Sakura,own,0.0,D,4,D,0.0,171,False
-Wind,1,262,리버렐리오,Liberalio,own,1.682323,SS,2,B,0.637361,17,False
-Wind,2,225,홍련 : 흑영,Scarlet: Black Shadow,own,1.666674,SS,5,C,0.469971,25,False
-Wind,3,513,리틀 머메이드,Little Mermaid,own,1.213349,S,2,S,1.201743,4,False
-Wind,4,835,아스카 : WILLE,Asuka: WILLE,own,1.142316,S,3,C,0.244676,46,False
-Wind,5,834,레이 (가칭),Rei (Tentative Name),own,1.034454,A,3,C,0.208072,51,False
-Wind,6,316,벨벳,Velvet,own,0.988337,A,1,C,0.223767,49,False
-Wind,7,223,나유타,Nayuta,own,0.980491,A,2,B,0.771851,12,False
-Wind,8,570,아크레인저 블랙,Ark Ranger Black,own,0.559068,B,1,D,0.180164,60,False
-Wind,9,431,볼륨,Volume,own,0.476439,C,6,D,0.195472,54,False
-Wind,10,284,사쿠라 : 블룸 인 서머,Sakura: Bloom in Summer,own,0.337236,C,4,D,0.068101,75,False
-Wind,11,290,마나,Mana,own,0.294309,C,3,D,0.063272,76,False
-Wind,12,271,누아르,Noir,own,0.241898,C,6,D,0.147272,63,False
-Wind,13,270,블랑,Blanc,own,0.234699,C,6,C,0.203481,52,False
-Wind,14,283,로산나 : 시크 오션,Rosanna: Chic Ocean,own,0.186429,D,4,D,0.130611,66,False
-Wind,15,400,길티,Guilty,own,0.066723,D,6,D,0.014602,93,False
-Wind,16,202,도라,Dolla,own,0.043423,D,6,D,0.069726,74,False
-Wind,17,131,페퍼,Pepper,own,0.011186,D,6,D,0.004945,107,False
-Wind,18,113,E.H.,E.H.,own,0.008739,D,1,D,0.001748,117,False
-Wind,19,040,D,D,own,0.001759,D,6,D,0.000426,134,False
-Wind,20,033,키리,Quiry,own,0.000451,D,5,D,9e-05,151,False
-Wind,21,072,디젤,Diesel,own,0.000333,D,6,D,0.003252,112,False
-Wind,22,232,노아,Noah,own,0.000158,D,6,D,0.002873,114,False
-Wind,23,121,앤 : 미라클 페어리,Anne: Miracle Fairy,own,0.000157,D,6,D,0.001462,119,False
-Wind,24,241,에피넬,Epinel,own,0.00012,D,6,D,6.3e-05,155,False
-Wind,25,172,애드미,Admi,own,4.5e-05,D,6,D,0.000785,126,False
-Wind,26,020,델타,Delta,own,0.0,D,6,D,3.9e-05,159,False
-Wind,26,061,미카,Mica,own,0.0,D,6,D,5e-05,157,False
-Wind,26,304,iDoll 플라워,iDoll Flower,own,0.0,D,6,D,0.0,171,False
-Wind,26,307,프로덕트 23,Product 23,own,0.0,D,6,D,0.0,171,False
-Wind,26,310,에이드,Ade,own,0.0,D,4,D,1.8e-05,162,False
-Wind,26,351,앵커,Anchor,own,0.0,D,6,D,0.0,171,False
-Wind,26,532,소라,Sora,own,0.0,D,2,D,0.0,171,False
-Wind,26,590,모리,Mori,own,0.0,D,2,D,0.0,171,False
-Wind,26,802,히메노,Himeno,own,0.0,D,6,D,0.0,171,False
-Wind,26,822,람,Ram,own,0.0,D,4,D,0.0,171,False
-Wind,26,852,릴리,Lily,own,0.0,D,2,D,0.0,171,False
-Wind,,103,라플라스 : 얼티밋 히어로,Laplace: Ultimate Hero,own,,,0,D,0.0,171,True
-Wind,,105,맥스웰 : 오디너리 미케닉,Maxwell: Ordinary Mechanic,own,,,0,D,0.0,171,True
-Iron,1,016,라피 : 레드 후드,Rapi: Red Hood,skill,1.544199,SS,4,A,1.043907,7,False
-Iron,2,330,크라운,Crown,own,1.534174,SS,6,S,1.375172,2,False
-Iron,3,850,이브,EVE,own,1.3464,S,4,C,0.26928,43,False
-Iron,4,515,신데렐라 : 크리스탈 웨이브,Cinderella: Crystal Wave,own,1.219194,S,1,B,0.734341,13,False
-Iron,5,353,헬름 : 아쿠아마린,Helm: Aquamarine,own,0.908017,A,7,D,0.188932,57,False
-Iron,6,082,리타,Liter,own,0.86281,A,7,B,0.731829,14,False
-Iron,7,851,레이븐,Raven,own,0.84632,A,4,D,0.19167,56,False
-Iron,8,600,민트,Mint,own,0.811426,A,1,A,0.81695,8,False
-Iron,9,470,레드 후드,Red Hood,own,0.726173,B,7,C,0.363523,33,False
-Iron,10,860,치사토,Chisato,own,0.614164,B,2,D,0.122833,68,False
-Iron,11,220,스노우 화이트,Snow White,own,0.611782,B,7,D,0.147569,62,False
-Iron,12,322,마르차나 : 마린 스터디,Marciana: Marine Study,own,0.608537,B,1,C,0.291984,39,True
-Iron,13,861,타키나,Takina,own,0.607863,B,2,C,0.247133,45,False
-Iron,14,102,맥스웰,Maxwell,own,0.465167,C,7,C,0.220932,50,False
-Iron,15,315,에이드 : 에이전트 바니,Ade: Agent Bunny,own,0.447972,C,3,C,0.331963,35,False
-Iron,16,314,소다 : 트윙클링 바니,Soda: Twinkling Bunny,own,0.439016,C,5,D,0.180653,58,False
-Iron,17,143,밀크 : 블루밍 바니,Milk: Blooming Bunny,own,0.4323,C,3,D,0.08646,71,False
-Iron,18,451,티아,Tia,own,0.137346,D,7,D,0.125674,67,False
-Iron,19,100,라플라스,Laplace,own,0.107399,D,7,D,0.023744,86,False
-Iron,20,221,라푼젤,Rapunzel,own,0.022498,D,7,D,0.009585,100,False
-Iron,21,321,마르차나,Marciana,own,0.01796,D,7,D,0.010085,98,False
-Iron,22,212,노벨,Novel,own,0.013097,D,7,D,0.01879,89,False
-Iron,23,140,슈가,Sugar,own,0.010408,D,7,D,0.003634,111,False
-Iron,24,150,율리아,Julia,own,0.005118,D,7,D,0.001026,123,False
+Fire,25,380,네로,Nero,own,0.000676,D,9,D,0.000168,148,False
+Fire,26,312,소다,Soda,own,0.000647,D,9,D,0.000219,144,False
+Fire,27,090,엠마,Emma,own,0.000154,D,9,D,7.1e-05,154,False
+Fire,28,022,시그널,Signal,own,6.8e-05,D,9,D,1.4e-05,166,False
+Fire,29,801,파워,Power,own,4.6e-05,D,9,D,6.4e-05,155,False
+Fire,30,501,트로니,Trony,own,4.2e-05,D,7,D,8e-06,170,False
+Fire,31,160,유니,Yuni,own,2.9e-05,D,9,D,2.7e-05,162,False
+Fire,32,303,프로덕트 12,Product 12,own,7e-06,D,9,D,1e-06,172,False
+Fire,33,010,라피,Rapi,own,0.0,D,9,D,0.0,173,False
+Fire,33,011,네온,Neon,own,0.0,D,9,D,0.000323,140,False
+Fire,33,110,크로우,Crow,own,0.0,D,9,D,2e-06,171,False
+Fire,33,201,얀,Yan,own,0.0,D,9,D,9e-06,169,False
+Fire,33,240,루마니,Rumani,own,0.0,D,6,D,0.0,173,False
+Fire,33,306,솔져 O.W.,Soldier OW,own,0.0,D,9,D,0.0,173,False
+Fire,33,311,코코아,Cocoa,own,0.0,D,9,D,0.000325,139,False
+Fire,33,361,킬로,Kilo,own,0.0,D,7,D,0.0,173,False
+Fire,33,550,베이,Bay,own,0.0,D,7,D,0.0,173,False
+Water,1,471,스노우 화이트 : 헤비암즈,Snow White: Heavy Arms,own,1.312466,S,3,B,0.787149,7,False
+Water,2,234,도로시 : 세렌디피티,Dorothy: Serendipity,own,1.102611,S,4,B,0.511226,20,False
+Water,3,074,솔린 : 프로스트 티켓,Soline: Frost Ticket,own,1.081846,A,3,C,0.422955,26,False
+Water,4,194,루드밀라 : 윈터 오너,Ludmilla: Winter Owner,own,1.009655,A,9,C,0.360354,32,False
+Water,5,192,토브,Tove,own,1.003825,A,9,B,0.57689,17,False
+Water,6,354,마스트 : 로망틱 메이드,Mast: Romantic Maid,own,0.986114,A,6,S,1.268798,3,False
+Water,7,170,프리바티,Privaty,own,0.976343,A,11,A,0.831434,6,False
+Water,8,352,헬름,Helm,own,0.973687,A,11,B,0.6841,12,False
+Water,9,355,앵커 : 이노센트 메이드,Anchor: Innocent Maid,own,0.969748,A,6,B,0.772296,8,False
+Water,10,502,일레그 : 붐 앤 쇼크,Elegg: Boom and Shock,own,0.960556,A,4,D,0.192184,53,False
+Water,11,520,브래디,Bready,own,0.753861,B,5,D,0.150772,61,False
+Water,12,403,퀀시 : 이스케이프 퀸,Quency: Escape Queen,own,0.60587,B,7,D,0.122352,67,False
+Water,13,404,길티 : 마이티 바니,Guilty: Mighty Bunny,own,0.573171,B,1,B,0.573171,18,True
+Water,14,405,신 : 스위프트 바니,Sin: Swift Bunny,own,0.496235,C,1,C,0.496235,21,True
+Water,15,140,슈가,Sugar,skill,0.409207,C,11,D,0.085031,74,False
+Water,16,580,팬텀,Phantom,own,0.370638,C,6,D,0.074147,76,False
+Water,17,601,프리카,Prika,own,0.297852,C,2,B,0.651704,13,False
+Water,18,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,own,0.171971,D,6,D,0.034394,87,False
+Water,19,233,도로시,Dorothy,own,0.117618,D,11,D,0.068467,77,False
+Water,20,112,바이퍼,Viper,own,0.102159,D,11,D,0.020628,91,False
+Water,21,382,레오나,Leona,own,0.085464,D,8,D,0.049992,81,False
+Water,22,195,앨리스 : 원더랜드 바니,Alice: Wonderland Bunny,own,0.045651,D,7,D,0.014643,95,False
+Water,23,820,렘,Rem,own,0.032829,D,8,D,0.00722,105,False
+Water,24,392,라이,Rei,own,0.022408,D,11,D,0.004684,108,False
+Water,25,821,에밀리아,Emilia,own,0.014592,D,8,D,0.002939,113,False
+Water,26,030,폴리,Poli,own,0.012822,D,11,D,0.006779,106,False
+Water,27,132,메어리 : 베이 갓데스,Mary: Bay Goddess,own,0.004455,D,10,D,0.004629,109,False
+Water,28,091,베스티,Vesti,own,0.003711,D,11,D,0.000961,123,False
+Water,29,432,아리아,Aria,own,0.003488,D,11,D,0.000839,126,False
+Water,30,070,브리드,Brid,own,0.002314,D,11,D,0.000488,133,False
+Water,31,014,네온 : 블루 오션,Neon: Blue Ocean,own,0.001619,D,10,D,0.000338,138,False
+Water,32,023,델타 : 닌자 시프,Delta: Ninja Thief,own,0.000999,D,3,D,0.046015,84,False
+Water,33,190,루드밀라,Ludmilla,own,0.000997,D,11,D,0.000807,127,False
+Water,34,193,네베,Neve,own,0.000728,D,11,D,0.000146,150,False
+Water,35,242,폴크방,Folkwang,own,0.000531,D,11,D,0.000147,149,False
+Water,36,521,크러스트,Crust,own,0.000402,D,4,D,0.000121,151,False
+Water,37,120,N102,N102,own,0.000338,D,11,D,0.000537,132,False
+Water,38,800,마키마,Makima,own,0.00032,D,11,D,0.003163,112,False
+Water,39,130,메어리,Mary,own,0.000217,D,11,D,4.6e-05,159,False
+Water,40,141,밀크,Milk,own,0.000102,D,11,D,0.000232,142,False
+Water,41,161,미하라,Mihara,own,1.6e-05,D,11,D,5.5e-05,157,False
+Water,42,305,iDoll 오션,iDoll Ocean,own,0.0,D,11,D,0.0,173,False
+Water,42,620,백학,Snow Crane,own,0.0,D,2,D,0.0,173,False
+Water,42,836,사쿠라,Sakura,own,0.0,D,5,D,0.0,173,False
+Wind,1,262,리버렐리오,Liberalio,own,1.682323,SS,2,B,0.611611,14,False
+Wind,2,225,홍련 : 흑영,Scarlet: Black Shadow,own,1.666674,SS,5,C,0.455269,24,False
+Wind,3,513,리틀 머메이드,Little Mermaid,own,1.213349,S,2,S,1.202438,4,False
+Wind,4,835,아스카 : WILLE,Asuka: WILLE,own,1.142316,S,3,C,0.242433,45,False
+Wind,5,834,레이 (가칭),Rei (Tentative Name),own,1.034454,A,3,C,0.207646,52,False
+Wind,6,316,벨벳,Velvet,own,0.988337,A,1,C,0.217498,50,False
+Wind,7,223,나유타,Nayuta,own,0.980491,A,2,B,0.768176,9,False
+Wind,8,570,아크레인저 블랙,Ark Ranger Black,own,0.559068,B,1,D,0.111814,70,False
+Wind,9,431,볼륨,Volume,own,0.476439,C,6,D,0.184762,57,False
+Wind,10,284,사쿠라 : 블룸 인 서머,Sakura: Bloom in Summer,own,0.337236,C,4,D,0.068065,78,False
+Wind,11,290,마나,Mana,own,0.294309,C,3,D,0.06156,80,False
+Wind,12,271,누아르,Noir,own,0.241898,C,6,D,0.137827,64,False
+Wind,13,270,블랑,Blanc,own,0.234699,C,6,D,0.172908,59,False
+Wind,14,283,로산나 : 시크 오션,Rosanna: Chic Ocean,own,0.186429,D,4,D,0.126218,65,False
+Wind,15,400,길티,Guilty,own,0.066723,D,6,D,0.014378,97,False
+Wind,16,202,도라,Dolla,own,0.043423,D,6,D,0.067215,79,False
+Wind,17,131,페퍼,Pepper,own,0.011186,D,6,D,0.004468,110,False
+Wind,18,113,E.H.,E.H.,own,0.008739,D,1,D,0.001748,119,False
+Wind,19,040,D,D,own,0.001759,D,6,D,0.000423,134,False
+Wind,20,033,키리,Quiry,own,0.000451,D,5,D,9e-05,153,False
+Wind,21,072,디젤,Diesel,own,0.000333,D,6,D,0.002328,117,False
+Wind,22,232,노아,Noah,own,0.000158,D,6,D,0.002748,115,False
+Wind,23,121,앤 : 미라클 페어리,Anne: Miracle Fairy,own,0.000157,D,6,D,0.001321,121,False
+Wind,24,241,에피넬,Epinel,own,0.00012,D,6,D,6.3e-05,156,False
+Wind,25,172,애드미,Admi,own,4.5e-05,D,6,D,0.000692,128,False
+Wind,26,020,델타,Delta,own,0.0,D,6,D,3.9e-05,160,False
+Wind,26,061,미카,Mica,own,0.0,D,6,D,5e-05,158,False
+Wind,26,304,iDoll 플라워,iDoll Flower,own,0.0,D,6,D,0.0,173,False
+Wind,26,307,프로덕트 23,Product 23,own,0.0,D,6,D,0.0,173,False
+Wind,26,310,에이드,Ade,own,0.0,D,4,D,1.4e-05,165,False
+Wind,26,351,앵커,Anchor,own,0.0,D,6,D,0.0,173,False
+Wind,26,532,소라,Sora,own,0.0,D,2,D,0.0,173,False
+Wind,26,590,모리,Mori,own,0.0,D,2,D,0.0,173,False
+Wind,26,802,히메노,Himeno,own,0.0,D,6,D,0.0,173,False
+Wind,26,822,람,Ram,own,0.0,D,4,D,0.0,173,False
+Wind,26,852,릴리,Lily,own,0.0,D,2,D,0.0,173,False
+Wind,,103,라플라스 : 얼티밋 히어로,Laplace: Ultimate Hero,own,,,0,D,0.0,173,True
+Wind,,104,드레이크 : 그레이트 빌런,Drake: Great Villain,own,,,0,D,0.0,173,True
+Wind,,105,맥스웰 : 오디너리 미케닉,Maxwell: Ordinary Mechanic,own,,,0,D,0.0,173,True
+Iron,1,016,라피 : 레드 후드,Rapi: Red Hood,skill,1.544199,SS,4,A,1.025012,5,False
+Iron,2,330,크라운,Crown,own,1.534174,SS,6,S,1.368141,2,False
+Iron,3,850,이브,EVE,own,1.3464,S,4,C,0.26928,42,False
+Iron,4,515,신데렐라 : 크리스탈 웨이브,Cinderella: Crystal Wave,own,1.219194,S,1,B,0.593347,15,False
+Iron,5,353,헬름 : 아쿠아마린,Helm: Aquamarine,own,0.908017,A,7,D,0.188347,55,False
+Iron,6,082,리타,Liter,own,0.86281,A,7,B,0.723833,11,False
+Iron,7,851,레이븐,Raven,own,0.84632,A,4,D,0.188135,56,False
+Iron,8,600,민트,Mint,own,0.811426,A,1,B,0.735806,10,False
+Iron,9,470,레드 후드,Red Hood,own,0.726173,B,7,C,0.322684,34,False
+Iron,10,860,치사토,Chisato,own,0.614164,B,2,D,0.122833,66,False
+Iron,11,220,스노우 화이트,Snow White,own,0.611782,B,7,D,0.142424,62,False
+Iron,12,322,마르차나 : 마린 스터디,Marciana: Marine Study,own,0.608537,B,1,D,0.121707,68,False
+Iron,13,861,타키나,Takina,own,0.607863,B,2,C,0.311851,37,False
+Iron,14,102,맥스웰,Maxwell,own,0.465167,C,7,C,0.210923,51,False
+Iron,15,315,에이드 : 에이전트 바니,Ade: Agent Bunny,own,0.447972,C,3,C,0.329979,33,False
+Iron,16,314,소다 : 트윙클링 바니,Soda: Twinkling Bunny,own,0.439016,C,5,D,0.174071,58,False
+Iron,17,143,밀크 : 블루밍 바니,Milk: Blooming Bunny,own,0.4323,C,3,D,0.08646,73,False
+Iron,18,451,티아,Tia,own,0.137346,D,7,D,0.112706,69,False
+Iron,19,100,라플라스,Laplace,own,0.107399,D,7,D,0.023339,90,False
+Iron,20,221,라푼젤,Rapunzel,own,0.022498,D,7,D,0.008694,103,False
+Iron,21,321,마르차나,Marciana,own,0.01796,D,7,D,0.010068,101,False
+Iron,22,212,노벨,Novel,own,0.013097,D,7,D,0.016963,93,False
+Iron,23,140,슈가,Sugar,own,0.010408,D,7,D,0.085031,74,False
+Iron,24,150,율리아,Julia,own,0.005118,D,7,D,0.001026,122,False
 Iron,25,582,레이블,Label,own,0.004474,D,2,D,0.000895,125,False
-Iron,26,331,차임,Chime,own,0.001126,D,2,D,0.000225,145,False
-Iron,27,071,솔린,Soline,own,0.000943,D,7,D,0.000326,137,False
-Iron,28,224,스노우 화이트 : 이노센트 데이즈,Snow White: Innocent Days,own,0.000606,D,7,D,0.000264,139,False
-Iron,29,142,프림,Frima,own,0.000488,D,7,D,0.000229,144,False
-Iron,30,062,미카 : 스노우 버디,Mica: Snow Buddy,own,0.000118,D,6,D,0.003636,110,False
-Iron,31,200,루피,Rupee,own,3.3e-05,D,7,D,0.00076,128,False
-Iron,32,111,자칼,Jackal,own,1.2e-05,D,7,D,0.001067,122,False
-Iron,33,012,아니스,Anis,own,0.0,D,7,D,1.1e-05,166,False
-Iron,33,080,센티,Centi,own,0.0,D,7,D,0.000425,135,False
-Iron,33,226,라푼젤 : 퓨어 그레이스,Rapunzel: Pure Grace,own,0.0,D,4,D,0.0,171,False
-Iron,33,301,솔져 F.A.,Soldier FA,own,0.0,D,7,D,0.0,171,False
-Iron,33,308,iDoll 썬,iDoll Sun,own,0.0,D,7,D,0.0,171,False
-Iron,33,812,파스칼,Pascal,own,0.0,D,7,D,0.0,171,False
-Iron,33,833,미사토,Misato,own,0.0,D,4,D,2.8e-05,160,False
-Iron,33,862,쿠루미,Kurumi,own,0.0,D,2,D,0.0,171,False
-Iron,,872,아이기스,Aigis,own,,,0,D,0.0,171,True
-Electric,1,017,아니스 : 스타,Anis: Star,own,1.854959,SS,1,SS,1.544601,1,False
-Electric,2,511,신데렐라,Cinderella,own,1.770427,SS,4,B,0.577701,18,False
-Electric,3,581,아르카나,Arcana,own,1.556728,SS,2,C,0.313451,36,False
-Electric,4,231,이사벨,Isabel,own,1.200935,S,8,C,0.242067,47,False
-Electric,5,183,메이든 : 아이스 로즈,Maiden: Ice Rose,own,1.09642,A,3,C,0.258288,44,False
-Electric,6,015,아니스 : 스파클링 서머,Anis: Sparkling Summer,own,1.082183,A,7,C,0.309666,37,False
-Electric,7,018,네온 : 비전 아이,Neon: Vision Eye,own,0.98346,A,1,C,0.275612,41,False
-Electric,8,272,루주,Rouge,own,0.966023,A,4,C,0.49712,24,False
-Electric,9,391,아인,Ein,own,0.938302,A,5,D,0.192824,55,False
-Electric,10,840,에이다,Ada,own,0.762761,B,2,C,0.419708,29,False
-Electric,11,281,목단,Moran,own,0.479505,C,6,C,0.389789,31,False
-Electric,12,222,홍련,Scarlet,own,0.417905,C,8,D,0.104916,69,False
-Electric,13,210,엑시아,Exia,own,0.371583,C,8,D,0.077334,73,False
-Electric,14,832,마리,Mari,own,0.302936,C,4,D,0.180259,59,False
-Electric,15,412,트리나,Trina,own,0.245434,C,2,D,0.049134,79,False
-Electric,16,450,나가,Naga,own,0.188858,D,6,C,0.290863,40,False
-Electric,17,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,own,0.176571,D,6,D,0.04612,81,False
-Electric,18,841,질,Jill,own,0.15989,D,2,D,0.031978,84,False
-Electric,19,180,길로틴,Guillotine,own,0.060406,D,8,D,0.016092,92,False
-Electric,20,350,마스트,Mast,own,0.038286,D,7,D,0.012564,96,False
-Electric,21,381,비스킷,Biscuit,own,0.035603,D,8,D,0.016583,91,False
-Electric,22,430,노이즈,Noise,own,0.02035,D,8,D,0.007281,104,False
-Electric,23,041,K,K,own,0.008457,D,2,D,0.001691,118,False
-Electric,24,390,츠바이,Zwei,own,0.006597,D,5,D,0.102813,70,False
-Electric,25,500,일레그,Elegg,own,0.006236,D,5,D,0.004245,109,False
-Electric,26,402,퀀시,Quency,own,0.002656,D,8,D,0.000558,131,False
-Electric,27,230,하란,Harran,own,0.002371,D,8,D,0.000733,129,False
-Electric,28,181,메이든,Maiden,own,0.001917,D,8,D,0.000437,133,False
-Electric,29,280,로산나,Rosanna,own,0.000535,D,7,D,0.000121,150,False
-Electric,30,203,루피 : 윈터 쇼퍼,Rupee: Winter Shopper,own,0.000518,D,8,D,0.000242,142,False
-Electric,31,060,벨로타,Belorta,own,9.2e-05,D,8,D,1.8e-05,161,False
-Electric,32,401,신,Sin,own,8.6e-05,D,8,D,1.7e-05,163,False
-Electric,33,302,프로덕트 08,Product 08,own,6.4e-05,D,8,D,1.3e-05,165,False
-Electric,34,291,에테르,Ether,own,0.0,D,8,D,0.0,171,False
-Electric,34,300,솔져 E.G.,Soldier EG,own,0.0,D,8,D,0.0,171,False
-Electric,34,411,플로라,Flora,own,0.0,D,3,D,0.006664,105,False
-Electric,34,441,아비스타,Avistar,own,0.0,D,1,D,0.0,171,False
-Electric,34,551,클레이,Clay,own,0.0,D,5,D,0.0,171,False
-Electric,34,842,클레어,Claire,own,0.0,D,2,D,0.0,171,False
+Iron,26,331,차임,Chime,own,0.001126,D,2,D,0.000225,143,False
+Iron,27,071,솔린,Soline,own,0.000943,D,7,D,0.000316,141,False
+Iron,28,224,스노우 화이트 : 이노센트 데이즈,Snow White: Innocent Days,own,0.000606,D,7,D,0.000364,137,False
+Iron,29,142,프림,Frima,own,0.000488,D,7,D,0.000212,146,False
+Iron,30,062,미카 : 스노우 버디,Mica: Snow Buddy,own,0.000118,D,6,D,0.002883,114,False
+Iron,31,200,루피,Rupee,own,3.3e-05,D,7,D,0.000611,130,False
+Iron,32,111,자칼,Jackal,own,1.2e-05,D,7,D,0.000928,124,False
+Iron,33,012,아니스,Anis,own,0.0,D,7,D,1.1e-05,168,False
+Iron,33,080,센티,Centi,own,0.0,D,7,D,0.000404,136,False
+Iron,33,226,라푼젤 : 퓨어 그레이스,Rapunzel: Pure Grace,own,0.0,D,4,D,0.0,173,False
+Iron,33,301,솔져 F.A.,Soldier FA,own,0.0,D,7,D,0.0,173,False
+Iron,33,308,iDoll 썬,iDoll Sun,own,0.0,D,7,D,0.0,173,False
+Iron,33,812,파스칼,Pascal,own,0.0,D,7,D,0.0,173,False
+Iron,33,833,미사토,Misato,own,0.0,D,4,D,2.8e-05,161,False
+Iron,33,862,쿠루미,Kurumi,own,0.0,D,2,D,0.0,173,False
+Iron,,872,아이기스,Aigis,own,,,0,D,0.0,173,True
+Electric,1,017,아니스 : 스타,Anis: Star,own,1.854959,SS,1,SS,1.550455,1,False
+Electric,2,511,신데렐라,Cinderella,own,1.770427,SS,4,B,0.552573,19,False
+Electric,3,581,아르카나,Arcana,own,1.556728,SS,2,C,0.313231,36,False
+Electric,4,231,이사벨,Isabel,own,1.200935,S,8,C,0.241901,46,False
+Electric,5,183,메이든 : 아이스 로즈,Maiden: Ice Rose,own,1.09642,A,3,C,0.252329,44,False
+Electric,6,015,아니스 : 스파클링 서머,Anis: Sparkling Summer,own,1.082183,A,7,C,0.296153,38,False
+Electric,7,018,네온 : 비전 아이,Neon: Vision Eye,own,0.98346,A,1,C,0.254744,43,False
+Electric,8,272,루주,Rouge,own,0.966023,A,4,C,0.45578,23,False
+Electric,9,391,아인,Ein,own,0.938302,A,5,D,0.190971,54,False
+Electric,10,840,에이다,Ada,own,0.762761,B,2,C,0.398221,30,False
+Electric,11,281,목단,Moran,own,0.479505,C,6,C,0.408898,29,False
+Electric,12,222,홍련,Scarlet,own,0.417905,C,8,D,0.102348,71,False
+Electric,13,210,엑시아,Exia,own,0.371583,C,8,D,0.076247,75,False
+Electric,14,832,마리,Mari,own,0.302936,C,4,D,0.163178,60,False
+Electric,15,412,트리나,Trina,own,0.245434,C,2,D,0.049134,83,False
+Electric,16,450,나가,Naga,own,0.188858,D,6,C,0.277174,39,False
+Electric,17,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,own,0.176571,D,6,D,0.043801,85,False
+Electric,18,841,질,Jill,own,0.15989,D,2,D,0.031978,88,False
+Electric,19,180,길로틴,Guillotine,own,0.060406,D,8,D,0.015683,94,False
+Electric,20,350,마스트,Mast,own,0.038286,D,7,D,0.012428,100,False
+Electric,21,381,비스킷,Biscuit,own,0.035603,D,8,D,0.014122,98,False
+Electric,22,430,노이즈,Noise,own,0.02035,D,8,D,0.006774,107,False
+Electric,23,041,K,K,own,0.008457,D,2,D,0.001691,120,False
+Electric,24,390,츠바이,Zwei,own,0.006597,D,5,D,0.096604,72,False
+Electric,25,500,일레그,Elegg,own,0.006236,D,5,D,0.003209,111,False
+Electric,26,402,퀀시,Quency,own,0.002656,D,8,D,0.000557,131,False
+Electric,27,230,하란,Harran,own,0.002371,D,8,D,0.000633,129,False
+Electric,28,181,메이든,Maiden,own,0.001917,D,8,D,0.000419,135,False
+Electric,29,280,로산나,Rosanna,own,0.000535,D,7,D,0.000118,152,False
+Electric,30,203,루피 : 윈터 쇼퍼,Rupee: Winter Shopper,own,0.000518,D,8,D,0.000215,145,False
+Electric,31,060,벨로타,Belorta,own,9.2e-05,D,8,D,1.8e-05,163,False
+Electric,32,401,신,Sin,own,8.6e-05,D,8,D,1.7e-05,164,False
+Electric,33,302,프로덕트 08,Product 08,own,6.4e-05,D,8,D,1.3e-05,167,False
+Electric,34,291,에테르,Ether,own,0.0,D,8,D,0.0,173,False
+Electric,34,300,솔져 E.G.,Soldier EG,own,0.0,D,8,D,0.0,173,False
+Electric,34,411,플로라,Flora,own,0.0,D,3,D,0.049632,82,False
+Electric,34,441,아비스타,Avistar,own,0.0,D,1,D,0.0,173,False
+Electric,34,551,클레이,Clay,own,0.0,D,5,D,0.0,173,False
+Electric,34,842,클레어,Claire,own,0.0,D,2,D,0.0,173,False

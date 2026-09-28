@@ -131,13 +131,13 @@ class ServerFilter:
         return f"{chosen} 중 {dropped}" if chosen else dropped
 
     @property
-    def english(self) -> str:
-        """The same for chart captions: ``servers KR·JP``, ``all servers but NA·SEA``."""
-        chosen = "·".join(self.include)
-        if not self.exclude:
-            return f"servers {chosen}" if chosen else ""
-        dropped = "·".join(self.exclude)
-        return f"servers {chosen} but {dropped}" if chosen else f"all servers but {dropped}"
+    def caption(self) -> str:
+        """The same for chart captions: ``KR·JP 서버만``, ``NA·SEA 제외 전 서버``; empty when every server counts."""
+        if self.include and not self.exclude:
+            return f"{self.label} 서버만"
+        if self.exclude and not self.include:
+            return f"{self.label} 전 서버"
+        return self.label
 
     @property
     def slug(self) -> str:

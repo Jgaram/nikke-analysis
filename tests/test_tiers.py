@@ -51,6 +51,31 @@ def newest(built):
     return built[1]["collected_until"].max()
 
 
+def settled(world, built):
+    """The day after the last finished season: the live one not started yet."""
+    return built[1].set_index("season").loc[world.live_season - 1, "end_at"] + pd.Timedelta(days=1)
+
+
+def tiny(lifts, *, element="Fire", extra="", live=()):
+    """One unit's standing from hand-made seasons: ``lifts`` maps a boss weakness
+    to the unit's lift in a season of it (one season each, a week apart, in that
+    order); a weakness in ``live`` is the season in progress, collected so far."""
+    start = pd.Timestamp("2025-01-01T00:00:00Z")
+    seasons, rows = [], []
+    for number, (weak, lift) in enumerate(lifts.items(), start=1):
+        end = start + pd.Timedelta(days=7 * number)
+        seasons.append({"season": number, "weak_element": weak, "end_at": end, "final": weak not in live,
+                        "collected_on": end - pd.Timedelta(days=2)})
+        rows.append({"season": number, "unit_id": "001", "lift": lift, "element": element, "extra_elements": extra})
+    summary = pd.DataFrame(seasons)
+    moment = summary["end_at"].max() + pd.Timedelta(days=1)
+    return tiers.standings(pd.DataFrame(rows), summary, moment, tiers.TierConfig(half_life_days=0))
+
+
+def overall_of(standing):
+    return standing.overall.iloc[0]
+
+
 def test_assign_tier_uses_the_cuts():
     config = tiers.TierConfig(cuts=[("S", 1.0), ("A", 0.5), ("B", 0.0)])
     assert tiers.assign_tier(1.2, config) == "S"
@@ -64,19 +89,20 @@ def test_config_file_round_trip(tmp_path):
     path.write_text(
         "population: {top_n: 20, servers: [KR], rank_weighting: uniform}\n"
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
-        "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2}\n",
+        "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
+        "          include_live: false}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
     assert config.top_n == 20 and config.servers == ("KR",) and config.rank_weighting == "uniform"
     assert config.tier_order == ["S", "A", "B"]
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
-    assert config.min_elements_observed == 2
+    assert config.min_elements_observed == 2 and not config.include_live
 
 
 def test_repo_config_loads():
     config = tiers.load_tier_config()
-    assert config.tier_order[0] == "SS" and config.overall in tiers.OVERALL_MODES
+    assert config.tier_order[0] == "SS" and config.overall in tiers.OVERALL_MODES and config.include_live
 
 
 def test_bad_parameters_are_rejected():
@@ -103,9 +129,9 @@ def test_tier_labels_are_monotone_in_lift(built):
 
 
 def test_a_dealer_is_top_of_its_element_and_weak_overall(world, built):
-    overall = overall_at(built, newest(built))
+    overall = overall_at(built, settled(world, built))
     for element, unit_id in world.element_dps.items():
-        row = element_at(built, newest(built), unit_id, element)
+        row = element_at(built, settled(world, built), unit_id, element)
         assert row["source"] == "own"
         assert row["element_tier"] == "SS" and row["element_rank"] == 1
         assert overall.loc[unit_id, "overall"] < 0.6  # worth little in four elements out of five
@@ -155,9 +181,61 @@ def test_the_past_is_viewed_without_the_future(world, built):
     assert standing.overall["last_season"].max() == world.newcomer_season - 1
 
 
-def test_the_season_in_progress_never_counts(world, built):
-    overall = overall_at(built, newest(built) + pd.Timedelta(days=30))
-    assert overall["last_season"].max() == world.live_season - 1
+def test_the_season_in_progress_counts_once_collected(world, built):
+    """The live season counts as far as it was collected - not before its first snapshot, and not at all
+    without include_live."""
+    _, summary = built
+    collected = summary.set_index("season").loc[world.live_season, "collected_on"]
+    assert overall_at(built, newest(built))["last_season"].max() == world.live_season
+    assert overall_at(built, collected - pd.Timedelta(hours=1))["last_season"].max() == world.live_season - 1
+    without = overall_at(built, newest(built) + pd.Timedelta(days=30), tiers.TierConfig(include_live=False))
+    assert without["last_season"].max() == world.live_season - 1
+    # The newcomer (Electric) meets its first Electric season in the live one: a tier there, and first.
+    electric = world.seasons.set_index("season").loc[world.live_season, "weak_element"]
+    row = element_at(built, newest(built), world.newcomer, electric)
+    assert row["element_seasons"] == 1 and row["element_rank"] == 1
+    counted = tiers.counted_seasons(summary, newest(built))
+    assert counted.loc[counted["live"], "season"].tolist() == [world.live_season]
+
+
+def test_other_elements_come_from_other_elements():
+    """Seen in its own element and one other: the three unseen others take the other's level, not its own."""
+    standing = tiny({"Fire": 1.5, "Water": 0.0})
+    overall = overall_of(standing)
+    assert overall["overall"] == pytest.approx((1.5 + 0.0 * 4) / 5)
+    assert overall["elements_observed"] == 2 and bool(overall["provisional"])
+    assert standing.elements.iloc[0]["element_lift"] == pytest.approx(1.5)
+    # two others seen: the unseen others take their mean
+    assert overall_of(tiny({"Fire": 1.5, "Water": 0.2, "Wind": 0.6}))["overall"] == pytest.approx((1.5 + 0.2 + 0.6 + 0.4 * 2) / 5)
+
+
+def test_with_no_other_element_seen_the_own_level_stands_in_for_now():
+    overall = overall_of(tiny({"Fire": 1.2}))
+    assert overall["overall"] == pytest.approx(1.2) and bool(overall["provisional"])
+
+
+def test_an_unseen_own_element_counts_zero():
+    """Seen in other elements only: its own slot is not guessed from them, and the overall is provisional."""
+    standing = tiny({"Water": 1.0, "Wind": 1.5, "Iron": 0.5, "Electric": 1.0})
+    overall = overall_of(standing)
+    assert overall["overall"] == pytest.approx((0 + 1.0 + 1.5 + 0.5 + 1.0) / 5)
+    assert overall["elements_observed"] == 4 and bool(overall["provisional"])
+    own = standing.elements.iloc[0]
+    assert own["element"] == "Fire" and pd.isna(own["element_lift"]) and own["element_tier"] == ""
+
+
+def test_a_skill_elements_unseen_slot_takes_the_units_own_level():
+    """Fire with Iron by skill, seen in Fire and Water: Iron is its own side too, so it takes the Fire level."""
+    standing = tiny({"Fire": 1.5, "Water": 0.5}, extra="Iron")
+    assert overall_of(standing)["overall"] == pytest.approx((1.5 + 1.5 + 0.5 * 3) / 5)
+    iron = standing.elements.set_index("element").loc["Iron"]
+    assert iron["source"] == "skill" and iron["element_seasons"] == 0 and pd.isna(iron["element_lift"])
+
+
+def test_the_live_season_stands_in_for_what_is_not_over_yet():
+    """Makoto's case: one Fire season over, a Water one in progress where nobody fields it."""
+    live = overall_of(tiny({"Fire": 1.09, "Water": 0.0}, live=("Water",)))
+    assert live["overall"] == pytest.approx(1.09 / 5) and live["last_season"] == 2 and bool(live["provisional"])
 
 
 def test_an_element_not_met_yet_has_no_tier_and_the_overall_is_provisional(world, built):

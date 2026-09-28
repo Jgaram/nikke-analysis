@@ -80,7 +80,7 @@ def test_issues_round_trip_and_render(processed):
 def test_refresh_ends_red_when_a_source_could_not_be_collected(tmp_path, monkeypatch, capsys):
     """An unattended run must not look fresh when it is not."""
     from nikke_analysis.build import pipeline
-    from nikke_analysis.collect import enikk, notices
+    from nikke_analysis.collect import blablalink, enikk, notices
     from nikke_analysis.collect import roster as roster_collector
 
     monkeypatch.setenv("NIKKE_DATA_ROOT", str(tmp_path))
@@ -102,6 +102,7 @@ def test_refresh_ends_red_when_a_source_could_not_be_collected(tmp_path, monkeyp
     monkeypatch.setattr(enikk, "collect_seasons", lambda: {"refreshed": []})
     monkeypatch.setattr(enikk, "collect_characters", lambda: {"changed": False})
     monkeypatch.setattr(enikk, "collect_rankings", lambda **kwargs: {"fetched": []})
+    monkeypatch.setattr(blablalink, "collect_icons", lambda: {"fetched": []})
     monkeypatch.setattr(pipeline, "build_timeline", lambda: {"issues": {}})
 
     assert cli.main(["refresh"]) == 1

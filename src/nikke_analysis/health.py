@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
-from .paths import processed_dir
+from .paths import class_icon_path, element_icon_path, icons_dir, processed_dir, unit_icon_path
 
 ISSUES_CSV = "timeline_issues.csv"
 
@@ -155,6 +155,35 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
                 Issue("error", "ranking_missing", f"시즌 {row['season']}",
                       f"{end.date()} 에 끝났는데 랭킹이 없다 — enikk 랭킹 수집이 멈췄을 수 있다")
             )
+    return issues
+
+
+def icon_issues(directory: Path, icons: Path | None = None) -> list[Issue]:
+    """Units the charts draw by name because their face is not on disk.
+
+    Only units in the rankings count - those are the ones a chart shows. A new
+    unit's face usually reaches the CDN with its release, so this clears itself
+    on the next run; one that stays means ``nikke collect icons`` is failing or
+    the CDN changed its paths.
+    """
+    icons = icons or icons_dir()
+    issues = []
+    shown: dict[str, str] = {}
+    for name in ("metrics_unit_season.csv", "metrics_element_tiers.csv"):
+        for row in _rows(directory / name):
+            shown.setdefault(row["unit_id"], row.get("name_ko") or row.get("name_en") or row["unit_id"])
+    for unit_id, name in sorted(shown.items()):
+        if not unit_icon_path(unit_id, icons).is_file():
+            issues.append(Issue("warning", "unit_icon_missing", name,
+                                f"id {unit_id} 얼굴 아이콘 없음 — 차트에 이름으로 나온다 (nikke collect icons)"))
+    from .collect.blablalink import CLASS_FILES, ELEMENT_FILES
+
+    for element in ELEMENT_FILES:
+        if not element_icon_path(element, icons).is_file():
+            issues.append(Issue("warning", "icon_missing", element, "속성 아이콘 없음 — 차트에 글자로 나온다"))
+    for unit_class in CLASS_FILES:
+        if not class_icon_path(unit_class, icons).is_file():
+            issues.append(Issue("warning", "icon_missing", unit_class, "클래스 아이콘 없음 — 차트에 글자로 나온다"))
     return issues
 
 

@@ -1,7 +1,7 @@
 # 네트워크 정책 여는 법
 
-이 프로젝트가 접속하는 곳은 다섯 곳이다. 클라우드 세션의 기본 **Trusted** 정책은
-패키지 레지스트리와 GitHub 만 허용하므로, 공지 CMS·네이버 라운지·enikk 는 막힌다.
+이 프로젝트가 접속하는 곳은 일곱 곳이다. 클라우드 세션의 기본 **Trusted** 정책은
+패키지 레지스트리와 GitHub 만 허용하므로, 공지 CMS·네이버 라운지·enikk·blablalink 는 막힌다.
 
 증상은 이렇게 보인다:
 
@@ -35,6 +35,8 @@ curl -sS "$HTTPS_PROXY/__agentproxy/status" | jq .recentRelayFailures
 na-community.playerinfinite.com
 comm-api.game.naver.com
 enikk.app
+sg-tools-cdn.blablalink.com
+www.blablalink.com
 ```
 
 | 도메인 | 쓰는 곳 |
@@ -42,6 +44,8 @@ enikk.app
 | `na-community.playerinfinite.com` | nikke-kr.com 공지사항·뉴스의 실제 데이터 (Level Infinite CMS API) — `collect/notices.py` |
 | `comm-api.game.naver.com` | 네이버 게임 라운지 공지 게시판 API — `collect/notices.py` |
 | `enikk.app` | 솔로 레이드 랭킹, 시즌 메타·수집 시계열·캐릭터 표 (GraphQL) — `collect/enikk.py` |
+| `sg-tools-cdn.blablalink.com` | 차트에 쓰는 니케 얼굴 아이콘 (게임 리소스 CDN) — `collect/blablalink.py` |
+| `www.blablalink.com` | 차트에 쓰는 속성·클래스 아이콘 (사이트 자산) — `collect/blablalink.py` |
 
 니케 본편은 Steam 에 없으므로 Steam API 는 쓰지 않는다.
 

@@ -70,12 +70,13 @@ jobs:
           # the notices every date is derived from, enikk's season record and
           # Solo Raid ranking snapshots. Collection is incremental: a quiet
           # week adds nothing, a week with a season running adds that season's
-          # newest rankings.
-          git add data/processed data/manual data/raw
+          # newest rankings. data/assets holds the icons the charts draw; a
+          # week with a new unit adds its face.
+          git add data/processed data/manual data/raw data/assets
           if git diff --staged --quiet; then
             echo "nothing changed"
           else
-            git commit -m "data: refresh notices, rankings, tiers and Solo Raid calendar"
+            git commit -m "data: refresh notices, rankings, tiers, icons and Solo Raid calendar"
             # Session work reaches main through merge-to-main at any time, so
             # main may have moved since checkout: put the data commit on top.
             git pull --rebase

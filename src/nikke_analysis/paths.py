@@ -42,6 +42,30 @@ def manual_dir() -> Path:
     return data_root() / "manual"
 
 
+def icons_dir() -> Path:
+    """Unit, element and class icons the charts draw instead of names. Committed.
+
+    Unlike ``raw/`` this is not a dated snapshot: one file per unit, fetched once
+    and kept, so a fresh clone draws the same charts without the network.
+    """
+    return data_root() / "assets" / "icons"
+
+
+def unit_icon_path(unit_id: str, directory: Path | None = None) -> Path:
+    """A unit's face, by its three-digit roster id (``010`` is Rapi)."""
+    return (directory or icons_dir()) / "units" / f"{unit_id}.webp"
+
+
+def element_icon_path(element: str, directory: Path | None = None) -> Path:
+    """An element's icon, by the roster's spelling (``Fire`` ... ``Electric``)."""
+    return (directory or icons_dir()) / "elements" / f"{element.lower()}.png"
+
+
+def class_icon_path(unit_class: str, directory: Path | None = None) -> Path:
+    """A class's icon, by the roster's spelling (``Attacker`` ...)."""
+    return (directory or icons_dir()) / "classes" / f"{unit_class.lower()}.png"
+
+
 def reports_dir() -> Path:
     override = os.environ.get("NIKKE_REPORTS_DIR")
     return Path(override).resolve() if override else REPO_ROOT / "reports"

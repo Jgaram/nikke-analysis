@@ -16,6 +16,7 @@
     nikke collect enikk-meta         fetch Solo Raid season metadata and the unit table from enikk
     nikke probe enikk                reconnaissance on the ranking site's API
     nikke collect enikk              fetch Solo Raid rankings (new and changed seasons)
+    nikke collect icons              fetch unit faces and element/class icons not on disk yet
     nikke build timeline             snapshots -> roster, releases, banners, Solo Raid calendar
     nikke build roster               snapshots -> data/processed/roster.csv (names only)
     nikke build raids                snapshots -> raid_entries.csv
@@ -140,6 +141,7 @@ def cmd_check(args: argparse.Namespace) -> int:
     issues = (
         health.read()
         + health.ranking_issues(paths.processed_dir(), now)
+        + health.icon_issues(paths.processed_dir())
         + health.run_issues(paths.processed_dir(), now)
     )
     if args.json:
@@ -242,6 +244,13 @@ def cmd_collect_enikk(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_collect_icons(args: argparse.Namespace) -> int:
+    from .collect import blablalink
+
+    _emit(blablalink.collect_icons(force=args.force).__dict__)
+    return 0
+
+
 # --------------------------------------------------------------------------
 # build
 # --------------------------------------------------------------------------
@@ -325,6 +334,13 @@ def cmd_refresh(args: argparse.Namespace) -> int:
 
     steps["build.timeline"] = pipeline.build_timeline()
 
+    # After the roster, which names the units: a unit new this run gets its
+    # face now, before the charts are drawn.
+    if not args.offline:
+        from .collect import blablalink
+
+        _attempt(steps, failures, "collect.icons", lambda: blablalink.collect_icons())
+
     from .build import raids
 
     try:
@@ -350,6 +366,7 @@ def cmd_refresh(args: argparse.Namespace) -> int:
     issues = (
         health.read()
         + health.ranking_issues(paths.processed_dir(), now)
+        + health.icon_issues(paths.processed_dir())
         + health.run_issues(paths.processed_dir(), now, failures)
     )
     steps["health"] = [issue.__dict__ for issue in issues if issue.level != "info"]
@@ -500,6 +517,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seasons", nargs="*", type=int, default=None, help="re-read these seasons regardless")
     p.add_argument("--full", action="store_true", help="re-read every season")
     p.set_defaults(func=cmd_collect_enikk)
+
+    p = collect.add_parser("icons", help="unit faces and element/class icons from blablalink (only missing ones)")
+    p.add_argument("--force", action="store_true", help="re-fetch icons already on disk")
+    p.set_defaults(func=cmd_collect_icons)
 
     probe = sub.add_parser("probe", help="reconnaissance").add_subparsers(
         dest="target", required=True

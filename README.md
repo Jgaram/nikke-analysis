@@ -28,12 +28,13 @@
 | 티어 | ✅ 시즌 티어 · 보스 약점별(속성별) 티어 · 종합 티어 · 역할(범용/하이브리드/특화) |
 | 시점 티어 `nikke tier` | ✅ 직전 시즌, 진행 중 시즌(잠정), 다음 시즌 예상, 종합 — 과거 시점도 그때 기준으로 |
 | 캐릭터별 티어 변화 | ✅ `nikke tier --unit`, 차트 7종 (`nikke viz`) |
+| 차트 아이콘 | ✅ 니케는 얼굴, 속성·클래스는 아이콘으로 그려 이름·속성명을 적지 않는다. blablalink 에서 받아 `data/assets/icons/` 에 커밋, 신캐는 다음 갱신 때 자동 추가 |
 | 시즌 사용률 `nikke raid` | ✅ 시즌별 사용 순위·사용률·덱 순위 분포(1덱~5덱), 서버·순위로 좁히기 |
 | 서버 선택 | ✅ 기본은 6개 서버 전체. `--server`(그 서버만) · `--exclude`(그 서버만 빼고)를 `tier`·`raid`·`analyze`·`viz` 에서, 기본 표본은 `config/tiers.yaml` 에서 |
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 | 작업 반영 | ✅ 브랜치는 `main` 하나. 세션 브랜치(`claude/*`)에 push 하면 테스트 통과 후 main 에 자동 병합, 브랜치 삭제 (`.github/workflows/merge-to-main.yml`) |
 
-`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 202개.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 211개.
 
 ---
 
@@ -187,6 +188,7 @@ nikke collect roster            # 게임 파일 + nikke-utils
 nikke collect notices           # 공식 공지 + 네이버 라운지 (새 것/수정된 것만)
 nikke collect enikk-meta        # enikk 시즌 메타·수집 시계열·캐릭터 표
 nikke collect enikk             # 솔로 레이드 랭킹 (새 시즌·바뀐 시즌만)
+nikke collect icons             # 니케 얼굴·속성·클래스 아이콘 (디스크에 없는 것만)
 nikke build timeline            # → roster, unit_releases, banners, soloraid_*
 nikke build raids               # 랭킹 스냅샷 → raid_entries.csv (니케 슬롯당 한 줄)
 nikke analyze                   # → metrics_*.csv (티어·속성별 티어·역할·메타 변화)
@@ -194,8 +196,29 @@ nikke viz                       # → reports/*.png (라이트·다크)
 nikke status                    # 지금 디스크에 뭐가 있는지
 ```
 
-> **네트워크**: 공식 공지 CMS, 네이버 라운지 API, enikk 에 닿아야 한다. 환경별 설정은
+> **네트워크**: 공식 공지 CMS, 네이버 라운지 API, enikk, blablalink 에 닿아야 한다. 환경별 설정은
 > [docs/network-policy.md](docs/network-policy.md).
+
+### 차트의 아이콘
+
+차트는 니케를 **얼굴**로, 속성과 클래스를 **아이콘**으로 그린다. 이름이나 "Fire" 같은
+글자를 적지 않는다. 행 라벨은 얼굴 옆에 그 니케의 속성 아이콘을 붙이고, 보스 약점
+열·행도 속성 아이콘으로 표시한다.
+
+| 파일 | 출처 |
+|---|---|
+| `data/assets/icons/units/<unit_id>.webp` | blablalink 게임 리소스 CDN의 128×128 얼굴 (`si_c<id>_00_s`). 로스터의 `unit_id` 가 곧 게임 리소스 id 다 (`010` = 라피) |
+| `data/assets/icons/elements/<속성>.png` | blablalink 사이트의 색 있는 속성 육각형 (`icon-code-*`) |
+| `data/assets/icons/classes/<클래스>.png` | blablalink 사이트의 클래스 문양 (`icon-job-*`). 한 가지 색이라 차트가 테마 글자색으로 칠한다 |
+
+- CDN 경로는 난독화돼 있지만 평문 경로에서 결정된다. 사이트 프런트엔드의
+  `obfuscatedPath()` 를 그대로 옮겼고(nikke-calc 의 `scraper/cdn_path.py` 와 같은 규칙),
+  인증도 브라우저도 필요 없다.
+- 수집은 증분이다. 디스크에 있는 파일은 다시 받지 않으므로 `nikke refresh` 는 로스터에
+  새로 들어온 니케의 얼굴만 받는다. CDN 에 아직 없는 니케(게임 파일에만 있는 신캐)는
+  건너뛰고 다음 갱신 때 다시 시도한다.
+- 아이콘이 없는 니케는 차트에 **이름으로** 나온다. 랭킹에 잡혔는데 얼굴이 없으면
+  `nikke check` 가 경고(`unit_icon_missing`)로 알려 준다.
 
 ---
 
@@ -239,12 +262,13 @@ nikke refresh        # 또는 python -m nikke_analysis refresh
 
 ```
 collect/     네트워크 → data/raw/          가져오기만 한다. 해석하지 않는다.
+             (아이콘만 data/assets/icons/ 로, 니케당 파일 하나)
 build/       raw      → data/processed/    순수 파싱·조인 (공지 해석, 달력 복원)
 timeline.py  processed → 시점 조회          nikke asof / nikke seasons
 analyze/     processed → metrics_*.csv     순수 계산 (lift, 티어, 속성별 티어, 역할)
 tierlist.py  metrics  → 시점별 티어         nikke tier
 raidstats.py metrics  → 시즌 사용률         nikke raid
-viz/         metrics  → reports/*.png      렌더링
+viz/         metrics  → reports/*.png      렌더링 (아이콘은 data/assets/icons/)
 ```
 
 `collect` 가 아무것도 해석하지 않는 게 중요한 이유:

@@ -28,7 +28,7 @@
 | 티어 | ✅ 시즌 티어 · 보스 약점별(속성별) 티어 · 종합 티어 · 역할(범용/하이브리드/특화) |
 | 시점 티어 `nikke tier` | ✅ 직전 시즌, 진행 중 시즌(잠정), 다음 시즌 예상, 종합 — 과거 시점도 그때 기준으로 |
 | 캐릭터별 티어 변화 | ✅ `nikke tier --unit`, 차트 7종 (`nikke viz`) |
-| 차트 아이콘 | ✅ 니케는 얼굴, 속성·클래스·버스트는 아이콘으로 그려 이름·속성명을 적지 않는다. 기업·무기군 아이콘도 받아 둔다. blablalink 에서 받아 `data/assets/icons/` 에 커밋, 신캐는 다음 갱신 때 자동 추가 |
+| 차트 아이콘 | ✅ 니케는 얼굴, 속성·버스트는 아이콘으로 그려 이름·속성명을 적지 않는다. 클래스·기업·무기군 아이콘도 받아 둔다. blablalink 에서 받아 `data/assets/icons/` 에 커밋, 신캐는 다음 갱신 때 자동 추가 |
 | 시즌 사용률 `nikke raid` | ✅ 시즌별 사용 순위·사용률·덱 순위 분포(1덱~5덱), 서버·순위로 좁히기 |
 | 서버 선택 | ✅ 기본은 6개 서버 전체. `--server`(그 서버만) · `--exclude`(그 서버만 빼고)를 `tier`·`raid`·`analyze`·`viz` 에서, 기본 표본은 `config/tiers.yaml` 에서 |
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
@@ -201,16 +201,16 @@ nikke status                    # 지금 디스크에 뭐가 있는지
 
 ### 차트의 아이콘
 
-차트는 니케를 **얼굴**로, 속성·클래스·버스트 단계를 **아이콘**으로 그린다. 이름이나
+차트는 니케를 **얼굴**로, 속성과 버스트 단계를 **아이콘**으로 그린다. 이름이나
 "Fire" 같은 글자를 적지 않는다. 행 라벨은 얼굴 옆에 그 니케의 속성과 버스트를 붙이고,
-보스 약점 열·행도 속성 아이콘으로 표시한다. 추이 차트(`tier-trajectories`)의 제목에는
-클래스도 붙는다. 기업·무기군 아이콘은 받아 두기만 하고 아직 어느 차트에도 그리지 않는다.
+보스 약점 열·행도 속성 아이콘으로 표시한다. 클래스·기업·무기군 아이콘은 받아 두기만
+하고 차트에는 그리지 않는다.
 
 | 파일 | 출처 |
 |---|---|
 | `data/assets/icons/units/<unit_id>.webp` | blablalink 게임 리소스 CDN의 128×128 얼굴 (`si_c<id>_00_s`). 로스터의 `unit_id` 가 곧 게임 리소스 id 다 (`010` = 라피) |
 | `data/assets/icons/elements/<속성>.png` | blablalink 사이트의 색 있는 속성 육각형 (`icon-code-*`) |
-| `data/assets/icons/classes/<클래스>.png` | blablalink 사이트의 클래스 문양 (`icon-job-*`) |
+| `data/assets/icons/classes/<클래스>.png` | blablalink 사이트의 클래스 문양 (`icon-job-*`) — 보관만 |
 | `data/assets/icons/bursts/<버스트>.png` | 버스트 단계 숫자 (`icon-burst-1/2/3`, 전 단계 `I-II-III` 는 `icon-burst-p`) |
 | `data/assets/icons/manufacturers/<기업>.png` | 기업 문양 (`icon-manufacturer-*`) — 보관만 |
 | `data/assets/icons/weapons/<무기군>.png` | 무기군 문양 (`icon-weapon-*`) — 보관만 |

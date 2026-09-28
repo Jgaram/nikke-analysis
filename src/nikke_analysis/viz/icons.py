@@ -1,4 +1,4 @@
-"""Icons in place of words: a unit's face, its element, class and burst stage.
+"""Icons in place of words: a unit's face, its element and burst stage.
 
 A chart asks for an icon by unit id or attribute value and gets an RGBA array, or
 ``None`` when the file is not on disk (``nikke collect icons`` fetches them). The
@@ -19,7 +19,7 @@ import numpy as np
 from matplotlib.colors import to_rgb
 from matplotlib.offsetbox import AnnotationBbox, HPacker, OffsetImage, TextArea
 
-from ..paths import burst_icon_path, class_icon_path, element_icon_path, icons_dir, unit_icon_path
+from ..paths import burst_icon_path, element_icon_path, icons_dir, unit_icon_path
 from .theme import Theme
 
 # Share of the face's side rounded off each corner - the charts' marks have
@@ -101,11 +101,6 @@ class Icons:
     def element(self, element: object) -> np.ndarray | None:
         return _read(element_icon_path(element, self.directory)) if isinstance(element, str) and element else None
 
-    def unit_class(self, unit_class: object) -> np.ndarray | None:
-        if not (isinstance(unit_class, str) and unit_class):
-            return None
-        return self._glyph(_read(class_icon_path(unit_class, self.directory)))
-
     def burst(self, burst: object) -> np.ndarray | None:
         if not (isinstance(burst, str) and burst):
             return None
@@ -113,8 +108,8 @@ class Icons:
         return None if image is None else _pad_width(image, BURST_CANVAS)
 
     def _glyph(self, image: np.ndarray | None) -> np.ndarray | None:
-        """Class and burst glyphs are one flat colour (grey or white); draw them in
-        the theme's secondary ink so they read on either surface."""
+        """Burst glyphs are one flat white; draw them in the theme's secondary
+        ink so they read on the light surface as well as the dark one."""
         if image is None:
             return None
         tinted = image.copy()

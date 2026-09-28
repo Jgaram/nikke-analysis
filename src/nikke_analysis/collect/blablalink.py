@@ -7,14 +7,14 @@ instead of the word. All public and unauthenticated:
                                  resource CDN. The roster's unit id *is* the game's
                                  resource id (``010`` is Rapi), so no lookup table.
 ``elements/<element>.png``       the coloured hexagon the site shows for each element.
-``classes/<class>.png``          the class glyph.
+``classes/<class>.png``          the class glyph. Not drawn - kept for later.
 ``bursts/<burst>.png``           the burst stage numeral (``I``, ``II``, ``III``, and
                                  the all-stage mark for ``I-II-III``).
-``manufacturers/<maker>.png``    the manufacturer mark. Not drawn yet - kept for later.
-``weapons/<weapon>.png``         the weapon type glyph. Not drawn yet - kept for later.
+``manufacturers/<maker>.png``    the manufacturer mark. Not drawn - kept for later.
+``weapons/<weapon>.png``         the weapon type glyph. Not drawn - kept for later.
 
-Everything but the element hexagons is one flat colour; charts tint it with the
-theme's ink. Attribute files are named by the roster's spelling
+Everything but the element hexagons is one flat colour, so a chart tints it
+with the theme's ink. Attribute files are named by the roster's spelling
 (``paths.attribute_icon_path``).
 
 The CDN hides its paths: every directory becomes a short hash token and the file

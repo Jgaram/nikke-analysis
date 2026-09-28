@@ -13,8 +13,8 @@ Seven charts, each answering one question:
 Every chart is rendered in both light and dark. The dark version uses its own
 validated steps rather than an inverted copy of the light one.
 
-Units are drawn as their faces, and elements, classes and burst stages as
-their icons (``data/assets/icons/``, fetched by ``nikke collect icons``), so no
+Units are drawn as their faces, and elements and burst stages as their
+icons (``data/assets/icons/``, fetched by ``nikke collect icons``), so no
 chart spells out a unit's name or an element. A unit whose face is not on disk
 yet falls back to its name - in Korean when a Hangul font is installed, in
 English otherwise - and so does an attribute without its icon.
@@ -270,10 +270,8 @@ def chart_trajectories(history: pd.DataFrame, current: pd.DataFrame, theme: th.T
             ax.spines[side].set_visible(False)
         best_el = best.get(unit_id, "")
         face = icons.face(unit_id)
-        klass = icons.unit_class(info.get("unit_class"))
         parts = [(face, 30) if face is not None else names(info),
                  _element_part(icons, info.get("element"), 17),
-                 (klass, 15) if klass is not None else str(info.get("unit_class", "") or ""),
                  _burst_part(icons, info.get("burst"), 13)]
         if isinstance(best_el, str) and best_el:
             parts += ["·  best when the boss is weak to", _element_part(icons, best_el, 14)]

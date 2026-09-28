@@ -7,8 +7,9 @@ The page itself lives in ``web/`` (plain HTML, CSS and JavaScript, no build
 step). This module gives it its data and puts the two together:
 
 ``data/model.json``  every unit (names, elements, burst, release and treasure
-                     instants), every Solo Raid season (boss, weak element, real
-                     dates, when its rankings were collected) and the defaults of
+                     instants), every Solo Raid season a notice has scheduled or
+                     that has rankings (boss, weak element, real dates, when its
+                     rankings were collected) and the defaults of
                      config/tiers.yaml
 ``data/decks.json``  every ranked player's fought decks, season by season: the
                      server, the rank, and each deck's damage and units
@@ -113,6 +114,9 @@ def _seasons(seasons: pd.DataFrame, periods: pd.DataFrame, entries: pd.DataFrame
     out = []
     for _, row in seasons.iterrows():
         number = int(row["season"])
+        # A season only enikk knows about (no notice yet, no rankings) is not public; the site doesn't show it.
+        if number not in spans and number not in collected.index:
+            continue
         out.append({
             "season": number,
             "bossEn": _text(row.get("boss_en")),

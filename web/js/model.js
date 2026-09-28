@@ -410,10 +410,10 @@ export function treasuredAt(model, moment) {
 }
 
 // Solo Raid seasons around ``moment``: the one open (or suspended) then, the last
-// closed and the next announced (timeline.py Timeline.at).
+// closed and the next a notice has scheduled (timeline.py Timeline.at, less the
+// season only enikk knows about - the site's data leaves those out).
 export function seasonsAround(model, moment) {
   const status = (s) => {
-    if (!s.periods.length) return "unscheduled";
     if (moment < s.periods[0][0]) return "upcoming";
     if (s.periods.some(([a, b]) => a <= moment && (b == null || moment <= b))) return "open";
     const end = s.periods[s.periods.length - 1][1];
@@ -423,11 +423,7 @@ export function seasonsAround(model, moment) {
   const scheduled = model.seasons.filter((s) => s.periods.length);
   const current = scheduled.find((s) => ["open", "suspended"].includes(status(s))) || null;
   const closed = scheduled.filter((s) => status(s) === "closed");
-  let upcoming = scheduled.filter((s) => status(s) === "upcoming");
-  if (!upcoming.length) {
-    const last = closed.length ? closed[closed.length - 1].season : -Infinity;
-    upcoming = model.seasons.filter((s) => !s.periods.length && s.season > last).slice(0, 1);
-  }
+  const upcoming = scheduled.filter((s) => status(s) === "upcoming");
   return {
     current: current ? { ...current, status: status(current) } : null,
     previous: closed.length ? closed[closed.length - 1] : null,

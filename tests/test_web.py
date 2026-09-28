@@ -75,7 +75,7 @@ def test_build_writes_the_page_its_data_and_icons(site, world_dir):
     model = json.loads((out / "data" / "model.json").read_text(encoding="utf-8"))
     decks = json.loads((out / "data" / "decks.json").read_text(encoding="utf-8"))
     assert len(model["units"]) == len(world.roster)
-    assert [s["season"] for s in model["seasons"]] == list(range(1, 11))  # nine ranked, one announced
+    assert [s["season"] for s in model["seasons"]] == list(range(1, 10))  # nine ranked; the one only enikk knows is left out
     assert model["servers"] == ["S1", "S2", "S3"] and model["dataVersion"] == summary["data_version"]
     rankers = world.entries.drop_duplicates(["season", "server", "player"])
     assert sum(len(v) for v in decks["seasons"].values()) == len(rankers)
@@ -84,6 +84,21 @@ def test_build_writes_the_page_its_data_and_icons(site, world_dir):
     assert len(ranker) == 2 + 5 and all(len(deck) == 6 and deck[0] > 0 for deck in ranker[2:])
     fire = next(u for u in model["units"] if u["id"] == world.element_dps["Fire"])
     assert fire["treasure"] is not None and fire["treasureElements"] == ["Iron"]
+
+
+def test_a_season_shows_once_a_notice_schedules_it(world_dir, tmp_path):
+    directory, world = world_dir
+    model, _ = web.export(directory, tiers.TierConfig())
+    assert "Next Boss" not in json.dumps(model)  # enikk knows it, no notice yet: not on the site
+    announced = tmp_path / "processed"
+    shutil.copytree(directory, announced)
+    start = pd.Timestamp(world.seasons["end_at"].iloc[-2]) + pd.Timedelta(days=28)
+    periods = pd.concat([world.periods, pd.DataFrame([{
+        "season": 10, "period": 1, "start_at": start.isoformat(), "end_at": (start + pd.Timedelta(days=7)).isoformat(),
+        "start_after_maintenance": 0, "end_reason": "scheduled"}])])
+    periods.to_csv(announced / "soloraid_periods.csv", index=False)
+    model, _ = web.export(announced, tiers.TierConfig())
+    assert model["seasons"][-1]["season"] == 10 and model["seasons"][-1]["bossEn"] == "Next Boss"
 
 
 def test_the_page_scripts_and_styles_carry_a_content_stamp(site):

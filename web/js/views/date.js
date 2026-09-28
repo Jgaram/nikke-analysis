@@ -94,7 +94,7 @@ function context(app, view) {
     h("div", { class: "context-around" },
       seasonChip(app, "진행 중", around.current, note),
       seasonChip(app, "직전", around.previous),
-      seasonChip(app, "다음", around.next, around.next && !around.next.periods.length ? "일정 미공지" : null)));
+      seasonChip(app, "다음", around.next)));
 }
 
 function viewTabs(app) {

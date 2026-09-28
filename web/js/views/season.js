@@ -17,9 +17,7 @@ export function seasonView(app) {
   const root = h("div", { class: "view view-season" });
   root.append(strip(app, number, pop), header(app, info, entry));
   if (!entry) {
-    root.append(h("div", { class: "panel empty" }, info.periods.length
-      ? "고른 표본(서버)에 이 시즌 랭킹이 없습니다."
-      : "아직 일정이 공지되지 않은 시즌입니다. 랭킹이 모이면 여기에 나옵니다."));
+    root.append(h("div", { class: "panel empty" }, "고른 표본(서버)에 이 시즌 랭킹이 없습니다."));
     return root;
   }
 
@@ -88,7 +86,7 @@ function header(app, info, entry) {
   const boss = info.bossKo || info.bossEn || "?";
   const status = entry ? (entry.final ? h("span", { class: "status done" }, "종료")
     : h("span", { class: "status live" }, h("i", { class: "pulse", "aria-hidden": "true" }), `진행 중 · ${shortDay(entry.collectedOn)} 수집분까지 (잠정)`))
-    : h("span", { class: "status" }, info.periods.length ? "랭킹 없음" : "일정 미공지");
+    : h("span", { class: "status" }, "랭킹 없음");
   const counts = {};
   let used = 0;
   if (entry) {

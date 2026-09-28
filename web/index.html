@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>니케 솔로 레이드 티어</title>
+<meta name="description" content="승리의 여신: 니케 솔로 레이드 상위 랭커의 덱으로 계산한 시즌별·날짜별 티어와 니케별 티어 변화. 인자를 바꾸면 브라우저에서 바로 다시 계산한다.">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#080b12">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 2l12 7v14l-12 7-12-7V9z' fill='%23111726' stroke='%23ffd468' stroke-width='2'/%3E%3Cpath d='M11 21l5-10 5 10' fill='none' stroke='%233496ef' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&display=swap">
+<link rel="stylesheet" href="css/app.css">
+<script>
+  try { var t = localStorage.getItem("theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}
+</script>
+</head>
+<body>
+<div class="backdrop" aria-hidden="true"></div>
+<a class="skip" href="#view">본문으로</a>
+
+<header class="top">
+  <div class="top-bar">
+    <a class="brand" href="#/season">
+      <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 2l12 7v14l-12 7-12-7V9z"/><path class="brand-a" d="M11 21l5-10 5 10"/></svg>
+      <span class="brand-text"><b>NIKKE</b><span>솔로 레이드 티어</span></span>
+    </a>
+    <div class="top-actions">
+      <span class="asof muted" id="asof"></span>
+      <button type="button" class="btn params-btn" id="params-open" aria-controls="params" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+        <span class="params-label">인자</span>
+        <span class="params-sample" id="sample"></span>
+        <span class="params-count" id="params-count" hidden></span>
+      </button>
+      <button type="button" class="icon-btn" id="theme" aria-label="테마 전환">
+        <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+        <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>
+      </button>
+    </div>
+  </div>
+  <nav class="tabs" aria-label="보기">
+    <a data-tab="season" href="#/season"><span class="tab-k">01</span>시즌별 티어</a>
+    <a data-tab="date" href="#/date"><span class="tab-k">02</span>날짜별 티어</a>
+    <a data-tab="unit" href="#/unit"><span class="tab-k">03</span>니케 추이</a>
+  </nav>
+</header>
+
+<main id="view" class="main" tabindex="-1"></main>
+
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="params" aria-label="인자 조정" aria-hidden="true">
+  <div class="drawer-head">
+    <div>
+      <h2>인자 조정</h2>
+      <p class="muted small">바꾸면 모든 탭이 브라우저에서 바로 다시 계산됩니다. 주소에 남아 링크로 공유할 수 있습니다.</p>
+    </div>
+    <button type="button" class="icon-btn" id="params-close" aria-label="닫기">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body" id="params-body"></div>
+  <div class="drawer-foot" id="params-foot"></div>
+</aside>
+
+<div class="tip-layer" id="tip" role="tooltip" hidden></div>
+
+<footer class="foot">
+  <details class="howto">
+    <summary>숫자 읽는 법</summary>
+    <div class="howto-body">
+      <p><b>기여도</b> — 상위 랭커 한 사람의 대미지를 다섯 덱에 덱이 낸 비율대로 나누고, 덱의 몫은 그 덱의 다섯 명이 똑같이 나눈 값. 한 사람이 쓰는 25명(5덱 × 5명)이 똑같이 나누면 모두 1.0 이다. 1.5 = 그 1.5배, 0 = 아무도 안 씀. 이걸 서버마다 상위 랭커 전체에 대해, 순위가 높을수록 조금 크게 쳐서 평균 낸다.</p>
+      <p><b>시즌 티어</b> — 그 시즌 기여도에 고정 컷을 댄 것. <b>속성 티어</b> — 보스 약점이 그 니케의 속성이던 시즌들의 기여도를 최근일수록 크게 친 평균. <b>종합 티어</b> — 보스 약점 다섯 가지마다 그렇게 낸 값(칸 다섯 개)을 다시 합친 것. 못 겪은 칸은 같은 쪽 기록으로 채운다: 다른 속성 칸은 겪은 다른 속성의 평균, 자기 속성 칸은 0.</p>
+      <p><b>잠정(*)</b> — 겪은 보스 약점이 적거나 자기 속성 시즌을 아직 못 겪어 채운 칸이 많은 값, 또는 진행 중인 시즌이 든 값. <b>♥ 애장품</b> — 애장품이 나오면 모두 끼고 쓰므로, 속성·종합 티어는 애장품을 낀 시즌만으로 다시 매긴다.</p>
+      <p class="muted">데이터: enikk 솔로 레이드 랭킹(서버별 상위 50명 × 5덱), 공식 공지로 복원한 시즌 일정. 계산은 <a href="https://github.com/Jgaram/nikke-analysis">nikke-analysis</a> 의 파이프라인과 같다.</p>
+    </div>
+  </details>
+</footer>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

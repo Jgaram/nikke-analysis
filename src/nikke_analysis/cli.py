@@ -23,6 +23,7 @@
     nikke build raids                snapshots -> raid_entries.csv
     nikke analyze                    processed tables -> metric tables
     nikke viz                        metric tables -> reports/*.png
+    nikke web                        the tier site -> _site/ (--serve to look at it)
 
 Rankings pool every server (GLOBAL, JP, KR, NA, SEA, TW-HK) unless
 config/tiers.yaml says otherwise. --server keeps only the servers named,
@@ -430,6 +431,22 @@ def cmd_viz(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_web(args: argparse.Namespace) -> int:
+    """The tier site into _site/ (or --out), optionally served for a look."""
+    from . import web
+
+    out = Path(args.out) if args.out else None
+    try:
+        summary = web.build(out)
+    except RuntimeError as exc:
+        print(exc, file=sys.stderr)
+        return 1
+    _emit(summary)
+    if args.serve:
+        web.serve(Path(summary["out_dir"]), args.port)
+    return 0
+
+
 def cmd_status(args: argparse.Namespace) -> int:
     from .util.snapshot import list_runs
 
@@ -570,6 +587,12 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--units", default=None, help="comma-separated unit names for the trajectory chart instead")
     _server_options(p)
     p.set_defaults(func=cmd_viz)
+
+    p = sub.add_parser("web", help="build the tier site (a static page that computes the tiers in the browser)")
+    p.add_argument("--out", default=None, help="output directory (default: _site/)")
+    p.add_argument("--serve", action="store_true", help="serve it on localhost after building")
+    p.add_argument("--port", type=int, default=8000)
+    p.set_defaults(func=cmd_web)
 
     p = sub.add_parser("refresh", help="run the whole pipeline in dependency order")
     p.add_argument("--offline", action="store_true", help="skip every network step")

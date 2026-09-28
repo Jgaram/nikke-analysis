@@ -46,4 +46,7 @@ data/cache/
 reports/**
 !reports/.gitkeep
 
+# The tier site, built by `nikke web` (and in CI by the pages workflow)
+_site/
+
 .DS_Store

@@ -33,10 +33,11 @@
 | 차트 아이콘 | ✅ 니케는 얼굴, 속성·버스트는 아이콘으로 그려 이름·속성명을 적지 않는다. 클래스·기업·무기군 아이콘도 받아 둔다. blablalink 에서 받아 `data/assets/icons/` 에 커밋, 신캐는 다음 갱신 때 자동 추가 |
 | 시즌 사용률 `nikke raid` | ✅ 시즌별 사용 순위·사용률·덱 순위 분포(1덱~5덱), 서버·순위로 좁히기 |
 | 서버 선택 | ✅ 기본은 6개 서버 전체. `--server`(그 서버만) · `--exclude`(그 서버만 빼고)를 `tier`·`raid`·`analyze`·`viz` 에서, 기본 표본은 `config/tiers.yaml` 에서 |
+| 티어 사이트 | ✅ GitHub Pages (`web/`, `nikke web`). 시즌별 티어 · 날짜별 티어(종합·속성별) · 니케 추이. `config/tiers.yaml` 의 인자를 전부 페이지에서 바꾸면 브라우저가 바로 다시 계산한다 |
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 | 작업 반영 | ✅ 브랜치는 `main` 하나. 세션 브랜치(`claude/*`)에 push 하면 테스트 통과 후 main 에 자동 병합, 브랜치 삭제 (`.github/workflows/merge-to-main.yml`) |
 
-`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 265개.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 273개.
 
 ---
 
@@ -58,8 +59,35 @@ nikke raid 40              # 시즌 40 사용률: 누가 몇 명에게 쓰였고
 nikke raid 40 크라운       # 한 니케의 그 시즌 (--server KR, --exclude NA, --top 10 으로 표본 좁히기)
 nikke refresh              # 수집 → 빌드 → 지표 → 차트, 의존 순서대로 전부
 nikke check                # 사람이 봐야 할 게 있는지 (있으면 종료 코드 1)
+nikke web --serve          # 티어 사이트를 _site/ 에 만들고 http://localhost:8000 으로
 pytest -q
 ```
+
+### 티어 사이트
+
+같은 티어를 브라우저에서 보는 페이지(`web/`)다. GitHub Pages 에 올라가고
+(`.github/workflows/pages.yml`), main 이 바뀔 때마다 — 주 2회 데이터 갱신 포함 — 다시 만들어진다.
+
+| 탭 | 보여 주는 것 | CLI 로는 |
+|---|---|---|
+| 시즌별 티어 | 한 시즌의 모든 니케를 그 시즌 기여도로. 사용·덱 분포·그 시즌이 끝났을 때의 속성·종합 티어는 표 보기에 | `nikke raid 40` |
+| 날짜별 티어 | 고른 날(기본 오늘) 기준 종합 티어와 속성별 티어. 1·2·3주년, 시즌이 끝난 날로 바로 가기 | `nikke tier 2주년` · `--element` |
+| 니케 추이 | 한 니케의 속성·종합 티어, 종합을 이루는 다섯 칸, 시즌별 기여도와 티어 변화 차트(애장품 ♥ 포함)와 표 | `nikke tier --unit 크라운` |
+
+`config/tiers.yaml` 의 인자 — 서버, 서버마다 상위 몇 위, 순위 가중, 티어 컷, 최근성 반감기, 종합 방식,
+축소, 잠정 기준, 진행 중 시즌 포함 — 는 전부 페이지의 **인자** 패널에서 바꿀 수 있다. 바꾸면 브라우저가
+랭킹 덱(`data/decks.json`, 압축해 0.5 MB 남짓)에서 기여도부터 다시 계산하고, 바꾼 인자는 주소에 남아 링크로
+공유된다. 기본값이면 커밋된 표와 같은 숫자다: 페이지의 계산(`web/js/model.js`)은 `analyze/` 를 그대로 옮긴
+것이고, `tests/test_web.py` 가 여러 인자 조합에서 두 쪽이 같은지 확인한다.
+
+```bash
+nikke build raids          # 페이지가 쓰는 덱 데이터의 원본 (한 번, 오프라인)
+nikke web                  # _site/ 에 페이지 + data/*.json + 아이콘 (커밋 안 함)
+nikke web --serve          # ... 그리고 http://localhost:8000 으로 보기
+```
+
+처음 한 번은 GitHub 에서 Pages 를 켜야 한다: 레포 **Settings → Pages → Build and deployment → Source** 를
+**GitHub Actions** 로. 그 전에는 pages 워크플로가 사이트를 만들어 보기만 하고 올리지는 않는다(실행에 경고가 남는다).
 
 ### 티어
 
@@ -360,6 +388,8 @@ analyze/     processed → metrics_*.csv     순수 계산 (기여도, 시즌·�
 tierlist.py  metrics  → 시점별 티어         nikke tier
 raidstats.py metrics  → 시즌 사용률         nikke raid
 viz/         metrics  → reports/*.png      렌더링 (아이콘은 data/assets/icons/)
+web.py       processed → _site/            티어 사이트: web/ 페이지 + 데이터 파일 + 아이콘
+web/         브라우저                       같은 계산을 인자를 바꿔 가며 (js/model.js = analyze/ 를 옮긴 것)
 ```
 
 `collect` 가 아무것도 해석하지 않는 게 중요한 이유:

@@ -1,7 +1,8 @@
 name: merge-to-main
 
 # The repo keeps a single branch, main. Claude Code sessions still push to a
-# branch of their own (claude/...), so this workflow folds that work back in:
+# branch of their own (claude/... or ccr-..., whichever the session was given),
+# so this workflow folds that work back in:
 # it merges the pushed commit into main, runs the tests on the result, pushes
 # main and deletes the session branch. Nobody has to open or merge a PR.
 #
@@ -16,6 +17,7 @@ on:
   push:
     branches:
       - "claude/**"
+      - "ccr-*"
 
 permissions:
   contents: write

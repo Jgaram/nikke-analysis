@@ -14,10 +14,16 @@ Outputs:
 
 ``metrics_seasons.csv``        per season: players, decks, whether it is final
 ``metrics_unit_season.csv``    per season and unit: every measurement, the season
-                               tier, and the element profile as of that season's end
-``metrics_element_tiers.csv``  per unit, as of the newest data: five element
-                               slots, overall tier, best element, coverage, role
-``metrics_tier_changes.csv``   units whose season or overall tier moved
+                               tier, and the overall tier - and in a season of the
+                               unit's element, its element tier - as of the
+                               season's end
+``metrics_overall_tiers.csv``  per unit, as of the newest data: the overall tier
+                               and rank - the overall comparison table
+``metrics_element_tiers.csv``  per element and unit of it, as of the newest data:
+                               the tier and rank in that element, with the overall
+                               tier beside - the element comparison tables. A unit
+                               whose skill adds an element is listed under both
+``metrics_tier_changes.csv``   units whose season, element or overall tier moved
 ``metrics_meta_shift.csv``     how far the meta moved each season
 ``metrics_synergy.csv``        unit pairs sharing a deck above chance, per season
 ``metrics_trajectory.csv``     each unit's debut / peak / current standing
@@ -56,6 +62,7 @@ STAMP = "stamp.json"
 OUTPUTS = (
     "metrics_seasons.csv",
     "metrics_unit_season.csv",
+    "metrics_overall_tiers.csv",
     "metrics_element_tiers.csv",
     "metrics_tier_changes.csv",
     "metrics_meta_shift.csv",
@@ -162,6 +169,20 @@ def patch_impact(
     return pd.DataFrame(rows)
 
 
+def comparison_tables(standing: tiers.Standings, info: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """The two comparison tables: every unit by overall tier, and each element's
+    units by their tier in it (with the overall tier beside). ``info`` is the
+    roster's unit columns, by unit id."""
+    names = [c for c in ("name_ko", "name_en") if c in info.columns]
+    overall = standing.overall.join(info, on="unit_id")
+    first = ["overall_rank", "unit_id"] + names + [c for c in ("element", "extra_elements") if c in overall.columns]
+    overall = overall[first + [c for c in overall.columns if c not in first]]
+    beside = overall[["unit_id"] + names + ["overall_tier", "overall", "overall_rank", "provisional"]]
+    elements = standing.elements.merge(beside, on="unit_id", how="left")
+    first = ["element", "element_rank", "unit_id"] + names + ["source"]
+    return overall, elements[first + [c for c in elements.columns if c not in first]]
+
+
 def _instant_columns(frame: pd.DataFrame) -> pd.DataFrame:
     """Timestamps written as KST ISO strings, like every other table here."""
     out = frame.copy()
@@ -218,10 +239,9 @@ def run(
     table = tiers.season_tiers(table, config)
     history = tiers.tier_history(table, summary_table, config)
     newest = summary_table["collected_until"].max()
-    current = tiers.element_profiles(table, summary_table, newest, config)
     info = roster.drop_duplicates("unit_id").set_index("unit_id")
     info = info[[c for c in metrics.UNIT_INFO if c in info.columns]]
-    current = current.join(info, on="unit_id")
+    overall, elements = comparison_tables(tiers.standings(table, summary_table, newest, config), info)
     changes = tiers.tier_changes(history, config)
     shift = metrics.meta_shift(table)
     pairs = metrics.synergy(entries, min_decks=config.synergy_min_decks)
@@ -234,7 +254,8 @@ def run(
 
     target.mkdir(parents=True, exist_ok=True)
     written: dict[str, str] = {}
-    for name, frame in zip(OUTPUTS, (summary_table, history, current, changes, shift, pairs, arcs, impact)):
+    frames = (summary_table, history, overall, elements, changes, shift, pairs, arcs, impact)
+    for name, frame in zip(OUTPUTS, frames):
         path = target / name
         _write(frame, path)
         written[name] = str(path)
@@ -251,7 +272,6 @@ def run(
         "rankers": int(summary_table["rankers"].sum()),
         "units_fielded": int(entries["unit_id"].nunique()),
         "as_of": newest.tz_convert("Asia/Seoul").isoformat() if not pd.isna(newest) else None,
-        "roles": current["role"].value_counts().to_dict() if not current.empty else {},
         **tiers.summarise(history, config),
         "written": written,
     }

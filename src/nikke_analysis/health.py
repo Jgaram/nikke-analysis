@@ -193,6 +193,21 @@ def icon_issues(directory: Path, icons: Path | None = None) -> list[Issue]:
     return issues
 
 
+def manual_issues(directory: Path, manual: Path | None = None) -> list[Issue]:
+    """Hand-kept rows that point at nothing: a unit id in data/manual/extra_elements.csv
+    the roster does not have. A typo there would quietly leave the unit in its
+    own element only."""
+    from .build.roster import load_extra_elements
+
+    roster = {row["unit_id"] for row in _rows(directory / "roster.csv")}
+    if not roster:
+        return []
+    extra = load_extra_elements(manual / "extra_elements.csv" if manual else None)
+    return [Issue("warning", "extra_element_unknown_unit", unit_id,
+                  "data/manual/extra_elements.csv 의 id 가 로스터에 없다 — 오타인지 확인")
+            for unit_id in sorted(set(extra) - roster)]
+
+
 def write(directory: Path, issues: Iterable[Issue]) -> Path:
     path = directory / ISSUES_CSV
     with path.open("w", encoding="utf-8", newline="") as handle:

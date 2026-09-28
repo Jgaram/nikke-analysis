@@ -1,6 +1,7 @@
 import textwrap
 
 from nikke_analysis.build.roster import (
+    load_extra_elements,
     merge_roster,
     parse_gamefiles_role,
     parse_nikkeutils,
@@ -78,6 +79,31 @@ def test_release_date_precedence_and_confidence():
     assert (by_id["010"].release_date, by_id["010"].release_date_source) == ("2022-11-04", "manual")
     assert by_id["010"].release_date_confidence == "high"
     assert by_id["016"].release_date_source == "patchnote"
+
+
+def test_skill_elements_come_from_the_hand_kept_table(tmp_path):
+    path = tmp_path / "extra_elements.csv"
+    path.write_text(
+        "unit_id,element,reason\n"
+        "16,철갑,스킬로 철갑 우월 코드\n"
+        "016,Iron,같은 줄을 두 번 적어도 한 번\n"
+        "140,water,스킬로 수냉 우월 코드\n"
+        "999,불,속성 이름이 아니면 건너뛴다\n",
+        encoding="utf-8",
+    )
+    assert load_extra_elements(path) == {"016": ("Iron",), "140": ("Water",)}
+    assert load_extra_elements(tmp_path / "missing.csv") == {}
+
+
+def test_the_roster_carries_skill_elements_but_not_the_units_own():
+    roster = merge_roster(
+        [{"unit_id": "016", "name_en": "Rapi: Red Hood"}],
+        parse_nikkeutils(CHARACTERS_JS),
+        extra_elements={"016": ("Iron", "Fire")},
+    )
+    by_id = {u.unit_id: u for u in roster}
+    assert (by_id["016"].element, by_id["016"].extra_elements) == ("Fire", "Iron")
+    assert by_id["010"].extra_elements == ""
 
 
 def test_datafile_date_is_marked_low_confidence():

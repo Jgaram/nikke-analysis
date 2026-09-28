@@ -1,11 +1,17 @@
-"""Tiers at a moment, and one unit's tier history.
+"""Tiers at a moment, one element's tiers, and one unit's tier history.
 
     nikke tier                   now: the last finished season, the one in
-                                 progress, the next one, and the overall tiers
+                                 progress, and every unit's overall tier
     nikke tier 2주년             the same, as the data stood at the anniversary
-    nikke tier --unit 크라운     one unit, season by season
+    nikke tier --element 작열    the units of one element, by their tier in it
+    nikke tier --unit 크라운     one unit: its two tiers, and season by season
     nikke tier --exclude NA      the same on another server sample (--server KR,JP
-                                 keeps only those); works with the two above
+                                 keeps only those); works with the ones above
+
+Every unit has two tiers: its **element tier** (how it does when the boss is
+weak to its own element) and its **overall tier** (over the whole rotation);
+see ``analyze.tiers``. The overall table compares every unit, the element
+table the units of one element.
 
 Reads the metric tables (``metrics_unit_season.csv``, ``metrics_seasons.csv``)
 and the timeline, so it works offline from committed data. A view of the past
@@ -20,7 +26,8 @@ see ``analyze.pipeline.run_servers``.
 
     book = TierBook.load()
     view = book.at("2주년")
-    view.overall.head()              # element slots, overall tier, role per unit
+    view.overall.head()              # element tier and overall tier per unit
+    view.element("Fire")             # the Fire units, best in Fire first
     book.unit("크라운").rows         # the unit's season-by-season record
 
     TierBook.load(servers=ServerFilter.of(exclude="NA"))   # every server but NA
@@ -44,21 +51,18 @@ from .timeline import ELEMENT_KO, Season, Timeline, resolve_moment
 from .util.names import NameIndex, normalize_name, normalize_unit_id
 from .util.text import pad, rjust
 
-ROLE_KO = {
-    "universal": "범용",
-    "hybrid": "하이브리드",
-    "specialist": "속성 특화",
-    "outside": "비주류",
-    "undetermined": "판단 보류",
-}
 OVERALL_KO = {"mean": "5속성 균등 평균", "frequency": "최근 등장 빈도 가중", "max": "최고 속성"}
 CLASS_KO = {"Attacker": "화력형", "Supporter": "지원형", "Defender": "방어형"}
-SLOT = {e: e.lower() for e in ELEMENTS}
 
 
 def _utc(value: Any) -> pd.Timestamp:
     stamp = pd.Timestamp(value)
     return stamp.tz_localize("UTC") if stamp.tzinfo is None else stamp.tz_convert("UTC")
+
+
+def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
+    """Rows as plain dicts, a missing value as None (JSON null) rather than NaN."""
+    return frame.astype(object).where(frame.notna(), None).to_dict(orient="records")
 
 
 def _read(path: Path, **kwargs: Any) -> pd.DataFrame:
@@ -118,12 +122,13 @@ def load_index(directory: Path) -> NameIndex | None:
 
 @dataclass
 class SeasonBlock:
-    """One season's tiers: measured (a finished or live season) or expected."""
+    """One season's tiers: a finished season, the live one so far, or a live one
+    with no snapshot yet (``pending``: no rows)."""
 
     season: Season | None
     number: int
-    kind: str  # "finished", "live", "expected"
-    rows: pd.DataFrame  # unit_id, name, value, tier, extra
+    kind: str  # "finished", "live", "pending"
+    rows: pd.DataFrame  # the season's rows of the history, with a display name
     note: str = ""
 
 
@@ -150,11 +155,27 @@ class TierView:
     moment: datetime
     finished: SeasonBlock | None
     current: SeasonBlock | None
-    upcoming: SeasonBlock | None
-    overall: pd.DataFrame
+    overall: pd.DataFrame  # one row per unit: its overall tier, best first
+    elements: pd.DataFrame  # one row per unit and element it counts as: its tier there
     final_seasons: list[int]
     config: tiering.TierConfig
     sample: Sample | None = None
+    weak: dict[int, str] | None = None  # finished season -> the element its boss was weak to
+
+    def element(self, element: str) -> pd.DataFrame:
+        """The units of ``element`` - with those whose skill adds it (``source`` "skill") -
+        best in it first; those yet to meet a season of it last."""
+        if self.elements.empty:
+            return self.elements
+        return self.elements[self.elements["element"] == element]
+
+    def element_seasons(self, element: str) -> list[int]:
+        """The finished seasons whose boss was weak to ``element``: what its element tiers stand on."""
+        return [s for s in self.final_seasons if (self.weak or {}).get(s) == element]
+
+    def _parameters(self) -> dict[str, Any]:
+        return {"half_life_days": self.config.half_life_days, "overall": self.config.overall,
+                "cuts": dict(self.config.cuts)}
 
     def to_dict(self) -> dict[str, Any]:
         def block(b: SeasonBlock | None) -> dict[str, Any] | None:
@@ -166,7 +187,7 @@ class TierView:
                 "boss": b.season.boss if b.season else "",
                 "weak_element": b.season.weak_element if b.season else "",
                 "note": b.note,
-                "units": b.rows.to_dict(orient="records"),
+                "units": _records(b.rows),
             }
 
         return {
@@ -175,13 +196,19 @@ class TierView:
             "final_seasons": self.final_seasons,
             "finished": block(self.finished),
             "current": block(self.current),
-            "upcoming": block(self.upcoming),
-            "overall": self.overall.to_dict(orient="records"),
-            "parameters": {
-                "half_life_days": self.config.half_life_days,
-                "overall": self.config.overall,
-                "cuts": dict(self.config.cuts),
-            },
+            "overall": _records(self.overall),
+            "elements": _records(self.elements),
+            "parameters": self._parameters(),
+        }
+
+    def element_dict(self, element: str) -> dict[str, Any]:
+        return {
+            "moment": self.moment.isoformat(),
+            "sample": self.sample.to_dict() if self.sample else None,
+            "element": element,
+            "seasons": self.element_seasons(element),
+            "units": _records(self.element(element)),
+            "parameters": self._parameters(),
         }
 
 
@@ -193,6 +220,7 @@ class UnitHistory:
     profile: dict[str, Any] | None
     moment: datetime
     sample: Sample | None = None
+    elements: tuple[str, ...] = ()  # the elements the unit counts as: its own, then any its skill adds
 
 
 class TierBook:
@@ -255,28 +283,29 @@ class TierBook:
         rows["name"] = [_name(r) for _, r in rows.iterrows()]
         return rows.sort_values(["lift", "unit_id"], ascending=[False, True])
 
-    def _expected(self, season: Season, profiles: pd.DataFrame) -> SeasonBlock:
-        slot = SLOT.get(season.weak_element)
-        if slot is None or profiles.empty:
-            return SeasonBlock(season, season.number, "expected", pd.DataFrame(), "약점 속성 미확인")
-        rows = profiles[["unit_id", "name", f"lift_{slot}", f"tier_{slot}", f"n_{slot}", "role"]].rename(
-            columns={f"lift_{slot}": "lift", f"tier_{slot}": "tier", f"n_{slot}": "observed"}
-        )
-        rows = rows.sort_values(["lift", "unit_id"], ascending=[False, True])
-        note = f"{ELEMENT_KO.get(season.weak_element, season.weak_element)} 약점 시즌 기록으로 본 예상"
-        return SeasonBlock(season, season.number, "expected", rows, note)
+    def _standings(self, instant: pd.Timestamp) -> tiering.Standings:
+        """Where every unit stands at ``instant``, with its names. In ``overall``,
+        ``element`` is the unit's own; in ``elements``, the element of the row, and
+        ``own_element`` the unit's own."""
+        standing = tiering.standings(self.history, self.seasons, instant, self.config)
+        if standing.overall.empty:
+            return standing
+        info = self.history.drop_duplicates("unit_id").set_index("unit_id")
+        columns = [c for c in ("name_ko", "name_en", "element", "extra_elements", "unit_class") if c in info.columns]
+        overall = standing.overall.join(info[columns], on="unit_id")
+        overall["name"] = [_name(r) for _, r in overall.iterrows()]
+        beside = overall[["unit_id", "name", "name_ko", "name_en", "element", "overall_tier", "overall",
+                          "overall_rank", "provisional"]].rename(columns={"element": "own_element"})
+        return tiering.Standings(overall, standing.elements.merge(beside, on="unit_id", how="left"))
 
     def at(self, moment: datetime | str | None = None) -> TierView:
         moment = resolve_moment(moment) if moment is not None else datetime.now(tz=_kst())
         instant = _utc(moment)
         snapshot = self.timeline.at(moment)
-        profiles = tiering.element_profiles(self.history, self.seasons, instant, self.config)
-        if not profiles.empty:
-            names = self.history.drop_duplicates("unit_id").set_index("unit_id")
-            profiles = profiles.join(names[["name_ko", "name_en", "element", "unit_class"]], on="unit_id")
-            profiles["name"] = [_name(r) for _, r in profiles.iterrows()]
+        standing = self._standings(instant)
         known = self.seasons[self.seasons["final"] & (self.seasons["end_at"] <= instant)]
         final_seasons = sorted(int(s) for s in known["season"])
+        weak = {int(s): str(e) for s, e in zip(known["season"], known["weak_element"])} if "weak_element" in known else {}
 
         finished = None
         if final_seasons:
@@ -292,9 +321,9 @@ class TierBook:
                 current = SeasonBlock(snapshot.season, number, "live", self._season_rows(number),
                                       f"{day:%m/%d} 수집분 (잠정)")
             elif number not in final_seasons:
-                current = self._expected(snapshot.season, profiles)
-        upcoming = self._expected(snapshot.next_season, profiles) if snapshot.next_season is not None else None
-        return TierView(moment, finished, current, upcoming, profiles, final_seasons, self.config, self.sample)
+                current = SeasonBlock(snapshot.season, number, "pending", pd.DataFrame(), "아직 수집분 없음")
+        return TierView(moment, finished, current, standing.overall, standing.elements, final_seasons, self.config,
+                        self.sample, weak)
 
     # ------------------------------------------------------------------
 
@@ -302,14 +331,30 @@ class TierBook:
         return find_unit(query, self.history, self.index)
 
     def unit(self, query: str, moment: datetime | str | None = None) -> UnitHistory:
+        """One unit's record. ``profile`` is where it stands at ``moment``: its
+        overall tier, with ``units`` (how many its rank is among), and under
+        ``elements`` its tier in each element it counts as, with ``element_units``."""
         unit_id = self.find_unit(query)
         moment = resolve_moment(moment) if moment is not None else datetime.now(tz=_kst())
         rows = self.history[self.history["unit_id"] == unit_id].sort_values("season")
-        profiles = tiering.element_profiles(self.history, self.seasons, _utc(moment), self.config)
-        match = profiles[profiles["unit_id"] == unit_id]
-        info = rows.iloc[-1][["unit_id", "name_ko", "name_en", "element", "burst", "unit_class", "release_date"]].to_dict()
-        return UnitHistory(unit_id, info, rows, match.iloc[0].to_dict() if not match.empty else None, moment,
-                           self.sample)
+        columns = ["unit_id", "name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "release_date"]
+        info = _records(rows.iloc[[-1]].reindex(columns=columns))[0]
+        extra = info.get("extra_elements")
+        elements = tuple(e for e in [info.get("element")] + (extra.split(";") if isinstance(extra, str) else [])
+                         if isinstance(e, str) and e)
+        standing = self._standings(_utc(moment))
+        profile = None
+        match = standing.overall[standing.overall["unit_id"] == unit_id] if not standing.overall.empty else None
+        if match is not None and not match.empty:
+            profile = _records(match[tiering.OVERALL_COLUMNS])[0]
+            profile["units"] = len(standing.overall)
+            listed = standing.elements.groupby("element").size()  # as many as the element's table lists
+            mine = standing.elements[standing.elements["unit_id"] == unit_id].sort_values("source", kind="stable")
+            profile["elements"] = [
+                {**record, "element_units": int(listed.get(record["element"], 0))}
+                for record in _records(mine[tiering.ELEMENT_COLUMNS].drop(columns="unit_id"))
+            ]
+        return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements)
 
 
 def _kst():
@@ -351,95 +396,146 @@ def _tier_lines(rows: pd.DataFrame, value: str, tier: str, config: tiering.TierC
     return lines
 
 
-def render(view: TierView, *, show_all: bool = False) -> str:
+def _header(view: TierView, title: str) -> list[str]:
     config = view.config
     span = f"완료 시즌 {view.final_seasons[0]}–{view.final_seasons[-1]}" if view.final_seasons else "완료 시즌 없음"
-    out = [
-        f"{view.moment:%Y-%m-%d %H:%M} KST 기준 티어 · {span} · 최근 가중 반감기 {config.half_life_days:g}일",
+    return [
+        f"{view.moment:%Y-%m-%d %H:%M} KST 기준 {title} · {span} · 최근 가중 반감기 {config.half_life_days:g}일",
         f"  표본: {view.sample or f'서버마다 상위 {config.top_n}위'}",
-        "  lift: 표본 랭커의 대미지 중 그 니케 몫, 1.0 = 한 사람이 쓰는 25명의 평균 몫",
     ]
-    upcoming = view.upcoming
-    same_element = (
-        upcoming is not None and view.current is not None and view.current.kind == upcoming.kind == "expected"
-        and upcoming.season is not None and view.current.season is not None
-        and upcoming.season.weak_element == view.current.season.weak_element
-    )
-    for block, label in ((view.finished, "직전"), (view.current, "진행 중"), (None if same_element else upcoming, "다음")):
+
+
+def _provisional_note(config: tiering.TierConfig) -> str:
+    return f"* = 관측한 약점 속성이 {config.min_elements_observed}개 미만이라 종합이 잠정"
+
+
+def _element_marks(elements: pd.DataFrame) -> dict[str, str]:
+    """Each unit's element tiers in one phrase, its own element first: ``작열 SS``,
+    ``작열 SS · 철갑 SS``; ``?`` for an element it has yet to meet a season of."""
+    marks: dict[str, list[str]] = {}
+    for _, r in elements.sort_values("source", kind="stable").iterrows():
+        tier = r["element_tier"] if isinstance(r["element_tier"], str) and r["element_tier"] else "?"
+        marks.setdefault(r["unit_id"], []).append(f"{_element(r['element'])} {tier}")
+    return {unit: " · ".join(parts) for unit, parts in marks.items()}
+
+
+def render(view: TierView, *, show_all: bool = False) -> str:
+    """The last finished season, the one in progress, and the overall tier table."""
+    config = view.config
+    out = _header(view, "티어") + ["  lift: 표본 랭커의 대미지 중 그 니케 몫, 1.0 = 한 사람이 쓰는 25명의 평균 몫"]
+    for block, label in ((view.finished, "직전"), (view.current, "진행 중")):
         if block is None:
             continue
         out += ["", _season_head(block, label)]
-        if same_element and block is view.current:
-            out.append(f"  (다음 시즌 {upcoming.number}도 같은 약점 — 예상은 같다)")
+        if block.kind == "pending":
+            continue
         if block.rows.empty:
             out.append("  (기록 없음)")
             continue
-        if block.kind != "expected":
-            out += _tier_lines(block.rows, "lift", "tier", config, show_all=show_all)
-            continue
-        seen = block.rows[block.rows["observed"] > 0]
-        out += _tier_lines(seen, "lift", "tier", config, show_all=show_all)
-        unseen = block.rows[(block.rows["observed"] == 0) & (block.rows["lift"] >= config.cut("B"))]
-        if not unseen.empty:
-            weak = _element(block.season.weak_element) if block.season else "?"
-            out.append(f"  미관측 {weak} 약점 시즌을 아직 겪지 않음: " + " · ".join(unseen["name"]))
+        out += _tier_lines(block.rows, "lift", "tier", config, show_all=show_all)
 
     if not view.overall.empty:
-        out += ["", f"■ 종합 티어 ({OVERALL_KO.get(config.overall, config.overall)}) · 괄호 = 역할"]
-        overall = view.overall.rename(columns={"overall_tier": "tier_o"})
+        out += ["", f"■ 종합 티어 ({OVERALL_KO.get(config.overall, config.overall)}) · 괄호 = 속성 티어"]
+        marks = _element_marks(view.elements)
 
         def mark(r: pd.Series) -> str:
-            role = ROLE_KO.get(r["role"], r["role"])
-            return f"*({role})" if bool(r["provisional"]) else f"({role})"
+            return ("*" if bool(r["provisional"]) else "") + f"({marks.get(r['unit_id'], '?')})"
 
-        out += _tier_lines(overall, "overall", "tier_o", config, show_all=show_all, mark=mark)
-        out.append(f"  * = 관측한 약점 속성이 {config.min_elements_observed}개 미만이라 잠정")
+        out += _tier_lines(view.overall, "overall", "overall_tier", config, show_all=show_all, mark=mark)
+        out.append(f"  {_provisional_note(config)} · ? = 그 속성 약점 시즌을 아직 겪지 않음")
+        out.append("  속성별 비교: nikke tier --element 작열 (" + "·".join(ELEMENT_KO[e] for e in ELEMENTS[1:]) + ")")
     return "\n".join(out)
 
 
+def render_element(view: TierView, element: str, *, show_all: bool = False) -> str:
+    """The units of one element, by their tier in it, with their overall tier beside."""
+    config = view.config
+    name = _element(element)
+    seasons = view.element_seasons(element)
+    out = _header(view, f"{name} 속성 티어")
+    out.append(f"  {name} 속성 티어: 보스 약점이 {name}이던 시즌"
+               + (f"({' · '.join(map(str, seasons))})" if seasons else "")
+               + "에서 낸 lift · 괄호 = 종합 티어")
+    rows = view.element(element)
+    out += ["", f"■ {name} 니케 {len(rows)}명"]
+    if rows.empty:
+        out.append("  (기록 없음)")
+        return "\n".join(out)
+
+    def mark(r: pd.Series) -> str:
+        guest = f" · 본래 {_element(r['own_element'])}" if r["source"] == "skill" else ""
+        return f"({r['overall_tier']}{'*' if bool(r['provisional']) else ''}{guest})"
+
+    out += _tier_lines(rows, "element_lift", "element_tier", config, show_all=show_all, mark=mark)
+    unseen = rows[rows["element_lift"].isna()]
+    if not unseen.empty:
+        out.append(f"  미관측 (출시 후 {name} 약점 시즌 없음): " + " · ".join(unseen["name"]))
+    notes = [_provisional_note(config)]
+    if (rows["source"] == "skill").any():
+        notes.append(f"본래 X = 스킬로 {name} 우월 코드도 가진 X 속성 니케")
+    out.append("  " + " · ".join(notes))
+    return "\n".join(out)
+
+
+def _unit_tiers(history: UnitHistory) -> list[str]:
+    """The unit's tiers at the moment of the view: one line per element it counts as, then the overall."""
+    profile = history.profile
+    if not profile:
+        return [f"{history.moment:%Y-%m-%d} 기준  아직 끝난 시즌 기록 없음"]
+    lines = [f"{history.moment:%Y-%m-%d} 기준"]
+    for i, standing in enumerate(profile["elements"]):
+        element = _element(standing["element"])
+        label = element + (" (스킬)" if standing["source"] == "skill" else "")
+        if standing["element_lift"] is None:
+            text = f"{label} 미관측 — 출시 후 {element} 약점 시즌이 아직 없음"
+        else:
+            text = (f"{label} {standing['element_tier']} {standing['element_lift']:.2f} · {element} 니케 "
+                    f"{standing['element_units']}명 중 {standing['element_rank']}위 · "
+                    f"{element} 약점 시즌 {standing['element_seasons']}번")
+        lines.append(f"  {pad('속성 티어' if i == 0 else '', 9)}  {text}")
+    provisional = (f" (잠정 — 관측한 약점 속성 {profile['elements_observed']}개)"
+                   if profile.get("provisional") else "")
+    lines.append(f"  {pad('종합 티어', 9)}  {profile['overall_tier']} {profile['overall']:.2f}{provisional} · "
+                 f"{profile['units']}명 중 {profile['overall_rank']}위")
+    return lines
+
+
 def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) -> str:
-    config = config or tiering.load_tier_config()
-    info = history.info
+    info = {key: value if value is not None else "" for key, value in history.info.items()}
     name = info.get("name_ko") or info.get("name_en")
+    own = info.get("element", "")
+    extra = [e for e in history.elements if e != own]
+    skill = f" · 스킬로 {'·'.join(_element(e) for e in extra)} 우월 코드" if extra else ""
     out = [
-        f"{name} ({info.get('name_en', '')}) · {_element(info.get('element', ''))} "
-        f"{CLASS_KO.get(info.get('unit_class', ''), info.get('unit_class', ''))} · "
+        f"{name} ({info.get('name_en', '')}) · {_element(own)} "
+        f"{CLASS_KO.get(info.get('unit_class', ''), info.get('unit_class', ''))}{skill} · "
         f"버스트 {info.get('burst', '')} · 출시 {info.get('release_date', '')}"
     ]
     if history.sample is not None and history.sample.chosen:
         out.append(f"표본: {history.sample}")
-    profile = history.profile
-    if profile:
-        role = ROLE_KO.get(profile["role"], profile["role"])
-        provisional = " (잠정)" if bool(profile.get("provisional")) else ""
-        out.append(
-            f"{history.moment:%Y-%m-%d} 기준: 종합 {profile['overall_tier']} {profile['overall']:.2f}{provisional} · {role} · "
-            f"최고 {_element(profile['best_element'])} {profile['best_tier']} {profile['best_lift']:.2f} · "
-            f"A 이상 {int(profile['coverage'])}/{int(profile['elements_observed'])} 속성"
-        )
-        slots = []
-        for element in ELEMENTS:
-            slot = SLOT[element]
-            observed = int(profile[f"n_{slot}"])
-            value = f"{profile[f'tier_{slot}']} {profile[f'lift_{slot}']:.2f}" if observed else f"? {profile[f'lift_{slot}']:.2f}"
-            slots.append(f"{_element(element)} {value} ({observed})")
-        out.append("  속성별  " + " · ".join(slots) + "   (괄호 = 관측 시즌 수, ? = 미관측)")
+    out += _unit_tiers(history)
     out += [
         "",
         f"{rjust('시즌', 4)}  {pad('시작', 10)}  {pad('보스 · 약점', 30)}  {rjust('채용', 5)}  {rjust('덱 몫', 5)}  "
-        f"{rjust('메인', 5)}  {rjust('lift', 5)}  {pad('시즌', 4)}  종합",
+        f"{rjust('메인', 5)}  {rjust('lift', 5)}  {pad('시즌', 4)}  {pad('속성', 7)}  종합",
     ]
     for _, row in history.rows.iterrows():
         used = row["presence"] > 0
         start = pd.Timestamp(row["start_at"]).tz_convert("Asia/Seoul") if isinstance(row["start_at"], str) and row["start_at"] else None
         boss_name = row["boss_en"] if isinstance(row["boss_en"], str) and row["boss_en"] else "?"
-        boss = f"{boss_name} · {_element(row['weak_element'] if isinstance(row['weak_element'], str) else '')}"
+        weak = row["weak_element"] if isinstance(row["weak_element"], str) else ""
+        boss = f"{boss_name} · {'▶' if weak in history.elements else ''}{_element(weak)}"
         deck_share = f"{row['deck_share']:.0%}" if used and pd.notna(row["deck_share"]) else "-"
         main = f"{row['main_deck_rate']:.0%}" if used and pd.notna(row["main_deck_rate"]) else "-"
+        element = f"{row['element_tier']} {row['element_lift']:.2f}" if pd.notna(row.get("element_lift")) else "-"
         overall = f"{row['overall_tier']} {row['overall']:.2f}" if pd.notna(row.get("overall")) else "-"
         live = "" if bool(row.get("final", True)) else " (진행 중)"
         out.append(
             f"{int(row['season']):>4}  {pad(f'{start:%Y-%m-%d}' if start is not None else '', 10)}  {pad(boss, 30)}  "
-            f"{row['presence']:>5.0%}  {deck_share:>5}  {main:>5}  {row['lift']:>5.2f}  {pad(str(row['tier']), 4)}  {overall}{live}"
+            f"{row['presence']:>5.0%}  {deck_share:>5}  {main:>5}  {row['lift']:>5.2f}  {pad(str(row['tier']), 4)}  "
+            f"{pad(element, 7)}  {overall}{live}"
         )
+    elements = "·".join(_element(e) for e in history.elements) or "?"
+    out.append(f"▶ = 보스 약점이 이 니케의 속성({elements})인 시즌 · 속성 = 그 시즌 약점 속성에서의 티어, "
+               "종합 = 종합 티어 (둘 다 그 시즌이 끝난 시점)")
     return "\n".join(out)

@@ -35,17 +35,26 @@ cuts:
   - { label: C,  min_lift: 0.2 }
   - { label: D,  min_lift: 0.0 }
 
-# Element tiers: what a unit is worth when the boss is weak to each element.
+# Element and overall tiers.
+#
+# Element tier: what a unit is worth in its own element - its lift in the
+# seasons whose boss was weak to that element. Overall tier: what it is worth
+# over the whole rotation - its lift estimated per boss weakness (five slots,
+# kept internal) and combined into one number. The slots follow the boss's
+# weakness, not the unit's element: a Water support fielded in Wind-weak seasons
+# earns its overall there, while its Water tier stays low. A unit whose skill
+# adds an element (data/manual/extra_elements.csv) has an element tier in each.
 element:
   # A season this many days before the moment of the view counts half as much.
   # Days rather than seasons, because each element comes around only every few
   # months and the gaps are uneven.
   half_life_days: 180
-  # Pseudo-seasons that pull an element slot toward the unit's all-element
-  # level. 0 = trust the observed seasons as they are. A positive value damps
-  # a slot seen only once, but it also drags a specialist's best element toward
-  # its (low) all-element average, so it is off by default. A slot with no
-  # season at all since release always takes the all-element level, flagged.
+  # Pseudo-seasons that pull a slot toward the unit's all-element level.
+  # 0 = trust the observed seasons as they are. A positive value damps a slot
+  # seen only once, but it also drags a specialist's own element toward its
+  # (low) all-element average, so it is off by default. A slot with no season
+  # at all since release takes the all-element level in the overall; the
+  # element tier stays empty until the unit meets a season of its element.
   prior_strength: 0
   # One number from the five slots:
   #   mean      - equal weight per element; does not depend on which elements
@@ -53,20 +62,9 @@ element:
   #   frequency - weight each element by how often (recently) bosses were weak to it
   #   max       - the best element only
   overall: mean
-  # An element counts toward a unit's coverage at this tier or better.
-  coverage_min_tier: A
-
-# Roles: in how many elements a unit is viable. An element is viable when the
-# unit's slot there is at least `viable_fraction` of its best slot.
-#   universal  - viable in at least `universal_min_share` of its observed elements
-#   specialist - viable in at most `specialist_max_viable` element(s)
-#   hybrid     - in between (damage-dealing supports, partner units, two-element units)
-roles:
-  min_elements_observed: 3   # seen in fewer elements -> "undetermined", overall tier provisional
-  min_best_lift: 0.5         # never this good in any element -> "outside" the meta
-  viable_fraction: 0.5
-  universal_min_share: 0.8   # 4 of 5 observed elements
-  specialist_max_viable: 1
+  # Seen in fewer boss weaknesses than this: the overall tier is provisional,
+  # because the unseen slots borrow the level of the few that were seen.
+  min_elements_observed: 3
 
 # Numbers reported alongside the tiers, not part of them.
 diagnostics:

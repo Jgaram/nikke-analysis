@@ -168,7 +168,7 @@ def test_charts_draw_faces_instead_of_names(processed, tmp_path):
     icons = tmp_path / "icons"
     write_icons(icons, shown_units(processed))
     result = charts.render_all(data_dir=processed, out_dir=tmp_path / "out", icons_dir=icons)
-    assert len(result["written"]) == 14
+    assert len(result["written"]) == 24
     assert result["named_units"] == []
 
 
@@ -179,12 +179,12 @@ def test_charts_fall_back_to_names_without_icons(processed, tmp_path):
     write_icons(icons, shown_units(processed) - set(missing))
     (element_icon_path("Fire", icons)).unlink()
     result = charts.render_all(data_dir=processed, out_dir=tmp_path / "out", themes=("dark",), icons_dir=icons)
-    assert len(result["written"]) == 7
+    assert len(result["written"]) == 12
     assert set(result["named_units"]) <= set(missing) and result["named_units"]
 
     bare = charts.render_all(data_dir=processed, out_dir=tmp_path / "bare", themes=("light",),
                              icons_dir=tmp_path / "none")
-    assert len(bare["written"]) == 7
+    assert len(bare["written"]) == 12
     assert bare["named_units"]
 
 

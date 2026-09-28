@@ -25,6 +25,10 @@ is usually the datamine, one or two patches early. Every row using it is flagged
 Names come from the game files, attributes from nikke-utils with enikk's copy of
 the game tables filling whatever nikke-utils has not caught up with yet - a unit
 released this week has a row, a name and its attributes on the next refresh.
+
+``extra_elements`` is the one attribute no source has: the element(s) whose
+weakness advantage (우월 코드) a unit's skill adds to its own, kept by hand in
+data/manual/extra_elements.csv. Such a unit is tiered in each of its elements.
 """
 
 from __future__ import annotations
@@ -39,6 +43,7 @@ from typing import Any, Iterable
 import yaml
 
 from ..paths import manual_dir, processed_dir
+from ..timeline import parse_element
 from ..util.names import NameIndex, build_name_index, normalize_name, normalize_unit_id, variant_suffix
 from ..util.snapshot import SnapshotRun, latest_run
 from .jsobj import extract_array_literal
@@ -49,6 +54,7 @@ ROSTER_CSV = "roster.csv"
 ALIAS_CSV = "unit_aliases.csv"
 OVERRIDES_CSV = "release_overrides.csv"
 MANUAL_ALIAS_CSV = "unit_aliases.csv"
+EXTRA_ELEMENTS_CSV = "extra_elements.csv"
 
 _NAME_KEY_RE = re.compile(r"^(\d+)_name$")
 _DESCRIPTION_KEY_RE = re.compile(r"^c?(\d+)_description$")
@@ -89,6 +95,7 @@ class RosterRow:
     rarity: str = ""
     burst: str = ""
     element: str = ""
+    extra_elements: str = ""  # elements its skill adds, "Iron" or "Iron;Water"
     manufacturer: str = ""
     unit_class: str = ""
     weapon: str = ""
@@ -229,11 +236,36 @@ def load_release_overrides(path: Path | None = None) -> dict[str, dict[str, str]
     return out
 
 
+def load_extra_elements(path: Path | None = None) -> dict[str, tuple[str, ...]]:
+    """Elements a unit's skill adds, from data/manual/extra_elements.csv (``unit_id``,
+    ``element``, ``reason``; one row per unit and element, the element in English
+    or Korean). A row naming no unit or no element is skipped with a warning."""
+    target = path or (manual_dir() / EXTRA_ELEMENTS_CSV)
+    if not target.is_file():
+        return {}
+    with target.open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    out: dict[str, tuple[str, ...]] = {}
+    for row in rows:
+        if not row.get("unit_id") or not row.get("element"):
+            continue
+        try:
+            unit_id = normalize_unit_id(row["unit_id"])
+            element = parse_element(row["element"])
+        except (LookupError, ValueError) as exc:
+            log.warning("%s: %s", target.name, exc)
+            continue
+        if element not in out.get(unit_id, ()):
+            out[unit_id] = out.get(unit_id, ()) + (element,)
+    return out
+
+
 def merge_roster(
     gamefiles: Iterable[dict[str, str]],
     nikkeutils: Iterable[dict[str, Any]],
     *,
     overrides: dict[str, dict[str, str]] | None = None,
+    extra_elements: dict[str, tuple[str, ...]] | None = None,
     patch_releases: dict[str, str] | None = None,
     release_times: dict[str, str] | None = None,
     enikk: Iterable[dict[str, Any]] | None = None,
@@ -250,6 +282,7 @@ def merge_roster(
     having shipped with the game rather than of a gap in the history.
     """
     overrides = overrides or {}
+    extra_elements = extra_elements or {}
     patch_releases = patch_releases or {}
     release_times = release_times or {}
 
@@ -282,6 +315,7 @@ def merge_roster(
         suffix = variant_suffix(display)
         unit.is_variant = 1 if suffix else 0
         unit.base_name_en = display.split(":")[0].strip() if suffix else display
+        unit.extra_elements = ";".join(e for e in extra_elements.get(unit_id, ()) if e != unit.element)
 
         if unit_id in overrides:
             unit.release_date = overrides[unit_id]["release_date"]
@@ -442,6 +476,7 @@ def build(
         gamefile_rows,
         nikkeutils_rows,
         overrides=load_release_overrides(),
+        extra_elements=load_extra_elements(),
         patch_releases=patch_releases,
         release_times=release_times,
         enikk=enikk,

@@ -1,9 +1,10 @@
-"""Season tiers, element profiles and roles, against the synthetic world."""
+"""Season tiers, element tiers and overall tiers, against the synthetic world."""
 
 import pandas as pd
 import pytest
 
 from nikke_analysis.analyze import metrics, tiers
+from nikke_analysis.timeline import parse_element
 from tests.synthetic import make_world
 
 
@@ -12,17 +13,38 @@ def world():
     return make_world()
 
 
-@pytest.fixture(scope="module")
-def built(world):
+def build(world, roster=None):
     seasons = metrics.season_frame(world.seasons.astype(str))
-    table = tiers.season_tiers(metrics.unit_season(world.entries, world.roster, seasons), tiers.TierConfig())
+    roster = world.roster if roster is None else roster
+    table = tiers.season_tiers(metrics.unit_season(world.entries, roster, seasons), tiers.TierConfig())
     summary = metrics.season_summary(world.entries, seasons)
     return table, summary
 
 
-def profile_at(built, moment, config=None):
+@pytest.fixture(scope="module")
+def built(world):
+    return build(world)
+
+
+@pytest.fixture(scope="module")
+def skilled(world):
+    """The same world, with a skill that adds Wind to the (Water) partner's own element."""
+    extra = world.roster["unit_id"].map({world.partner: "Wind"}).fillna("")
+    return build(world, world.roster.assign(extra_elements=extra))
+
+
+def standing_at(built, moment, config=None):
     table, summary = built
-    return tiers.element_profiles(table, summary, pd.Timestamp(moment), config or tiers.TierConfig()).set_index("unit_id")
+    return tiers.standings(table, summary, pd.Timestamp(moment), config or tiers.TierConfig())
+
+
+def overall_at(built, moment, config=None):
+    return standing_at(built, moment, config).overall.set_index("unit_id")
+
+
+def element_at(built, moment, unit_id, element, config=None):
+    rows = standing_at(built, moment, config).elements
+    return rows[(rows["unit_id"] == unit_id) & (rows["element"] == element)].iloc[0]
 
 
 def newest(built):
@@ -42,15 +64,14 @@ def test_config_file_round_trip(tmp_path):
     path.write_text(
         "population: {top_n: 20, servers: [KR], rank_weighting: uniform}\n"
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
-        "element: {half_life_days: 90, prior_strength: 1, overall: frequency, coverage_min_tier: A}\n"
-        "roles: {min_elements_observed: 2, viable_fraction: 0.4}\n",
+        "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
     assert config.top_n == 20 and config.servers == ("KR",) and config.rank_weighting == "uniform"
     assert config.tier_order == ["S", "A", "B"]
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
-    assert config.min_elements_observed == 2 and config.viable_fraction == 0.4
+    assert config.min_elements_observed == 2
 
 
 def test_repo_config_loads():
@@ -61,8 +82,16 @@ def test_repo_config_loads():
 def test_bad_parameters_are_rejected():
     with pytest.raises(ValueError):
         tiers.TierConfig(overall="median")
-    with pytest.raises(ValueError):
-        tiers.TierConfig(coverage_min_tier="Z")
+
+
+@pytest.mark.parametrize("name", ["작열", "fire", " Fire ", "FIRE"])
+def test_an_element_is_named_in_either_language(name):
+    assert parse_element(name) == "Fire"
+
+
+def test_an_unknown_element_lists_the_names():
+    with pytest.raises(LookupError, match="작열\\(Fire\\)"):
+        parse_element("불")
 
 
 def test_tier_labels_are_monotone_in_lift(built):
@@ -73,63 +102,82 @@ def test_tier_labels_are_monotone_in_lift(built):
     assert positions == sorted(positions)
 
 
-def test_a_dealer_is_a_specialist_in_its_own_element(world, built):
-    profiles = profile_at(built, newest(built))
+def test_a_dealer_is_top_of_its_element_and_weak_overall(world, built):
+    overall = overall_at(built, newest(built))
     for element, unit_id in world.element_dps.items():
-        row = profiles.loc[unit_id]
-        assert row["role"] == "specialist"
-        assert row["best_element"] == element
-        assert row["best_tier"] == "SS"
-        assert row["overall"] < 0.6  # worth little in four elements out of five
+        row = element_at(built, newest(built), unit_id, element)
+        assert row["source"] == "own"
+        assert row["element_tier"] == "SS" and row["element_rank"] == 1
+        assert overall.loc[unit_id, "overall"] < 0.6  # worth little in four elements out of five
 
 
-def test_a_partner_follows_the_element_of_the_deck_it_supports(world, built):
-    row = profile_at(built, newest(built)).loc[world.partner]
-    assert row["best_element"] == "Wind"  # its own element is Water
-    assert row["role"] == "specialist"
+def test_a_partner_earns_its_overall_in_the_element_it_supports(world, built):
+    """A Water support fielded only in Wind-weak seasons: low in Water, but not overall."""
+    row = element_at(built, newest(built), world.partner, "Water")
+    overall = overall_at(built, newest(built)).loc[world.partner]
+    assert row["element_lift"] < 0.5
+    assert overall["overall"] > row["element_lift"]
 
 
-def test_supports_that_go_anywhere_are_universal(world, built):
-    profiles = profile_at(built, newest(built))
+def test_supports_that_go_anywhere_are_strong_in_both(world, built):
+    overall = overall_at(built, newest(built))
+    own = world.roster.set_index("unit_id")["element"]
     for unit_id in world.universal:
-        row = profiles.loc[unit_id]
-        assert row["role"] == "universal"
-        assert row["coverage"] == 5
-        assert row["overall_tier"] in ("SS", "S")
+        assert element_at(built, newest(built), unit_id, own[unit_id])["element_tier"] in ("SS", "S")
+        assert overall.loc[unit_id, "overall_tier"] in ("SS", "S")
+
+
+def test_a_skill_element_puts_a_unit_in_both_element_tables(world, built, skilled):
+    standing = standing_at(skilled, newest(skilled))
+    mine = standing.elements[standing.elements["unit_id"] == world.partner].set_index("element")
+    assert mine["source"].to_dict() == {"Water": "own", "Wind": "skill"}
+    assert mine.loc["Wind", "element_tier"] in ("SS", "S") and mine.loc["Water", "element_lift"] < 0.5
+    wind = standing.elements[standing.elements["element"] == "Wind"]
+    assert {world.partner, world.element_dps["Wind"]} <= set(wind["unit_id"])
+    assert wind["element_rank"].max() == len(wind)  # ranked among the Wind units, itself included
+    # The overall never looked at the unit's own element, so a skill element leaves it alone.
+    plain = overall_at(built, newest(built))["overall"].sort_index()
+    pd.testing.assert_series_equal(standing.overall.set_index("unit_id")["overall"].sort_index(), plain)
+
+
+def test_a_skill_element_counts_as_the_units_own(world, skilled):
+    table, _ = skilled
+    partner = table[table["unit_id"] == world.partner]
+    assert partner["element_match"].equals(partner["weak_element"].isin(["Water", "Wind"]))
 
 
 def test_the_past_is_viewed_without_the_future(world, built):
-    """As of the newcomer's release week, it does not exist in the profiles yet."""
+    """As of the newcomer's release week, it does not exist in the standings yet."""
     table, summary = built
     before = summary.set_index("season").loc[world.newcomer_season - 1, "end_at"] + pd.Timedelta(days=1)
-    profiles = profile_at(built, before)
-    assert world.newcomer not in profiles.index
-    assert profiles["last_season"].max() == world.newcomer_season - 1
+    standing = standing_at(built, before)
+    assert world.newcomer not in set(standing.overall["unit_id"]) | set(standing.elements["unit_id"])
+    assert standing.overall["last_season"].max() == world.newcomer_season - 1
 
 
 def test_the_season_in_progress_never_counts(world, built):
-    profiles = profile_at(built, newest(built) + pd.Timedelta(days=30))
-    assert profiles["last_season"].max() == world.live_season - 1
+    overall = overall_at(built, newest(built) + pd.Timedelta(days=30))
+    assert overall["last_season"].max() == world.live_season - 1
 
 
-def test_an_unobserved_slot_borrows_the_unit_level_and_is_flagged(world, built):
-    """Seen in few elements: the rest borrow its level, and the overall is provisional."""
+def test_an_element_not_met_yet_has_no_tier_and_the_overall_is_provisional(world, built):
+    """Seen in one boss weakness, not its own: no element tier, and a provisional overall."""
     table, summary = built
     moment = summary.set_index("season").loc[world.newcomer_season, "end_at"] + pd.Timedelta(days=1)
-    row = profile_at(built, moment).loc[world.newcomer]
-    assert row["elements_observed"] == 1 and bool(row["provisional"])
-    assert row["role"] == "undetermined"
-    observed = [c for c in ("fire", "water", "wind", "iron", "electric") if row[f"n_{c}"] > 0]
-    assert len(observed) == 1
-    values = {row[f"lift_{c}"] for c in ("fire", "water", "wind", "iron", "electric")}
-    assert len({round(v, 9) for v in values}) == 1
+    standing = standing_at(built, moment)
+    overall = standing.overall.set_index("unit_id").loc[world.newcomer]
+    assert overall["elements_observed"] == 1 and bool(overall["provisional"])
+    electric = standing.elements[standing.elements["element"] == "Electric"]
+    row = electric[electric["unit_id"] == world.newcomer].iloc[0]
+    assert row["element_seasons"] == 0 and pd.isna(row["element_lift"]) and row["element_tier"] == ""
+    assert pd.isna(row["element_rank"]) and electric["unit_id"].iloc[-1] == world.newcomer  # listed last
 
 
 def test_recent_seasons_weigh_more(world, built):
     """With a short half-life the latest Fire season dominates; with none, all count alike."""
     fire = world.element_dps["Fire"]
-    short = profile_at(built, newest(built), tiers.TierConfig(half_life_days=1)).loc[fire, "lift_fire"]
-    flat = profile_at(built, newest(built), tiers.TierConfig(half_life_days=0)).loc[fire, "lift_fire"]
+    short = element_at(built, newest(built), fire, "Fire", tiers.TierConfig(half_life_days=1))["element_lift"]
+    flat = element_at(built, newest(built), fire, "Fire", tiers.TierConfig(half_life_days=0))["element_lift"]
     table, _ = built
     fire_seasons = table[(table["unit_id"] == fire) & (table["weak_element"] == "Fire") & (table["season"] < world.live_season)]
     latest = fire_seasons.sort_values("season")["lift"].iloc[-1]
@@ -139,34 +187,40 @@ def test_recent_seasons_weigh_more(world, built):
 
 def test_prior_strength_pulls_a_specialist_toward_its_average(world, built):
     fire = world.element_dps["Fire"]
-    plain = profile_at(built, newest(built)).loc[fire, "lift_fire"]
-    pulled = profile_at(built, newest(built), tiers.TierConfig(prior_strength=2)).loc[fire, "lift_fire"]
+    plain = element_at(built, newest(built), fire, "Fire")["element_lift"]
+    pulled = element_at(built, newest(built), fire, "Fire", tiers.TierConfig(prior_strength=2))["element_lift"]
     assert pulled < plain
 
 
 def test_overall_modes(world, built):
     fire = world.element_dps["Fire"]
-    mean = profile_at(built, newest(built), tiers.TierConfig(overall="mean")).loc[fire, "overall"]
-    best = profile_at(built, newest(built), tiers.TierConfig(overall="max")).loc[fire, "overall"]
-    freq = profile_at(built, newest(built), tiers.TierConfig(overall="frequency")).loc[fire, "overall"]
+    mean = overall_at(built, newest(built), tiers.TierConfig(overall="mean")).loc[fire, "overall"]
+    best = overall_at(built, newest(built), tiers.TierConfig(overall="max")).loc[fire, "overall"]
+    freq = overall_at(built, newest(built), tiers.TierConfig(overall="frequency")).loc[fire, "overall"]
     assert best > mean
     assert 0 < freq < best
 
 
-def test_role_thresholds_are_parameters(world, built):
-    strict = tiers.TierConfig(universal_min_share=1.0, viable_fraction=0.95)
-    roles = profile_at(built, newest(built), strict)["role"]
-    assert (roles == "hybrid").any()
-
-
-def test_history_carries_the_profile_as_of_each_season(world, built):
+def test_history_carries_where_each_unit_stood(world, built):
     table, summary = built
     history = tiers.tier_history(table, summary, tiers.TierConfig())
     assert len(history) == len(table)
     assert history["overall"].notna().all()
     assert not history.loc[history["season"] == world.live_season, "final"].any()
     dealer = history[history["unit_id"] == world.element_dps["Water"]].sort_values("season")
-    assert dealer["role"].iloc[-1] == "specialist"
+    own = (dealer["weak_element"] == "Water").to_numpy()
+    assert dealer.loc[own, "element_tier"].eq("SS").all()  # after each Water season
+    assert dealer.loc[~own, "element_tier"].isna().all()  # nothing to say in the others
+
+
+def test_history_gives_a_skill_element_its_seasons_too(world, skilled):
+    table, summary = skilled
+    history = tiers.tier_history(table, summary, tiers.TierConfig())
+    partner = history[(history["unit_id"] == world.partner) & history["final"]]
+    mine = partner["weak_element"].isin(["Water", "Wind"])
+    assert partner.loc[mine, "element_tier"].notna().all() and partner.loc[~mine, "element_tier"].isna().all()
+    wind = partner[partner["weak_element"] == "Wind"]
+    assert wind["element_tier"].isin(["SS", "S"]).all()
 
 
 def test_tier_changes_have_signed_steps(built):
@@ -176,3 +230,8 @@ def test_tier_changes_have_signed_steps(built):
     promoted = changes[changes["steps"] > 0]
     assert not promoted.empty
     assert (promoted["lift_to"] > promoted["lift_from"]).all()
+    # An element tier moves only in a season of that element.
+    weak = summary.set_index("season")["weak_element"]
+    moved = changes[changes["element_steps"] != 0]
+    assert (moved["element"] == moved["season_to"].map(weak)).all()
+    assert changes.loc[changes["element"] == "", "element_steps"].eq(0).all()

@@ -3,9 +3,10 @@
     nikke asof 2024-11-04            what was live then: Solo Raid season, unit pool, banners
     nikke asof 2주년                 the same, for the Nth launch anniversary
     nikke seasons                    every Solo Raid season with its real dates
-    nikke tier                       tiers now: last season, the live one, the next one, overall
+    nikke tier                       tiers now: last season, the live one, every unit's overall tier
     nikke tier 2주년                 the same, as the data stood then
-    nikke tier --unit 크라운         one unit's tier, season by season
+    nikke tier --element 작열        the units of one element, by their tier in it
+    nikke tier --unit 크라운         one unit's element and overall tier, and season by season
     nikke tier --exclude NA          any of these on another server sample (--server KR,JP)
     nikke raid                       the newest season: units by usage, with the deck split
     nikke raid 40 크라운             one unit in one season (--server, --exclude, --top narrow it)
@@ -79,9 +80,11 @@ def cmd_asof(args: argparse.Namespace) -> int:
 
 
 def cmd_tier(args: argparse.Namespace) -> int:
-    from .tierlist import TierBook, render, render_unit
+    from .tierlist import TierBook, render, render_element, render_unit
+    from .timeline import parse_element
 
     try:
+        element = parse_element(args.element) if args.element else None
         book = TierBook.load(servers=_servers(args))
     except (LookupError, RuntimeError) as exc:
         print(exc, file=sys.stderr)
@@ -99,6 +102,12 @@ def cmd_tier(args: argparse.Namespace) -> int:
             print(render_unit(history, book.config))
         return 0
     view = book.at(args.moment)
+    if element:
+        if args.json:
+            _emit(view.element_dict(element))
+        else:
+            print(render_element(view, element, show_all=args.all))
+        return 0
     if args.json:
         _emit(view.to_dict())
     else:
@@ -142,6 +151,7 @@ def cmd_check(args: argparse.Namespace) -> int:
         health.read()
         + health.ranking_issues(paths.processed_dir(), now)
         + health.icon_issues(paths.processed_dir())
+        + health.manual_issues(paths.processed_dir())
         + health.run_issues(paths.processed_dir(), now)
     )
     if args.json:
@@ -367,6 +377,7 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         health.read()
         + health.ranking_issues(paths.processed_dir(), now)
         + health.icon_issues(paths.processed_dir())
+        + health.manual_issues(paths.processed_dir())
         + health.run_issues(paths.processed_dir(), now, failures)
     )
     steps["health"] = [issue.__dict__ for issue in issues if issue.level != "info"]
@@ -468,9 +479,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--units", action="store_true", help="list every unit in the pool")
     p.set_defaults(func=cmd_asof)
 
-    p = sub.add_parser("tier", help="tiers at a moment (default: now), or one unit's history")
+    p = sub.add_parser("tier", help="tiers at a moment (default: now), one element's tiers, or one unit's history")
     p.add_argument("moment", nargs="?", default=None, help="2024-11-04, 2024-11-04T15:00 or 2주년 (default: now)")
-    p.add_argument("--unit", default=None, help="one unit's season-by-season record, by Korean or English name")
+    which = p.add_mutually_exclusive_group()
+    which.add_argument("--element", default=None, metavar="NAME",
+                       help="the units of one element by their tier in it: 작열, 수냉, 풍압, 철갑, 전격 "
+                            "(or Fire, Water, Wind, Iron, Electric)")
+    which.add_argument("--unit", default=None,
+                       help="one unit's two tiers and season-by-season record, by Korean or English name")
     p.add_argument("--all", action="store_true", help="also list C and D")
     _server_options(p)
     p.add_argument("--json", action="store_true", help="machine-readable output")

@@ -34,6 +34,16 @@ ELEMENT_KO = {"Fire": "작열", "Water": "수냉", "Wind": "풍압", "Iron": "�
 RARITY_ORDER = ("SSR", "SR", "R")
 
 
+def parse_element(text: Any) -> str:
+    """An element from its Korean or English name, in any case: ``작열``, ``fire`` -> ``Fire``."""
+    key = str(text).strip().lower()
+    for element, korean in ELEMENT_KO.items():
+        if key in (element.lower(), korean):
+            return element
+    options = ", ".join(f"{korean}({element})" for element, korean in ELEMENT_KO.items())
+    raise LookupError(f"'{text}' 은(는) 속성 이름이 아니다: {options}")
+
+
 @dataclass(frozen=True)
 class Unit:
     unit_id: str

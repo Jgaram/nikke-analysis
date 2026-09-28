@@ -59,7 +59,7 @@ log = logging.getLogger(__name__)
 ELEMENTS = ("Fire", "Water", "Wind", "Iron", "Electric")
 RANKER_KEYS = ["season", "server", "player"]
 DECK_KEYS = RANKER_KEYS + ["deck"]
-UNIT_INFO = ["name_ko", "name_en", "element", "burst", "unit_class", "rarity", "release_date"]
+UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "rarity", "release_date"]
 
 
 # --------------------------------------------------------------------------
@@ -219,6 +219,8 @@ def unit_season(
       ``usage_rank``      1 = fielded by the most players; ties share a rank
       ``in_deck_1..5``    players who had it in their deck ranked 1..5 by damage
       ``avg_deck``        the average of that deck rank
+      ``element_match``   the boss was weak to the unit's element, or to one its
+                          skill adds (the roster's ``extra_elements``)
     """
     if entries.empty:
         return pd.DataFrame()
@@ -282,6 +284,9 @@ def unit_season(
     meta = seasons.set_index("season")[["boss_en", "boss_ko", "weak_element", "start_at", "end_at"]]
     table = table.join(meta, on="season")
     table["element_match"] = table["element"].fillna("") == table["weak_element"].fillna("?")
+    if "extra_elements" in table.columns:
+        skill = [weak in str(extra).split(";") for weak, extra in zip(table["weak_element"], table["extra_elements"])]
+        table["element_match"] |= pd.Series(skill, index=table.index) & table["weak_element"].notna()
     return table.sort_values(["season", "lift", "unit_id"], ascending=[True, False, True]).reset_index(drop=True)
 
 

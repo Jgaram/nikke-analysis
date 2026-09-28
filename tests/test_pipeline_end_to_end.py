@@ -12,7 +12,7 @@ from nikke_analysis import raidstats
 from nikke_analysis.analyze import pipeline, tiers
 from nikke_analysis.raidstats import QueryError, RaidBook
 from nikke_analysis.servers import ServerError, ServerFilter
-from nikke_analysis.tierlist import TierBook, render, render_unit
+from nikke_analysis.tierlist import TierBook, render, render_element, render_unit
 from nikke_analysis.viz import charts
 from tests.synthetic import make_world, write_processed
 
@@ -56,7 +56,8 @@ def test_charts_render_in_both_themes(processed, tmp_path):
     directory, world, _ = processed
     result = charts.render_all(data_dir=directory, out_dir=tmp_path)
     assert not result["skipped_no_data"], result
-    assert len(result["written"]) == 14
+    assert len(result["written"]) == 24  # twelve charts, one per element among them, in two themes
+    assert {f"element-tiers-{e.lower()}" for e in tiers.ELEMENTS} <= set(result["written"])
     for name in result["written"]:
         path = tmp_path / f"{name}.png"
         assert path.is_file() and path.stat().st_size > 5_000, name
@@ -64,14 +65,46 @@ def test_charts_render_in_both_themes(processed, tmp_path):
     assert "tier-trajectories" in chosen["written"]
 
 
-def test_tiers_now_show_last_live_and_next_season(processed):
+def test_tiers_now_show_the_last_season_and_the_overall_table(processed):
     directory, world, _ = processed
     book = TierBook.load(directory)
     view = book.at("2026-01-01")
     assert view.finished.number == world.live_season - 1
-    assert view.upcoming is not None and view.upcoming.kind == "expected"
     text = render(view)
-    assert "직전 시즌" in text and "종합 티어" in text
+    assert "직전 시즌" in text and "종합 티어" in text and "다음" not in text
+    # every unit once in the overall table, and once per element it counts as in the element tables
+    assert view.overall["unit_id"].is_unique and set(view.elements["unit_id"]) == set(view.overall["unit_id"])
+
+
+def test_an_element_table_lists_its_units_by_their_tier_in_it(processed):
+    directory, world, _ = processed
+    view = TierBook.load(directory).at("2026-01-01")
+    fire = view.element("Fire")
+    assert set(fire["unit_id"]) == set(world.roster.loc[world.roster["element"] == "Fire", "unit_id"]) & set(view.overall["unit_id"])
+    assert fire["element_lift"].is_monotonic_decreasing
+    text = render_element(view, "Fire")
+    assert "작열 속성 티어" in text and "Fire Dealer(ko)" in text and "Water Dealer(ko)" not in text
+    assert view.element_dict("Fire")["units"][0]["unit_id"] == fire["unit_id"].iloc[0]
+
+
+def test_a_skill_element_lists_a_unit_under_both(tmp_path):
+    """The roster's extra_elements (data/manual/extra_elements.csv) put a unit in two element tables."""
+    world = make_world(seasons=8, rankers=10, fillers=20, seed=11)
+    world.roster["extra_elements"] = world.roster["unit_id"].map({world.partner: "Wind"}).fillna("")
+    write_processed(world, tmp_path)
+    pipeline.run(data_dir=tmp_path)
+    elements = pd.read_csv(tmp_path / "metrics_element_tiers.csv", dtype={"unit_id": str})
+    overall = pd.read_csv(tmp_path / "metrics_overall_tiers.csv", dtype={"unit_id": str})
+    assert overall["unit_id"].is_unique and len(elements) == len(overall) + 1
+    partner = elements[elements["unit_id"] == world.partner].set_index("element")["source"].to_dict()
+    assert partner == {"Water": "own", "Wind": "skill"}
+
+    book = TierBook.load(tmp_path)
+    view = book.at("2026-01-01")
+    assert "Wind Partner(ko)" in render_element(view, "Wind") and "본래 수냉" in render_element(view, "Wind")
+    assert world.partner in set(view.element("Water")["unit_id"])  # never fielded there: listed, not printed
+    text = render_unit(book.unit("Wind Partner"), book.config)
+    assert "스킬로 풍압 우월 코드" in text and "풍압 (스킬)" in text and "▶풍압" in text and "▶수냉" in text
 
 
 def test_tiers_of_the_past_use_only_what_was_known(processed):
@@ -80,7 +113,7 @@ def test_tiers_of_the_past_use_only_what_was_known(processed):
     view = book.at("2025-04-01")  # season 3 over, season 4 not started yet
     assert view.final_seasons == [1, 2, 3]
     assert world.newcomer not in set(view.overall["unit_id"])
-    assert view.upcoming is not None and view.upcoming.number == 4
+    assert view.current is None  # between seasons
 
 
 def test_the_season_in_progress_is_provisional(processed):
@@ -90,7 +123,8 @@ def test_the_season_in_progress_is_provisional(processed):
     view = book.at((live_start + pd.Timedelta(days=4)).isoformat())
     assert view.current is not None and view.current.kind == "live"
     early = book.at((live_start + pd.Timedelta(hours=2)).isoformat())
-    assert early.current is not None and early.current.kind == "expected"
+    assert early.current is not None and early.current.kind == "pending" and early.current.rows.empty
+    assert "아직 수집분 없음" in render(early)
 
 
 def test_unit_history_reads_every_season_since_release(processed):
@@ -99,7 +133,11 @@ def test_unit_history_reads_every_season_since_release(processed):
     history = book.unit("Newcomer")
     assert history.unit_id == world.newcomer
     assert list(history.rows["season"]) == list(range(world.newcomer_season, world.live_season + 1))
-    assert "종합" in render_unit(history, book.config)
+    text = render_unit(history, book.config)
+    assert "종합 티어" in text and "속성 티어" in text
+    # Electric, but no Electric-weak season has ended since its release: no element tier yet
+    assert [(e["element"], e["element_lift"]) for e in history.profile["elements"]] == [("Electric", None)]
+    assert "미관측" in text
     with pytest.raises(LookupError):
         book.unit("Filler")  # matches many
 
@@ -301,5 +339,5 @@ def test_charts_of_another_sample_say_so_and_leave_no_trace(processed, tmp_path)
     tables = pipeline.run_servers(ServerFilter.of(exclude="s2"), data_dir=directory, cache_dir=tmp_path / "t")
     result = charts.render_all(data_dir=Path(tables["out_dir"]), out_dir=tmp_path / "c",
                                themes=("light",), sample="all servers but S2")
-    assert len(result["written"]) == 7
-    assert charts._sample_caption == ""
+    assert len(result["written"]) == 12
+    assert charts._sample_caption == "" and charts._extras == {}

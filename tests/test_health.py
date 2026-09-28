@@ -112,6 +112,26 @@ def test_refresh_ends_red_when_a_source_could_not_be_collected(tmp_path, monkeyp
     assert cli.main(["refresh"]) == 0
 
 
+def test_a_skill_element_for_a_unit_the_roster_lacks_is_a_warning(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    write(processed / "roster.csv", [roster_row("016", "라피 : 레드 후드", "patchnote")])
+    manual = tmp_path / "manual"
+    manual.mkdir()
+    (manual / "extra_elements.csv").write_text("unit_id,element,reason\n016,Iron,스킬\n061,Water,오타\n",
+                                               encoding="utf-8")
+    issues = health.manual_issues(processed, manual)
+    assert [(i.level, i.code, i.subject) for i in issues] == [("warning", "extra_element_unknown_unit", "061")]
+    assert not health.has_errors(issues)
+
+
+def test_the_committed_skill_elements_name_units_of_the_committed_roster():
+    from nikke_analysis import paths
+    from nikke_analysis.build.roster import load_extra_elements
+
+    assert load_extra_elements() and health.manual_issues(paths.processed_dir()) == []
+
+
 def test_ranking_findings_name_unmatched_names_and_missing_seasons(tmp_path):
     processed = tmp_path / "processed"
     processed.mkdir()

@@ -27,6 +27,25 @@ unit_id,release_date,reason
 `unit_id` is the three-digit id from `data/processed/roster.csv` (`016`), and
 `c016_00` or `16` are accepted too.
 
+## `extra_elements.csv`
+
+The element(s) whose weakness advantage (우월 코드) a unit's skill gives it on
+top of its own. No source carries this - the game files and nikke-utils list one
+element per unit - so it lives here, and the roster build writes it to the
+`extra_elements` column of `roster.csv`. Such a unit counts as each of its
+elements: it gets an element tier in each and is listed in each element's tier
+table (`nikke tier --element`).
+
+```csv
+unit_id,element,reason
+016,Iron,"라피 : 레드 후드 (작열): 스킬로 철갑 우월 코드도 가진다"
+```
+
+One row per unit and added element; the element in English (`Iron`) or Korean
+(`철갑`). Unlike the other two files these rows are not temporary: they last as
+long as the skill does. A `unit_id` the roster does not have is reported by
+`nikke check` (`extra_element_unknown_unit`).
+
 ## `unit_aliases.csv`
 
 Extra spellings for the name index, for a name the notices use that the game

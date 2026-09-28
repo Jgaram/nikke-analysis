@@ -29,6 +29,13 @@ released this week has a row, a name and its attributes on the next refresh.
 ``extra_elements`` is the one attribute no source has: the element(s) whose
 weakness advantage (우월 코드) a unit's skill adds to its own, kept by hand in
 data/manual/extra_elements.csv. Such a unit is tiered in each of its elements.
+
+A unit whose treasure (애장품) came out has a second row, the unit it became: its
+base's id and names with a heart (``221♥``, ``라플라스♥``), its base's attributes,
+and the treasure's day as its release (``treasure``, from build/treasures.py).
+The base row gets ``treasure_at``, when it left the pool for that unit, and the
+new row ``treasure_of``, the base it came from. The alias table leaves the new
+rows out: notices and rankings only ever name the base.
 """
 
 from __future__ import annotations
@@ -44,7 +51,16 @@ import yaml
 
 from ..paths import manual_dir, processed_dir
 from ..timeline import parse_element
-from ..util.names import NameIndex, build_name_index, normalize_name, normalize_unit_id, variant_suffix
+from ..util.names import (
+    TREASURE_MARK,
+    NameIndex,
+    build_name_index,
+    normalize_name,
+    normalize_unit_id,
+    treasure_base,
+    treasure_id,
+    variant_suffix,
+)
 from ..util.snapshot import SnapshotRun, latest_run
 from .jsobj import extract_array_literal
 
@@ -80,6 +96,7 @@ CONFIDENCE_BY_SOURCE = {
     "launch": "medium",
     "datafile": "low",
     "datafile_floored": "low",
+    "treasure": "high",
     "": "none",
 }
 
@@ -110,6 +127,8 @@ class RosterRow:
     release_at: str = ""
     release_date_source: str = ""
     release_date_confidence: str = "none"
+    treasure_at: str = ""  # when its treasure came out and it became ``treasure_id(unit_id)``
+    treasure_of: str = ""  # on a treasure row: the base unit it came from
     in_gamefiles: int = 0
     in_nikkeutils: int = 0
     in_enikk: int = 0
@@ -270,6 +289,7 @@ def merge_roster(
     release_times: dict[str, str] | None = None,
     enikk: Iterable[dict[str, Any]] | None = None,
     launch_covered: bool = False,
+    treasures: dict[str, dict[str, str]] | None = None,
 ) -> list[RosterRow]:
     """Full outer join on ``unit_id``, then resolve one release date per unit.
 
@@ -280,6 +300,9 @@ def merge_roster(
     ``launch_covered`` says the notice history reaches back past the global
     launch, which is what makes "never introduced by any notice" evidence of
     having shipped with the game rather than of a gap in the history.
+
+    ``treasures`` (base unit id -> its ``treasures.csv`` row) adds the unit each
+    of those became; see :func:`treasure_row`.
     """
     overrides = overrides or {}
     extra_elements = extra_elements or {}
@@ -339,7 +362,33 @@ def merge_roster(
             unit.release_date_source = ""
         unit.release_date_confidence = CONFIDENCE_BY_SOURCE.get(unit.release_date_source, "none")
 
+    for unit_id, treasure in (treasures or {}).items():
+        base = merged.get(unit_id)
+        if base is None or not treasure.get("treasure_at"):
+            log.warning("treasure for unit %s, which the roster does not have", unit_id)
+            continue
+        base.treasure_at = treasure["treasure_at"]
+        row = treasure_row(base, treasure)
+        merged[row.unit_id] = row
+
     return [merged[key] for key in sorted(merged)]
+
+
+def treasure_row(base: RosterRow, treasure: dict[str, str]) -> RosterRow:
+    """The unit ``base`` became when its treasure came out: the base's
+    attributes under the marked id and names, released with the treasure."""
+    row = RosterRow(unit_id=treasure_id(base.unit_id))
+    for name in ("name_en", "name_ko", "name_ja"):
+        value = getattr(base, name)
+        setattr(row, name, f"{value}{TREASURE_MARK}" if value else "")
+    for attribute in (*ATTRIBUTES, "extra_elements", "is_variant", "base_name_en"):
+        setattr(row, attribute, getattr(base, attribute))
+    row.release_at = treasure["treasure_at"]
+    row.release_date = treasure.get("treasure_date") or treasure["treasure_at"][:10]
+    row.release_date_source = "treasure"
+    row.release_date_confidence = CONFIDENCE_BY_SOURCE["treasure"]
+    row.treasure_of = base.unit_id
+    return row
 
 
 def _name_tail(name: str, base: str) -> str | None:
@@ -359,7 +408,7 @@ def build_alias_rows(roster: Iterable[RosterRow]) -> list[dict[str, str]]:
     a later version of the character: the notice calls ``레이 (가칭)``
     "아야나미 레이 (가칭)").
     """
-    units = list(roster)
+    units = [unit for unit in roster if not treasure_base(unit.unit_id)]
     rows: list[dict[str, str]] = []
     for unit in units:
         for language in ("en", "ko", "ja"):
@@ -463,6 +512,7 @@ def build(
     release_times: dict[str, str] | None = None,
     enikk: list[dict[str, Any]] | None = None,
     launch_covered: bool = False,
+    treasures: dict[str, dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     """Build roster.csv and unit_aliases.csv from the newest snapshots."""
     gamefiles_run = gamefiles_run or latest_run("roster_gamefiles")
@@ -481,6 +531,7 @@ def build(
         release_times=release_times,
         enikk=enikk,
         launch_covered=launch_covered,
+        treasures=treasures,
     )
 
     target_dir = out_dir or processed_dir()
@@ -502,14 +553,15 @@ def build(
         writer.writerows(alias_rows)
 
     summary = {
-        "units": len(roster),
+        "units": sum(1 for u in roster if not u.treasure_of),
+        "treasure_units": sum(1 for u in roster if u.treasure_of),
         "from_gamefiles": sum(u.in_gamefiles for u in roster),
         "from_nikkeutils": sum(u.in_nikkeutils for u in roster),
         "from_enikk": sum(u.in_enikk for u in roster),
-        "variants": sum(u.is_variant for u in roster),
+        "variants": sum(u.is_variant for u in roster if not u.treasure_of),
         "release_date_source": {
             source: sum(1 for u in roster if u.release_date_source == source)
-            for source in ("manual", "patchnote", "launch", "datafile", "datafile_floored", "")
+            for source in ("manual", "patchnote", "launch", "datafile", "datafile_floored", "treasure", "")
         },
         "release_date_confidence": {
             level: sum(1 for u in roster if u.release_date_confidence == level)
@@ -520,5 +572,5 @@ def build(
         "alias_csv": str(alias_path),
         "alias_rows": len(alias_rows),
     }
-    log.info("roster built: %s units -> %s", len(roster), roster_path)
+    log.info("roster built: %s units -> %s", summary["units"], roster_path)
     return summary

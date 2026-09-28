@@ -1,6 +1,6 @@
 """The timeline tables, built in the order they depend on each other.
 
-    roster (names)  ->  notices  ->  releases  ->  roster (dates)  ->  Solo Raid  ->  issues
+    roster (names)  ->  notices  ->  releases, treasures  ->  roster (dates)  ->  Solo Raid  ->  issues
 
 The roster is built twice on purpose. Finding a unit in a notice needs the
 alias table the roster build writes, and the roster's release dates come from
@@ -19,7 +19,7 @@ from typing import Any
 
 from .. import health
 from ..paths import processed_dir
-from . import enikk_meta, notices, releases, roster, soloraid
+from . import enikk_meta, notices, releases, roster, soloraid, treasures
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +41,11 @@ def availability(rows: list[dict[str, str]]) -> dict[str, str]:
     return out
 
 
+def replacement(rows: list[dict[str, str]]) -> dict[str, str]:
+    """``{unit_id: ISO instant}`` at which a unit left the pool: its treasure came out."""
+    return {row["unit_id"]: row["treasure_at"] for row in rows if row.get("treasure_at")}
+
+
 def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
     directory = out_dir or processed_dir()
     steps: dict[str, Any] = {}
@@ -57,7 +62,9 @@ def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
     if index is None:
         raise RuntimeError("the roster build wrote no alias table")
     known_since = {row["unit_id"]: row["datafile_added"] for row in _roster_rows(directory) if row["datafile_added"]}
+    matcher = releases.UnitMatcher(index, known_since)
     steps["releases"] = releases.build(notice_list, index, known_since=known_since, out_dir=directory)
+    steps["treasures"] = treasures.build(notice_list, matcher, out_dir=directory)
 
     # "Never introduced by a notice" only means "shipped with the game" when the
     # notices reach back past the launch.
@@ -69,13 +76,16 @@ def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
         patch_releases=releases.load_unit_releases(release_path),
         release_times=releases.load_release_times(release_path),
         launch_covered=launch_covered,
+        treasures=treasures.load_treasures(directory / treasures.TREASURES_CSV),
         out_dir=directory,
     )
 
+    units = _roster_rows(directory)
     steps["soloraid"] = soloraid.build(
         notice_list,
         enikk_meta.load_seasons(),
-        releases=availability(_roster_rows(directory)),
+        releases=availability(units),
+        replaced=replacement(units),
         out_dir=directory,
     )
 

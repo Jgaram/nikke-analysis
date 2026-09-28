@@ -5,6 +5,8 @@
     nikke tier 2주년             the same, as the data stood at the anniversary
     nikke tier --element 작열    the units of one element, by their tier in it
     nikke tier --unit 크라운     one unit: its two tiers, and season by season
+    nikke tier --unit 라플라스♥  the unit 라플라스 became with its treasure (also
+                                 "라플라스 애장품")
     nikke tier --exclude NA      the same on another server sample (--server KR,JP
                                  keeps only those); works with the ones above
 
@@ -12,6 +14,10 @@ Every unit has two tiers: its **element tier** (how it does when the boss is
 weak to its own element) and its **overall tier** (over the whole rotation);
 see ``analyze.tiers``. The overall table compares every unit, the element
 table the units of one element. The numbers are lift, shown as 기여도.
+
+A unit whose treasure (애장품) came out is another unit from then on, marked with
+a heart (``라플라스♥``): the tables of a later moment list it instead of the base,
+whose record ends with the last season before the treasure.
 
 Reads the metric tables (``metrics_unit_season.csv``, ``metrics_seasons.csv``)
 and the timeline, so it works offline from committed data. A view of the past
@@ -49,7 +55,7 @@ from .analyze.metrics import ELEMENTS
 from .paths import processed_dir
 from .servers import ServerFilter, describe, ordered
 from .timeline import ELEMENT_KO, Season, Timeline, resolve_moment
-from .util.names import NameIndex, normalize_name, normalize_unit_id
+from .util.names import TREASURE_MARK, NameIndex, mark_treasure, normalize_name, normalize_unit_id, treasure_id
 from .util.text import pad, rjust
 
 OVERALL_KO = {"mean": "보스 약점 다섯 가지 성적의 평균", "frequency": "보스 약점 다섯 가지 성적을 최근 자주 나온 약점일수록 크게 친 평균",
@@ -57,6 +63,7 @@ OVERALL_KO = {"mean": "보스 약점 다섯 가지 성적의 평균", "frequency
 LIFT_NOTE = ["  숫자 = 기여도. 랭커의 대미지를 덱에 든 니케끼리 나눠 가진 몫이다. 한 사람이 쓰는",
              "  25명(5덱 × 5명)이 똑같이 나누면 모두 1.0 — 1.5 = 그 1.5배, 0 = 아무도 안 씀"]
 CLASS_KO = {"Attacker": "화력형", "Supporter": "지원형", "Defender": "방어형"}
+TREASURE_NOTE = f"{TREASURE_MARK} = 애장품을 받은 니케. 애장품이 나온 뒤 시즌부터 원래 니케와 따로 센다"
 
 
 def _utc(value: Any) -> pd.Timestamp:
@@ -72,7 +79,7 @@ def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
 def _read(path: Path, **kwargs: Any) -> pd.DataFrame:
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
-    return pd.read_csv(path, dtype={"unit_id": str}, **kwargs)
+    return pd.read_csv(path, dtype={"unit_id": str, "treasure_of": str}, **kwargs)
 
 
 def _name(row: Any) -> str:
@@ -84,20 +91,26 @@ def _name(row: Any) -> str:
 def find_unit(query: str, units: pd.DataFrame, index: NameIndex | None = None) -> str:
     """A unit id from an id (``16``, ``016``, ``c016``), any name the alias table
     knows, or a Korean or English name - exact first, then a unique partial match.
+    A treasure unit answers to its name with the heart or with a word for it
+    (``라플라스♥``, ``라플라스 애장품``, ``221♥``), and to its base's name where
+    the base is not in ``units``.
 
     Only units in ``units`` (a table with ``unit_id``, ``name_ko``, ``name_en``)
     can be answered. A name two units share raises, listing both.
     """
     table = units.drop_duplicates("unit_id")
     present = set(table["unit_id"].astype(str))
-    text = query.strip()
-    if re.fullmatch(r"[cC]?\d{1,4}", text) and normalize_unit_id(text) in present:
-        return normalize_unit_id(text)
+    text = mark_treasure(query)
+    number = re.fullmatch(rf"[cC]?(\d{{1,4}})({re.escape(TREASURE_MARK)}?)", text)
+    if number and normalize_unit_id(number.group(1)) + number.group(2) in present:
+        return normalize_unit_id(number.group(1)) + number.group(2)
     names = {str(r["unit_id"]): _name(r) for _, r in table.iterrows()}
     if index is not None:
         hit = index.resolve(text)
         if hit in present:
             return str(hit)
+        if hit is not None and treasure_id(hit) in present:  # only the unit it became is there
+            return treasure_id(hit)
         shared = sorted(index.candidates(text) & present)
         if len(shared) > 1:
             options = ", ".join(f"{names[u]} ({u})" for u in shared)
@@ -230,6 +243,9 @@ class UnitHistory:
     sample: Sample | None = None
     elements: tuple[str, ...] = ()  # the elements the unit counts as: its own, then any its skill adds
     live_seasons: list[int] = field(default_factory=list)  # in progress, counted as far as collected
+    base: str = ""  # a unit with its treasure: the name of the unit it came from
+    successor: str = ""  # a unit whose treasure had come out by the moment: the name of the unit it became
+    treasure_at: datetime | None = None  # when that treasure came out (the successor's, or this unit's own)
 
 
 class TierBook:
@@ -285,6 +301,12 @@ class TierBook:
         servers = ordered(n for value in names.dropna().astype(str) for n in value.split(";") if n)
         return Sample(servers, self.config.server_filter, self.config.top_n)
 
+    @property
+    def replaced(self) -> pd.Series:
+        """When each unit whose treasure came out left the pool (unit id -> UTC instant)."""
+        until = {u.unit_id: u.available_until for u in self.timeline.units if u.available_until is not None}
+        return pd.Series(pd.to_datetime(list(until.values()), utc=True), index=list(until), dtype="datetime64[ns, UTC]")
+
     # ------------------------------------------------------------------
 
     def _season_rows(self, number: int) -> pd.DataFrame:
@@ -292,11 +314,13 @@ class TierBook:
         rows["name"] = [_name(r) for _, r in rows.iterrows()]
         return rows.sort_values(["lift", "unit_id"], ascending=[False, True])
 
-    def _standings(self, instant: pd.Timestamp) -> tiering.Standings:
-        """Where every unit stands at ``instant``, with its names. In ``overall``,
-        ``element`` is the unit's own; in ``elements``, the element of the row, and
-        ``own_element`` the unit's own."""
-        standing = tiering.standings(self.history, self.seasons, instant, self.config)
+    def _standings(self, instant: pd.Timestamp, replaced: pd.Series | None = None) -> tiering.Standings:
+        """Where every unit in the pool at ``instant`` stands, with its names. In
+        ``overall``, ``element`` is the unit's own; in ``elements``, the element of
+        the row, and ``own_element`` the unit's own. ``replaced`` defaults to every
+        unit whose treasure came out (they leave once it has)."""
+        replaced = self.replaced if replaced is None else replaced
+        standing = tiering.standings(self.history, self.seasons, instant, self.config, replaced=replaced)
         if standing.overall.empty:
             return standing
         info = self.history.drop_duplicates("unit_id").set_index("unit_id")
@@ -348,17 +372,31 @@ class TierBook:
         """One unit's record. ``profile`` is where it stands at ``moment``: its
         overall tier, with ``units`` (how many its rank is among), under
         ``elements`` its tier in each element it counts as, with ``element_units``,
-        and under ``slots`` the five values its overall is made of."""
+        and under ``slots`` the five values its overall is made of. A unit whose
+        treasure had come out by ``moment`` has become another unit
+        (``successor``); its profile is where it stood after its last season."""
         unit_id = self.find_unit(query)
         moment = resolve_moment(moment) if moment is not None else datetime.now(tz=_kst())
         rows = self.history[self.history["unit_id"] == unit_id].sort_values("season")
-        columns = ["unit_id", "name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "release_date"]
+        columns = ["unit_id", "name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "release_date",
+                   "treasure_of"]
         info = _records(rows.iloc[[-1]].reindex(columns=columns))[0]
         extra = info.get("extra_elements")
         elements = tuple(e for e in [info.get("element")] + (extra.split(";") if isinstance(extra, str) else [])
                          if isinstance(e, str) and e)
         instant = _utc(moment)
-        standing = self._standings(instant)
+        names = {u.unit_id: u for u in self.timeline.units}
+        base = names.get(str(info.get("treasure_of") or ""))
+        replaced = self.replaced
+        until = replaced.get(unit_id)
+        successor = None
+        if until is not None and until <= instant:
+            # Where it stood after its last season, among the units that played that season.
+            successor = next((u for u in self.timeline.units if u.treasure_of == unit_id), None)
+            last = self.seasons[self.seasons["season"] == int(rows["season"].iloc[-1])].iloc[0]
+            instant = min(instant, last["end_at"] if bool(last["final"]) else last["collected_until"])
+            replaced = replaced[replaced <= last["start_at"]]
+        standing = self._standings(instant, replaced)
         profile = None
         match = standing.overall[standing.overall["unit_id"] == unit_id] if not standing.overall.empty else None
         if match is not None and not match.empty:
@@ -374,7 +412,11 @@ class TierBook:
             profile["slots"] = _records(slots[tiering.SLOT_COLUMNS].drop(columns="unit_id"))
         _, live, _ = self._counted(instant)
         live = [s for s in live if s in set(rows["season"].astype(int))]  # the live seasons it was out for
-        return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live)
+        treasure_at = (successor.available_from if successor else
+                       names[unit_id].available_from if base is not None and unit_id in names else None)
+        return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live,
+                           base=base.name if base else "", successor=successor.name if successor else "",
+                           treasure_at=treasure_at)
 
 
 def _kst():
@@ -456,6 +498,11 @@ FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성�
              "자기 속성 칸은 0")
 
 
+def _has_treasure(rows: pd.DataFrame) -> bool:
+    """Whether a table lists a unit with its treasure (its id carries the mark)."""
+    return not rows.empty and rows["unit_id"].astype(str).str.endswith(TREASURE_MARK).any()
+
+
 def _element_marks(elements: pd.DataFrame) -> dict[str, str]:
     """Each unit's element tiers in one phrase, its own element first: ``작열 SS``,
     ``작열 SS · 철갑 SS``; ``?`` for an element it has yet to meet a season of."""
@@ -491,6 +538,8 @@ def render(view: TierView, *, show_all: bool = False) -> str:
         out += _tier_lines(view.overall, "overall", "overall_tier", config, show_all=show_all, mark=mark)
         out.append(f"  {_provisional_note(config)} · ? = 그 속성 약점 시즌을 아직 못 겪음")
         out.append(f"  {FILL_NOTE}")
+        if _has_treasure(view.overall):
+            out.append(f"  {TREASURE_NOTE}")
         out.append("  속성별 비교: nikke tier --element 작열 (" + "·".join(ELEMENT_KO[e] for e in ELEMENTS[1:]) + ")"
                    " · 한 니케 자세히: nikke tier --unit 이름")
     return "\n".join(out)
@@ -523,6 +572,8 @@ def render_element(view: TierView, element: str, *, show_all: bool = False) -> s
     if (rows["source"] == "skill").any():
         notes.append(f"본래 X = 스킬로 {name} 우월 코드도 가진 X 속성 니케")
     out.append("  " + " · ".join(notes))
+    if _has_treasure(rows):
+        out.append(f"  {TREASURE_NOTE}")
     return "\n".join(out)
 
 
@@ -580,6 +631,10 @@ def _unit_tiers(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
     if not profile:
         return [f"{history.moment:%Y-%m-%d} 기준{live}  아직 시즌 기록 없음"]
     lines = [f"{history.moment:%Y-%m-%d} 기준{live}"]
+    if history.successor:
+        last = int(history.rows["season"].iloc[-1])
+        lines = [f"애장품이 나오기 전 마지막 시즌 {last} 기준 · 그 뒤로는 {history.successor}: "
+                 f"nikke tier --unit {history.successor}"]
     for i, standing in enumerate(profile["elements"]):
         element = _element(standing["element"])
         label = element + (" (스킬)" if standing["source"] == "skill" else "")
@@ -603,10 +658,16 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
     own = info.get("element", "")
     extra = [e for e in history.elements if e != own]
     skill = f" · 스킬로 {'·'.join(_element(e) for e in extra)} 우월 코드" if extra else ""
+    if history.base:
+        dates = f"애장품 {info.get('release_date', '')} ({history.base}의 애장품, 그 전 기록: nikke tier --unit {history.base})"
+    else:
+        dates = f"출시 {info.get('release_date', '')}"
+        if history.successor and history.treasure_at is not None:
+            dates += f" · 애장품 {history.treasure_at:%Y-%m-%d} → {history.successor}"
     out = [
         f"{name} ({info.get('name_en', '')}) · {_element(own)} "
         f"{CLASS_KO.get(info.get('unit_class', ''), info.get('unit_class', ''))}{skill} · "
-        f"버스트 {info.get('burst', '')} · 출시 {info.get('release_date', '')}"
+        f"버스트 {info.get('burst', '')} · {dates}"
     ]
     if history.sample is not None and history.sample.chosen:
         out.append(f"표본: {history.sample}")

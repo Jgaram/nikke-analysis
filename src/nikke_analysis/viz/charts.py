@@ -50,8 +50,9 @@ from ..analyze.metrics import ELEMENTS, season_order
 from ..analyze.tiers import load_tier_config
 from ..paths import processed_dir, reports_dir
 from ..timeline import ELEMENT_KO
+from ..util.names import TREASURE_MARK
 from . import theme as th
-from .icons import Icons, line, place
+from .icons import Icons, heart, line, place
 
 log = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ def _read(name: str, directory: Path) -> pd.DataFrame:
     path = directory / name
     if not path.is_file() or path.stat().st_size == 0:
         return pd.DataFrame()
-    frame = pd.read_csv(path, dtype={"unit_id": str})
+    frame = pd.read_csv(path, dtype={"unit_id": str, "treasure_of": str})
     for column in SEASON_COLUMNS:
         if column in frame.columns:
             frame[column] = pd.to_numeric(frame[column], errors="coerce").astype("Int64")
@@ -253,8 +254,11 @@ def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons,
     height_pt = ax.get_window_extent().height * 72.0 / fig.dpi
     ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.45, -48.0 / height_pt), ncols=len(handles),
               frameon=False, handlelength=1.2, columnspacing=1.2)
+    note = note if isinstance(note, list) else [note] if note else []
+    if table["unit_id"].astype(str).str.endswith(TREASURE_MARK).any():
+        note = note + (["·"] if note else []) + [heart(64), "= 애장품을 받은 니케 (애장품이 나온 뒤로는 따로 센다)"]
     if note:
-        place(ax, line(note if isinstance(note, list) else [note], height_pt=11, fontsize=8.5, color=theme.ink_muted),
+        place(ax, line(note, height_pt=11, fontsize=8.5, color=theme.ink_muted),
               (0, 0), xycoords="axes fraction", offset=(0, -76), align=(0, 1))
     return fig, ax
 
@@ -616,11 +620,13 @@ def default_units(overall: pd.DataFrame, top_n: int) -> list[str]:
 
 
 def resolve_units(queries: list[str], history: pd.DataFrame) -> list[str]:
-    from ..util.names import normalize_name
+    """Unit ids for names or ids; ``라플라스 애장품`` asks for ``라플라스♥``."""
+    from ..util.names import mark_treasure, normalize_name
 
     units = history.drop_duplicates("unit_id")
     found = []
     for query in queries:
+        query = mark_treasure(query)
         key = normalize_name(query)
         match = units[(units["name_ko"].map(normalize_name) == key) | (units["name_en"].map(normalize_name) == key)
                       | (units["unit_id"] == query)]

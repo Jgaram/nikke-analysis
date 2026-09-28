@@ -49,6 +49,11 @@ tier is shown but marked.
 The season in progress counts too (``include_live``) once a snapshot of it was
 taken by the moment of the view: its rankings so far stand in for the season,
 and they change with every snapshot until it is over.
+
+A unit whose treasure (애장품) had come out by the moment of a view is not in it:
+it has become another unit (``221♥``), which starts its own record with the
+first season after the treasure. Its own record stays for views of the time
+before.
 """
 
 from __future__ import annotations
@@ -244,6 +249,8 @@ def standings(
     seasons: pd.DataFrame,
     moment: pd.Timestamp,
     config: TierConfig | None = None,
+    *,
+    replaced: pd.Series | None = None,
 ) -> Standings:
     """Every unit's element tiers and overall tier, as known at ``moment``.
 
@@ -252,12 +259,17 @@ def standings(
     view of the past never uses what happened after it. ``table`` is the season
     x unit table (with each unit's own ``element``) and ``seasons`` the season
     summary (it says which seasons are final and when each was collected).
+    ``replaced`` (unit id -> instant) leaves out the units that had left the
+    pool by ``moment`` - their treasure had come out - so the others rank
+    without them.
     """
     config = config or TierConfig()
     moment = _instant(moment)
     counted = counted_seasons(seasons, moment, config)
     rows = table.loc[table["season"].isin(counted["season"]), ["season", "unit_id", "lift"]].merge(counted, on="season")
     rows = rows[rows["weak_element"].isin(ELEMENTS)]
+    if replaced is not None and len(replaced):
+        rows = rows[~rows["unit_id"].isin(replaced.index[replaced <= moment])]
     if rows.empty:
         return Standings(pd.DataFrame(columns=OVERALL_COLUMNS), pd.DataFrame(columns=ELEMENT_COLUMNS))
 

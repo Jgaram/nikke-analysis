@@ -26,6 +26,7 @@ from typing import Any, Iterable
 
 from .paths import processed_dir
 from .util.kdate import KST, parse_moment
+from .util.names import TREASURE_MARK, treasure_id
 from .util.text import pad as _pad
 
 LAUNCH = date(2022, 11, 4)
@@ -58,10 +59,15 @@ class Unit:
     available_from: datetime
     release_source: str
     confidence: str
+    available_until: datetime | None = None  # its treasure came out: it left the pool for the unit it became
+    treasure_of: str = ""  # a unit with its treasure (``221♥``): the base it came from
 
     @property
     def name(self) -> str:
         return self.name_ko or self.name_en or self.unit_id
+
+    def available_at(self, moment: datetime) -> bool:
+        return self.available_from <= moment and (self.available_until is None or moment < self.available_until)
 
 
 @dataclass(frozen=True)
@@ -147,8 +153,14 @@ class Snapshot:
         return (self.moment.date() - LAUNCH).days
 
     def released_within(self, days: int) -> list[Unit]:
+        """New units in the last ``days`` - not the ones a treasure made (``treasured_within``)."""
         cutoff = self.moment - timedelta(days=days)
-        return [u for u in self.units if u.available_from > cutoff]
+        return [u for u in self.units if u.available_from > cutoff and not u.treasure_of]
+
+    def treasured_within(self, days: int) -> list[Unit]:
+        """Units whose treasure came out in the last ``days``, as the units they became."""
+        cutoff = self.moment - timedelta(days=days)
+        return [u for u in self.units if u.available_from > cutoff and u.treasure_of]
 
     def count_by(self, attribute: str) -> dict[str, int]:
         counts: dict[str, int] = {}
@@ -188,6 +200,7 @@ class Snapshot:
                 "class": u.unit_class,
                 "available_from": u.available_from.isoformat(),
                 "release_source": u.release_source,
+                "treasure_of": u.treasure_of or None,
             }
 
         return {
@@ -203,6 +216,7 @@ class Snapshot:
                 "by_rarity": self.count_by("rarity"),
                 "by_element": self.count_by("element"),
                 "released_last_30_days": [unit(u) for u in self.released_within(30)],
+                "treasures_last_30_days": [unit(u) for u in self.treasured_within(30)],
                 "announced_not_released": [unit(u) for u in self.announced_units],
                 "all": [unit(u) for u in self.units],
             },
@@ -256,6 +270,8 @@ def _unit_from(row: dict[str, str]) -> Unit | None:
         available_from=available,
         release_source=row.get("release_date_source", ""),
         confidence=row.get("release_date_confidence", ""),
+        available_until=_instant(row.get("treasure_at", "")),
+        treasure_of=row.get("treasure_of", ""),
     )
 
 
@@ -327,6 +343,11 @@ class Timeline:
             for row in _rows(directory / "unit_releases.csv")
             if row.get("notice_published_at")
         }
+        announced.update(
+            (treasure_id(row["unit_id"]), datetime.fromisoformat(row["notice_published_at"]))
+            for row in _rows(directory / "treasures.csv")
+            if row.get("unit_id") and row.get("notice_published_at")
+        )
         return cls(units, seasons, banners, _rows(directory / "notices.csv"), announced)
 
     # ----------------------------------------------------------------------
@@ -338,8 +359,10 @@ class Timeline:
         return self._seasons.get(number)
 
     def units_at(self, moment: datetime | str) -> list[Unit]:
+        """The pool at ``moment``: released by then, and - for a unit whose treasure
+        came out - the unit it became in its place."""
         moment = resolve_moment(moment)
-        return [u for u in self.units if u.available_from <= moment]
+        return [u for u in self.units if u.available_at(moment)]
 
     def at(self, moment: datetime | str) -> Snapshot:
         moment = resolve_moment(moment)
@@ -480,10 +503,15 @@ def render(view: Snapshot, *, list_units: bool = False) -> str:
     recent = view.released_within(30)
     if recent:
         out.append("  최근 30일 출시  " + " · ".join(f"{u.name} ({u.available_from:%m/%d})" for u in recent))
+    treasured = view.treasured_within(30)
+    if treasured:
+        out.append("  최근 30일 애장품  " + " · ".join(f"{u.name} ({u.available_from:%m/%d})" for u in treasured))
     if view.announced_units:
         out.append(
             "  공지됐지만 미출시  " + " · ".join(f"{u.name} ({u.available_from:%m/%d %H:%M})" for u in view.announced_units)
         )
+    if any(u.treasure_of for u in view.units + view.announced_units):
+        out.append(f"  {TREASURE_MARK} = 애장품을 받은 니케. 애장품이 나온 뒤로는 원래 니케 대신 다른 니케로 센다")
     low = [u for u in view.units if u.confidence == "low"]
     if low:
         out.append(f"  출시일 신뢰도 낮음 {len(low)}명: " + " · ".join(u.name for u in low))

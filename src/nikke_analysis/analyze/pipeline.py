@@ -241,7 +241,8 @@ def run(
     newest = summary_table["collected_until"].max()
     info = roster.drop_duplicates("unit_id").set_index("unit_id")
     info = info[[c for c in metrics.UNIT_INFO if c in info.columns]]
-    overall, elements = comparison_tables(tiers.standings(table, summary_table, newest, config), info)
+    standing = tiers.standings(table, summary_table, newest, config, replaced=metrics.replacement_instants(roster))
+    overall, elements = comparison_tables(standing, info)
     changes = tiers.tier_changes(history, config)
     shift = metrics.meta_shift(table)
     pairs = metrics.synergy(entries, min_decks=config.synergy_min_decks)

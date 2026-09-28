@@ -27,7 +27,9 @@ rank 50), the discount used in ranking evaluation.
 **Availability.** A unit that did not exist during a season did not "fail to be
 picked". Season rows cover exactly the units released by the season's start
 (plus any unit the data shows was fielded), and every such unit gets a row, zero
-if nobody used it - so an unused unit reads as zero, not as missing.
+if nobody used it - so an unused unit reads as zero, not as missing. A unit whose
+treasure (애장품) had come out by then is not among them: it counts as the unit it
+became (``221♥``, released with the treasure), and the rankings are that unit's.
 
 **Decks that were not fought.** A deck that dealt no damage was not fought with
 (rare: six decks in seasons 1-41), so it counts for nothing: not as a deck, and
@@ -59,7 +61,8 @@ log = logging.getLogger(__name__)
 ELEMENTS = ("Fire", "Water", "Wind", "Iron", "Electric")
 RANKER_KEYS = ["season", "server", "player"]
 DECK_KEYS = RANKER_KEYS + ["deck"]
-UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "rarity", "release_date"]
+UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "rarity", "release_date",
+             "treasure_of"]
 
 
 # --------------------------------------------------------------------------
@@ -108,6 +111,15 @@ def release_instants(roster: pd.DataFrame) -> pd.Series:
     day = pd.to_datetime(roster.get("release_date", empty), errors="coerce")
     day = day.dt.tz_localize("Asia/Seoul").dt.tz_convert("UTC")
     return pd.Series(at.fillna(day).to_numpy(), index=roster["unit_id"].to_numpy())
+
+
+def replacement_instants(roster: pd.DataFrame) -> pd.Series:
+    """When each unit left the pool, UTC: its treasure came out, and from then on
+    it is the unit it became. Only units that left have an entry."""
+    if "treasure_at" not in roster.columns:
+        return pd.Series(dtype="datetime64[ns, UTC]")
+    at = pd.to_datetime(roster["treasure_at"], errors="coerce", utc=True)
+    return pd.Series(at.to_numpy(), index=roster["unit_id"].to_numpy()).dropna()
 
 
 def select_population(
@@ -262,11 +274,13 @@ def unit_season(
 
     # Every unit available that season gets a row, zero when nobody fielded it.
     released = release_instants(roster)
+    replaced = replacement_instants(roster)
     starts = seasons.set_index("season")["start_at"]
     frames = [per]
     for season in season_order(per["season"]):
         start = starts.get(season)
         available = set(released.index[released.le(start).fillna(False)]) if start is not None and not pd.isna(start) else set()
+        available -= set(replaced.index[replaced.le(start)]) if available else set()
         missing = sorted(available - set(per.loc[per["season"] == season, "unit_id"]))
         if missing:
             frames.append(pd.DataFrame({"season": season, "unit_id": missing, "rankers": 0, "presence": 0.0,

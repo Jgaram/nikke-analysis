@@ -85,6 +85,9 @@ def data_issues(directory: Path, problems: Iterable[str] = ()) -> list[Issue]:
 
     for row in _rows(directory / "release_unresolved.csv"):
         issues.append(Issue("warning", "unresolved_name", row["name"], row["notice_title"]))
+    for row in _rows(directory / "treasures.csv"):
+        if not row.get("unit_id"):
+            issues.append(Issue("warning", "unresolved_treasure_name", row["name"], row["notice_title"]))
 
     for row in _rows(directory / "roster.csv"):
         name = row.get("name_ko") or row.get("name_en") or row["unit_id"]

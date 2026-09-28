@@ -24,6 +24,10 @@ context, in order: only a unit already released when the season started; then th
 burst stage the rest of the deck is missing (a deck needs I, II and III to burst);
 then the element the boss is weak to. Anything still undecided is reported, not
 guessed: a mis-joined name would corrupt every usage number it touches.
+
+A unit whose treasure (애장품) had come out by the season's start is the unit it
+became (``221♥``; see build/treasures.py) - the site keeps the base's name, and
+from then on the rankings are the new unit's record.
 """
 
 from __future__ import annotations
@@ -33,13 +37,14 @@ import json
 import logging
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
 from ..config import RankingMapping
 from ..paths import processed_dir
 from ..util.jsonpath import resolve_one, resolve_path
-from ..util.names import NameIndex, normalize_name
+from ..util.names import NameIndex, normalize_name, treasure_id
 from ..util.snapshot import SnapshotRun, list_runs
 from .roster import load_alias_index
 
@@ -122,10 +127,13 @@ class UnitResolver:
         index: NameIndex,
         units: dict[str, UnitFacts] | None = None,
         seasons: dict[int, dict[str, str]] | None = None,
+        treasures: dict[str, str] | None = None,
     ):
         self.index = index
         self.units = units or {}
         self.seasons = seasons or {}
+        # base unit id -> when its treasure came out
+        self.treasures = {unit: datetime.fromisoformat(at) for unit, at in (treasures or {}).items() if at}
 
     @classmethod
     def load(cls, directory: Path | None = None) -> "UnitResolver":
@@ -133,16 +141,19 @@ class UnitResolver:
         index = load_alias_index(directory / "unit_aliases.csv")
         if index is None:
             raise RuntimeError("no alias table; run `nikke build timeline` first")
+        roster = _csv_rows(directory / "roster.csv")
         units = {
             row["unit_id"]: UnitFacts(row.get("release_date", ""), row.get("element", ""), row.get("burst", ""))
-            for row in _csv_rows(directory / "roster.csv")
+            for row in roster
         }
         seasons = {
-            int(row["season"]): {"start": (row.get("start_at") or "")[:10], "weak": row.get("weak_element", "")}
+            int(row["season"]): {"start": (row.get("start_at") or "")[:10], "start_at": row.get("start_at") or "",
+                                 "weak": row.get("weak_element", "")}
             for row in _csv_rows(directory / "soloraid_seasons.csv")
             if row.get("season", "").isdigit()
         }
-        return cls(index, units, seasons)
+        treasures = {row["unit_id"]: row["treasure_at"] for row in roster if row.get("treasure_at")}
+        return cls(index, units, seasons, treasures)
 
     def direct(self, name: str) -> str | None:
         return self.index.resolve(name)
@@ -177,6 +188,15 @@ class UnitResolver:
     def burst(self, unit_id: str) -> str:
         facts = self.units.get(unit_id)
         return facts.burst if facts else ""
+
+    def in_season(self, unit_id: str, season: int) -> str:
+        """The unit ``unit_id`` was in ``season``: the one it became (``221♥``) when
+        its treasure had come out by the season's start, else itself."""
+        treasure = self.treasures.get(unit_id)
+        start = self.seasons.get(season, {}).get("start_at", "")
+        if treasure is None or not start:
+            return unit_id
+        return treasure_id(unit_id) if treasure <= datetime.fromisoformat(start) else unit_id
 
 
 def _csv_rows(path: Path) -> list[dict[str, str]]:
@@ -238,6 +258,7 @@ def parse_document(
             for slot, (name, unit_id) in enumerate(zip(names, ids)):
                 if unit_id is None:
                     continue
+                unit_id = resolver.in_season(unit_id, season)
                 cp = _slot_value(cps, slot)
                 core = _slot_value(cores, slot)
                 entries.append(

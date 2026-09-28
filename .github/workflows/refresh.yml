@@ -43,8 +43,10 @@ jobs:
 
       - name: Install
         run: |
-          # A Hangul font so the charts can name units in Korean.
-          sudo apt-get install -y --no-install-recommends fonts-nanum > /dev/null
+          # A Hangul font so the charts can name units in Korean. Optional:
+          # without it the charts use English names, so it must not fail the run.
+          { sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends fonts-nanum; } \
+            || echo "::warning::fonts-nanum not installed; charts will use English unit names"
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 

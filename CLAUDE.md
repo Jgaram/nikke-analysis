@@ -9,7 +9,7 @@
   합쳐 테스트를 돌리고, 통과하면 main 에 올린 뒤 세션 브랜치를 지운다. push 한 뒤
   원격에서 브랜치가 사라지는 건 정상이다. 다시 push 하면 다시 생기고 또 합쳐진다.
 - 그러니 push 가 곧 main 반영이다. push 전에 테스트를 돌린다
-  (`pip install -e ".[dev]"` 한 번, 그다음 `pytest -q`).
+  (`pip install -e ".[dev]"` 한 번, 그다음 `python -m pytest -q`).
 - 합치기가 실패하면(충돌이나 테스트 실패) main 은 그대로이고 세션 브랜치가 남는다.
   push 한 뒤 Actions 의 `merge-to-main` 실행 결과를 확인하고, 실패했으면
   `git fetch origin main && git merge origin/main` 으로 최신 main 을 받아 고친 뒤

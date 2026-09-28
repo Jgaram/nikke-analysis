@@ -1,25 +1,66 @@
-# Tier scoring parameters.
+# Tier parameters.
 #
-# These are the only judgement calls in the pipeline, which is why they live in
-# a config file: changing them is a reviewable diff, and re-running reproduces
-# the whole history under the new definition.
+# Every judgement call in the analysis lives here, so changing one is a
+# reviewable diff and re-running (`nikke analyze`) reproduces the whole history
+# under the new definition. docs/metrics.md explains each number.
+#
+# The unit of measurement is LIFT: a unit's share of the top players' damage,
+# scaled so that 1.0 is what an average member of a player's 25 units carries.
+# (Each player's damage is split over their five decks by each deck's share,
+# and a deck's share equally over its five members.)
 
-weights:
-  # Rank-weighted pick rate: how much of the top-50's evidence a unit carries.
-  usage: 0.55
-  # Score delta: do teams with this unit out-score teams without it?
-  performance: 0.30
-  # Breadth: across how many of the season's bosses does it show up?
-  breadth: 0.15
+# Which leaderboard entries count.
+population:
+  top_n: 50              # ranks 1..N of every server (enikk serves the top 50)
+  servers: []            # [] = every server; e.g. [KR] for the Korean server alone
+  rank_weighting: dcg    # dcg: 1/log2(rank+1), so rank 1 = 1.00, rank 50 = 0.18; or uniform
 
-# Minimum teams in a season before its tiers are considered meaningful.
-min_teams: 10
-
-# Composite score (0-100) required to reach each tier. Ordered best to worst.
+# Season tier: fixed cuts on lift, best to worst. Fixed rather than percentile,
+# so the number of SS units can differ from season to season - that is information.
+# With these values a season has on average ~4 SS (0-9: a dominant main deck
+# gives five), ~8 S-or-better and ~22 B-or-better units.
 cuts:
-  - { label: SS, min_score: 92 }
-  - { label: S,  min_score: 80 }
-  - { label: A,  min_score: 62 }
-  - { label: B,  min_score: 42 }
-  - { label: C,  min_score: 20 }
-  - { label: D,  min_score: 0 }
+  - { label: SS, min_lift: 1.4 }
+  - { label: S,  min_lift: 1.1 }
+  - { label: A,  min_lift: 0.8 }
+  - { label: B,  min_lift: 0.5 }
+  - { label: C,  min_lift: 0.2 }
+  - { label: D,  min_lift: 0.0 }
+
+# Element tiers: what a unit is worth when the boss is weak to each element.
+element:
+  # A season this many days before the moment of the view counts half as much.
+  # Days rather than seasons, because each element comes around only every few
+  # months and the gaps are uneven.
+  half_life_days: 180
+  # Pseudo-seasons that pull an element slot toward the unit's all-element
+  # level. 0 = trust the observed seasons as they are. A positive value damps
+  # a slot seen only once, but it also drags a specialist's best element toward
+  # its (low) all-element average, so it is off by default. A slot with no
+  # season at all since release always takes the all-element level, flagged.
+  prior_strength: 0
+  # One number from the five slots:
+  #   mean      - equal weight per element; does not depend on which elements
+  #               came up lately (default)
+  #   frequency - weight each element by how often (recently) bosses were weak to it
+  #   max       - the best element only
+  overall: mean
+  # An element counts toward a unit's coverage at this tier or better.
+  coverage_min_tier: A
+
+# Roles: in how many elements a unit is viable. An element is viable when the
+# unit's slot there is at least `viable_fraction` of its best slot.
+#   universal  - viable in at least `universal_min_share` of its observed elements
+#   specialist - viable in at most `specialist_max_viable` element(s)
+#   hybrid     - in between (damage-dealing supports, partner units, two-element units)
+roles:
+  min_elements_observed: 3   # seen in fewer elements -> "undetermined", overall tier provisional
+  min_best_lift: 0.5         # never this good in any element -> "outside" the meta
+  viable_fraction: 0.5
+  universal_min_share: 0.8   # 4 of 5 observed elements
+  specialist_max_viable: 1
+
+# Numbers reported alongside the tiers, not part of them.
+diagnostics:
+  deck_effect_ridge: 20      # ridge penalty of the within-player deck regression
+  synergy_min_decks: 20      # a pair must share at least this many decks in a season

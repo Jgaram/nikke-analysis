@@ -3,13 +3,16 @@
     nikke asof 2024-11-04            what was live then: Solo Raid season, unit pool, banners
     nikke asof 2주년                 the same, for the Nth launch anniversary
     nikke seasons                    every Solo Raid season with its real dates
+    nikke tier                       tiers now: last season, the live one, the next one, overall
+    nikke tier 2주년                 the same, as the data stood then
+    nikke tier --unit 크라운         one unit's tier, season by season
     nikke check                      does the timeline need a human? (exit 1 if so)
 
     nikke collect roster             fetch the roster sources
     nikke collect notices            fetch new/edited official notices (site + Naver lounge)
     nikke collect enikk-meta         fetch Solo Raid season metadata and the unit table from enikk
     nikke probe enikk                reconnaissance on the ranking site's API
-    nikke collect enikk              fetch Solo Raid rankings (needs config)
+    nikke collect enikk              fetch Solo Raid rankings (new and changed seasons)
     nikke build timeline             snapshots -> roster, releases, banners, Solo Raid calendar
     nikke build roster               snapshots -> data/processed/roster.csv (names only)
     nikke build raids                snapshots -> raid_entries.csv
@@ -59,6 +62,29 @@ def cmd_asof(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_tier(args: argparse.Namespace) -> int:
+    from .tierlist import TierBook, render, render_unit
+
+    book = TierBook.load()
+    if args.unit:
+        try:
+            history = book.unit(args.unit, args.moment)
+        except LookupError as exc:
+            print(exc, file=sys.stderr)
+            return 1
+        if args.json:
+            _emit({"unit": history.info, "profile": history.profile, "seasons": history.rows.to_dict(orient="records")})
+        else:
+            print(render_unit(history, book.config))
+        return 0
+    view = book.at(args.moment)
+    if args.json:
+        _emit(view.to_dict())
+    else:
+        print(render(view, show_all=args.all))
+    return 0
+
+
 def cmd_check(args: argparse.Namespace) -> int:
     """Does the timeline need a human? Exit status 1 when it does."""
     from datetime import datetime
@@ -66,7 +92,12 @@ def cmd_check(args: argparse.Namespace) -> int:
     from . import health
     from .util.kdate import KST
 
-    issues = health.read() + health.run_issues(paths.processed_dir(), datetime.now(KST))
+    now = datetime.now(KST)
+    issues = (
+        health.read()
+        + health.ranking_issues(paths.processed_dir(), now)
+        + health.run_issues(paths.processed_dir(), now)
+    )
     if args.json:
         _emit([issue.__dict__ for issue in issues])
     else:
@@ -163,17 +194,7 @@ def cmd_collect_enikk(args: argparse.Namespace) -> int:
     from .config import load_enikk_config
 
     config = load_enikk_config(Path(args.config) if args.config else None)
-    seasons = args.seasons or config.seasons
-    if not seasons:
-        raise SystemExit("no seasons given; pass --seasons or set them in config/enikk.yaml")
-    snapshot = enikk.collect(
-        base_url=config.base_url,
-        endpoint_template=config.endpoint_template,
-        seasons=seasons,
-        bosses=config.bosses or ("",),
-        extra_params=config.extra_params,
-    )
-    _emit({"snapshot_dir": snapshot, "seasons": list(seasons)})
+    _emit(enikk.collect_rankings(config=config, seasons=args.seasons, full=args.full))
     return 0
 
 
@@ -251,23 +272,12 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         _attempt(steps, failures, "collect.notices.naver", lambda: notices.collect_naver())
         _attempt(steps, failures, "collect.enikk.seasons", lambda: enikk.collect_seasons())
         _attempt(steps, failures, "collect.enikk.characters", lambda: enikk.collect_characters())
-
-        config = load_enikk_config()
-        if config.ready and (args.seasons or config.seasons):
-            _attempt(
-                steps,
-                failures,
-                "collect.enikk.rankings",
-                lambda: enikk.collect(
-                    base_url=config.base_url,
-                    endpoint_template=config.endpoint_template,
-                    seasons=args.seasons or config.seasons,
-                    bosses=config.bosses or ("",),
-                    extra_params=config.extra_params,
-                ),
-            )
-        else:
-            steps["collect.enikk.rankings"] = {"skipped": "config/enikk.yaml is not configured yet"}
+        _attempt(
+            steps,
+            failures,
+            "collect.enikk.rankings",
+            lambda: enikk.collect_rankings(config=load_enikk_config(), seasons=args.seasons),
+        )
 
     steps["build.timeline"] = pipeline.build_timeline()
 
@@ -289,7 +299,12 @@ def cmd_refresh(args: argparse.Namespace) -> int:
 
         steps["viz"] = charts.render_all()
 
-    issues = health.read() + health.run_issues(paths.processed_dir(), datetime.now(KST), failures)
+    now = datetime.now(KST)
+    issues = (
+        health.read()
+        + health.ranking_issues(paths.processed_dir(), now)
+        + health.run_issues(paths.processed_dir(), now, failures)
+    )
     steps["health"] = [issue.__dict__ for issue in issues if issue.level != "info"]
     _emit(steps)
     print(health.render(issues), file=sys.stderr)
@@ -310,7 +325,8 @@ def cmd_analyze(args: argparse.Namespace) -> int:
 def cmd_viz(args: argparse.Namespace) -> int:
     from .viz import charts
 
-    _emit(charts.render_all(top_n=args.top))
+    units = [u.strip() for u in args.units.split(",") if u.strip()] if args.units else None
+    _emit(charts.render_all(top_n=args.top, units=units))
     return 0
 
 
@@ -356,6 +372,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--units", action="store_true", help="list every unit in the pool")
     p.set_defaults(func=cmd_asof)
 
+    p = sub.add_parser("tier", help="tiers at a moment (default: now), or one unit's history")
+    p.add_argument("moment", nargs="?", default=None, help="2024-11-04, 2024-11-04T15:00 or 2주년 (default: now)")
+    p.add_argument("--unit", default=None, help="one unit's season-by-season record, by Korean or English name")
+    p.add_argument("--all", action="store_true", help="also list C and D")
+    p.add_argument("--json", action="store_true", help="machine-readable output")
+    p.set_defaults(func=cmd_tier)
+
     p = sub.add_parser("check", help="does the timeline need a human? (exit 1 if so)")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_check)
@@ -382,9 +405,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--full", action="store_true", help="re-read every season")
     p.set_defaults(func=cmd_collect_enikk_meta)
 
-    p = collect.add_parser("enikk", help="Solo Raid rankings")
+    p = collect.add_parser("enikk", help="Solo Raid rankings (new and changed seasons)")
     p.add_argument("--config", default=None)
-    p.add_argument("--seasons", nargs="*", default=None)
+    p.add_argument("--seasons", nargs="*", type=int, default=None, help="re-read these seasons regardless")
+    p.add_argument("--full", action="store_true", help="re-read every season")
     p.set_defaults(func=cmd_collect_enikk)
 
     probe = sub.add_parser("probe", help="reconnaissance").add_subparsers(
@@ -404,7 +428,7 @@ def build_parser() -> argparse.ArgumentParser:
     p = build.add_parser("roster", help="roster and alias table only (no notice-based dates)")
     p.set_defaults(func=cmd_build_roster)
 
-    p = build.add_parser("raids")
+    p = build.add_parser("raids", help="ranking snapshots -> raid_entries.csv (one row per unit slot)")
     p.add_argument("--config", default=None)
     p.set_defaults(func=cmd_build_raids)
 
@@ -413,12 +437,13 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_analyze)
 
     p = sub.add_parser("viz", help="render charts")
-    p.add_argument("--top", type=int, default=20)
+    p.add_argument("--top", type=int, default=6, help="units in the trajectory chart (strongest overall)")
+    p.add_argument("--units", default=None, help="comma-separated unit names for the trajectory chart instead")
     p.set_defaults(func=cmd_viz)
 
     p = sub.add_parser("refresh", help="run the whole pipeline in dependency order")
     p.add_argument("--offline", action="store_true", help="skip every network step")
-    p.add_argument("--seasons", nargs="*", default=None)
+    p.add_argument("--seasons", nargs="*", type=int, default=None, help="re-read these seasons' rankings regardless")
     p.add_argument("--content", default="soloraid")
     p.set_defaults(func=cmd_refresh)
 

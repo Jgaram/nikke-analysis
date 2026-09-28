@@ -1,0 +1,676 @@
+{
+  "source": "enikk_soloraid",
+  "run_id": "20260928T013948Z",
+  "sealed_at": "2026-09-28T01:41:55+00:00",
+  "entry_count": 41,
+  "entries": [
+    {
+      "filename": "season-001.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "ee4cf31a7b5d1451eb8339eb2b1899902405f355a80d9f077f5f8ae743cebf55",
+      "bytes": 379218,
+      "fetched_at": "2026-09-28T01:39:49+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 1,
+        "lastupdated": "2023-05-17T19:59:59.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-002.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "a103c14f82bba46b2de95a509da4fbe6bf9033627007aaf45b47385047a14b7d",
+      "bytes": 372133,
+      "fetched_at": "2026-09-28T01:39:51+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 2,
+        "lastupdated": "2023-06-14T19:59:59.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-003.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "f62583736ca8ff6649ea1198462a29e8de5279083c16965d5ba545204b6e42ec",
+      "bytes": 382890,
+      "fetched_at": "2026-09-28T01:39:52+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 3,
+        "lastupdated": "2023-07-19T19:59:59.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-004.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "fbc02a88ed0b56fd327dd773599180008cc9e4a655c26bbafe6f14bce05f6149",
+      "bytes": 392417,
+      "fetched_at": "2026-09-28T01:39:54+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 4,
+        "lastupdated": "2023-08-16T19:59:59.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-005.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "7409bdbe2cf177ba88fa9298f1c867a9fe4af83fbaf8bebf45f73cf3fe376268",
+      "bytes": 201634,
+      "fetched_at": "2026-09-28T01:39:55+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 5,
+        "lastupdated": "2023-09-20T00:00:00.000Z",
+        "rankers": 200
+      }
+    },
+    {
+      "filename": "season-006.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "f4f91a5c81f2145f418dabb031c1f40a76fe84549cd3bed679babd99867a4f3f",
+      "bytes": 200537,
+      "fetched_at": "2026-09-28T01:39:57+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 6,
+        "lastupdated": "2023-10-18T00:00:00.000Z",
+        "rankers": 200
+      }
+    },
+    {
+      "filename": "season-007.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "ffb3b92d57491dc9041d7a65136b28474e089dddb5adf232164425f75184248b",
+      "bytes": 341639,
+      "fetched_at": "2026-09-28T01:39:58+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 7,
+        "lastupdated": "2023-11-15T00:00:00.000Z",
+        "rankers": 299
+      }
+    },
+    {
+      "filename": "season-008.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "3e6bbe092b71ca532aa16cf3022e7ce59b69d1a8159505db2e89a2ce7ab971d7",
+      "bytes": 348020,
+      "fetched_at": "2026-09-28T01:40:00+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 8,
+        "lastupdated": "2023-12-21T00:55:14.396Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-009.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "23bf32642dc44053ad8e1c893dd49b87698f5c4a4bb871089700262a3f557b4e",
+      "bytes": 356469,
+      "fetched_at": "2026-09-28T01:40:01+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 9,
+        "lastupdated": "2024-01-10T23:04:57.755Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-010.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "38708b5c9d77bb486d51a891cd11f76e5ac7334177dc904caef1d867fa203352",
+      "bytes": 411967,
+      "fetched_at": "2026-09-28T01:40:07+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 10,
+        "lastupdated": "2024-02-15T21:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-011.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "862a8d6232286dd02256a1976ad6e25b0a6a14f98d9eaa55e285046752affdda",
+      "bytes": 408345,
+      "fetched_at": "2026-09-28T01:40:10+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 11,
+        "lastupdated": "2024-03-14T21:00:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-012.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "986e84bf939d7c569d9bf1f9ba93c112d0bab1b576ded9eecb806964b102feba",
+      "bytes": 407545,
+      "fetched_at": "2026-09-28T01:40:14+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 12,
+        "lastupdated": "2024-04-10T23:01:00.000Z",
+        "rankers": 298
+      }
+    },
+    {
+      "filename": "season-013.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "c647bb5d3f6a872f510ebe0be4dca52cbc1ddc7b568fdecf720f4e2d08c4d227",
+      "bytes": 417577,
+      "fetched_at": "2026-09-28T01:40:17+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 13,
+        "lastupdated": "2024-05-08T21:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-014.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "710ce71678ed2bf46fff31841c282165629be7316f2ff98e02969a362356bce7",
+      "bytes": 423610,
+      "fetched_at": "2026-09-28T01:40:20+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 14,
+        "lastupdated": "2024-06-12T20:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-015.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "3efbbc3b0ffca54cdbd82ab7681b72f665b895cdebe3ede2839203f5cf73ab37",
+      "bytes": 427353,
+      "fetched_at": "2026-09-28T01:40:25+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 15,
+        "lastupdated": "2024-07-17T21:00:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-016.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "d62e822c8d705579b46daabfeb9581374745153f00ce44e9acdc1f06b388df78",
+      "bytes": 418394,
+      "fetched_at": "2026-09-28T01:40:28+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 16,
+        "lastupdated": "2024-08-08T22:00:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-017.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "bbee1d21ddc1ebc35457a25ed7e11dd2b5b92c7eef41a0a342de58bfbffab11f",
+      "bytes": 415108,
+      "fetched_at": "2026-09-28T01:40:31+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 17,
+        "lastupdated": "2024-09-11T22:00:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-018.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "d1714fcb37f3bafeb19d93c4f2800ed0aa6a6f8e11c0f8959b7a7db7395b56cd",
+      "bytes": 422947,
+      "fetched_at": "2026-09-28T01:40:33+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 18,
+        "lastupdated": "2024-10-09T21:02:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-019.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "89465e7c80e0929cbcb8ed0a60d5d96f8c4117cbe8201bab55d3a42d16b0f63e",
+      "bytes": 423407,
+      "fetched_at": "2026-09-28T01:40:35+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 19,
+        "lastupdated": "2024-11-16T22:00:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-020.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "858883d655c61b89037c112be0b04dff0fe9483ff1e0c706d82f984e9a528724",
+      "bytes": 427059,
+      "fetched_at": "2026-09-28T01:40:40+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 20,
+        "lastupdated": "2024-12-18T20:09:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-021.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "bc2a152a9a36a32f671115b62869a29b1513ecff53d6213b8135ed9bb2b01647",
+      "bytes": 415924,
+      "fetched_at": "2026-09-28T01:40:44+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 21,
+        "lastupdated": "2025-01-15T23:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-022.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "a75fbad91ba07d47bfe649e77975a1cc391ad5d65b9f11053f94c64f06f93038",
+      "bytes": 429003,
+      "fetched_at": "2026-09-28T01:40:48+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 22,
+        "lastupdated": "2025-02-12T21:03:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-023.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "fcb54934fc317508502a3e754221051ac14d5ac067a17a17d67fd5027a91c39a",
+      "bytes": 439860,
+      "fetched_at": "2026-09-28T01:40:54+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 23,
+        "lastupdated": "2025-03-12T21:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-024.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "0a47ecc1bcbc70fb229c59ec5bc321832b4a09ffe3a72e8cf26171827a2a5f16",
+      "bytes": 439203,
+      "fetched_at": "2026-09-28T01:40:59+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 24,
+        "lastupdated": "2025-04-09T23:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-025.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "708e0035f53238d5ef3e78f4ea4cfc0119e9e6ecc247ad752d24bdbc3563f09c",
+      "bytes": 431592,
+      "fetched_at": "2026-09-28T01:41:04+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 25,
+        "lastupdated": "2025-05-14T21:01:00.000Z",
+        "rankers": 298
+      }
+    },
+    {
+      "filename": "season-026.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "504d6d2dbecbaa6fe74d3c84b767c90bcf3b94ab28bfb191c2d8237348fb7554",
+      "bytes": 425146,
+      "fetched_at": "2026-09-28T01:41:08+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 26,
+        "lastupdated": "2025-07-10T00:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-027.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "4484e0801f61e50f0e5eb9be750010ea5e8ec710f300eab0af45790e5929da99",
+      "bytes": 443461,
+      "fetched_at": "2026-09-28T01:41:15+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 27,
+        "lastupdated": "2025-08-03T09:04:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-028.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "dc4ff96fa3c06043b732cd0879792abd13b9f42fdfc8ad21c385f3f214117f43",
+      "bytes": 436784,
+      "fetched_at": "2026-09-28T01:41:19+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 28,
+        "lastupdated": "2025-09-01T12:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-029.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "efa3ce66df8d941b570d909c29ff44533319c4dc48b84dc46c5856e66aee42e1",
+      "bytes": 434726,
+      "fetched_at": "2026-09-28T01:41:23+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 29,
+        "lastupdated": "2025-09-23T02:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-030.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "876232911f4e6720f6f42e4451ed577eeb31d098d7d3e90260bbf2dcd0702ea3",
+      "bytes": 423559,
+      "fetched_at": "2026-09-28T01:41:27+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 30,
+        "lastupdated": "2025-10-15T23:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-031.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "92437f2f424270a939e70818a2dd0837ac41b1d10d72f5b331970f139e2a328e",
+      "bytes": 442617,
+      "fetched_at": "2026-09-28T01:41:31+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 31,
+        "lastupdated": "2025-11-20T06:32:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-032.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "807193bb605d2da897adde57b71fb875a2870a4af19b8d51092cbdd3005f4407",
+      "bytes": 434975,
+      "fetched_at": "2026-09-28T01:41:37+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 32,
+        "lastupdated": "2025-12-18T00:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-033.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "49730a4915c36bfecb5c2dd4a58fa341e0508f12020f6b19544b369190e4bea5",
+      "bytes": 445824,
+      "fetched_at": "2026-09-28T01:41:38+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 33,
+        "lastupdated": "2026-01-14T21:00:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-034.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "5f957f8ee1d8a16493724cf36d113a11b4755ed00a084d4633275b16b695a13a",
+      "bytes": 427095,
+      "fetched_at": "2026-09-28T01:41:40+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 34,
+        "lastupdated": "2026-02-25T23:01:00.000Z",
+        "rankers": 299
+      }
+    },
+    {
+      "filename": "season-035.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "a84acb04b7e50f360d0cb1bb04eef36583be86a44456d1d82045074bfb2891ea",
+      "bytes": 437847,
+      "fetched_at": "2026-09-28T01:41:41+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 35,
+        "lastupdated": "2026-03-26T21:01:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-036.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "21135e380c601a994f225fbdfd114d28dfe4077d3ef71286df4c696f124a59ad",
+      "bytes": 433455,
+      "fetched_at": "2026-09-28T01:41:42+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 36,
+        "lastupdated": "2026-05-06T20:20:00.000Z",
+        "rankers": 298
+      }
+    },
+    {
+      "filename": "season-037.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "1acba87214428393e2e686b0675642b409630712bb011c7a56299fad6047f0e1",
+      "bytes": 449525,
+      "fetched_at": "2026-09-28T01:41:44+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 37,
+        "lastupdated": "2026-06-06T23:55:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-038.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "7952953223743c5508674594c89ec6be6ed99f4adecf9acd3ee5f411f4e9b879",
+      "bytes": 444171,
+      "fetched_at": "2026-09-28T01:41:45+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 38,
+        "lastupdated": "2026-07-11T16:11:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-039.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "4f6430859219a0e6986b6b4abbb7186241dd24acaefbc76e29af601db39a6f76",
+      "bytes": 433259,
+      "fetched_at": "2026-09-28T01:41:49+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 39,
+        "lastupdated": "2026-07-22T20:54:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-040.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "ca93c822af6fd6ba69dbc0774b49099cb3d45e647e359f14827fb96f484d1bcb",
+      "bytes": 444463,
+      "fetched_at": "2026-09-28T01:41:52+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 40,
+        "lastupdated": "2026-08-28T15:52:00.000Z",
+        "rankers": 300
+      }
+    },
+    {
+      "filename": "season-041.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "7770be7b3b4e1221620b94f209b6bc07e3ac13b09dd5e302afc2a4f8049eaa7f",
+      "bytes": 448362,
+      "fetched_at": "2026-09-28T01:41:55+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 41,
+        "lastupdated": "2026-09-28T00:45:00.000Z",
+        "rankers": 300
+      }
+    }
+  ],
+  "extra": {
+    "base_url": "https://enikk.app",
+    "query": "query SoloRaidRankings($raid: Float!) { SRRankings(raid: $raid) { rank playerid server damage cp collectionTime firstAppeared teams } }",
+    "listed": 42,
+    "fetched": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41
+    ],
+    "unchanged": [],
+    "no_rankings_yet": [
+      42
+    ],
+    "failed": {}
+  }
+}

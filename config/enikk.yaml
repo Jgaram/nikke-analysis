@@ -1,39 +1,37 @@
-# enikk Solo Raid collector configuration.
+# enikk Solo Raid rankings.
 #
-# STATUS: endpoint_template and mapping are intentionally blank. They are filled
-# in from the output of `nikke probe enikk`, which records the site's real
-# responses under data/raw/enikk_probe/. Running the probe once is the only
-# manual step in the whole pipeline; after that, collecting a new season is
-# `nikke collect enikk --seasons 42`.
+# enikk (https://enikk.app/soloraid) serves everything through one GraphQL
+# endpoint, POST /api/graphql. `nikke collect enikk` sends the query below once
+# per season and stores the response untouched under data/raw/enikk_soloraid/;
+# `nikke build raids` reads it back with the field map. If the site renames a
+# field, fix it here and re-run the build - every stored season re-parses.
 #
-# See docs/enikk-setup.md for the walkthrough.
+# See docs/enikk-setup.md.
 
 base_url: https://enikk.app
 
-# URL path (relative to base_url) for one season/boss of rankings.
-# {season} and {boss} are substituted. Example shapes to expect:
-#   /api/soloraid?season={season}&boss={boss}
-#   /_next/data/<buildId>/soloraid/ranker.json?season={season}
-endpoint_template: ""
+# Seconds between requests. enikk is run by one person; do not lower this.
+delay: 1.5
 
-# Seasons to collect by default. Solo Raid seasons are numbered; back-filling
-# needs whatever range the site still serves.
-seasons: []
+rankings:
+  # Top 50 of every server (GLOBAL, JP, KR, NA, SEA, TW-HK), each with five
+  # decks: the five units, the deck's damage, and per-unit combat power and
+  # core level. Passing `all: true` would add players outside the top 50 whom
+  # enikk happened to look up - not a defined population, so it is left off.
+  query: >-
+    query SoloRaidRankings($raid: Float!) { SRRankings(raid: $raid)
+    { rank playerid server damage cp collectionTime firstAppeared teams } }
 
-# Boss identifiers within a season. Leave empty if one response covers them all.
-bosses: []
-
-# Any fixed query parameters the endpoint needs (region, mode, limit...).
-extra_params: {}
-
-# Where each field lives inside one response. Dotted paths; "[]" means "iterate".
-mapping:
-  entries: ""      # list of ranking records, e.g. data.rankers[]
-  rank: ""         # e.g. rank
-  score: ""        # e.g. damage  (raid score / total damage)
-  player: ""       # e.g. nickname
-  team: ""         # list of units in the record, e.g. team[]
-  unit_name: ""    # name field inside a team element, e.g. name
-  unit_id: ""      # in-game unit id inside a team element, if the site exposes one
-  boss: ""         # boss identifier, if carried inside the record
-  season: ""       # season identifier, if carried inside the record
+  # Where each field sits in the response. Dotted paths; "[]" walks a list.
+  mapping:
+    entries: data.SRRankings[]   # one record per ranked player
+    rank: rank                   # 1-50 within the server
+    score: damage                # the player's total: the sum of the five decks
+    player: playerid
+    server: server
+    collected_at: collectionTime # when enikk last saw this record
+    decks: teams[]               # the five decks
+    deck_score: damage           # one deck's damage
+    deck_units: characters       # five unit names, in slot order
+    deck_unit_cp: cpc            # combat power per slot
+    deck_unit_cores: cores       # core level per slot

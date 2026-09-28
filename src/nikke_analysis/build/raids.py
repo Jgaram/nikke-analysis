@@ -1,18 +1,29 @@
-"""Turn ranking-site snapshots into one tidy table of team compositions.
+"""Turn ranking snapshots into one tidy table of deck compositions.
 
-Output (``raid_entries.csv``) is deliberately *long* - one row per unit slot,
-not one row per team:
+Output (``raid_entries.csv``) is deliberately *long* - one row per unit slot:
 
-    content, season, boss, rank, score, player, slot, unit_id, unit_name_raw
+    content, season, server, rank, player, score, deck, deck_score, slot,
+    unit_id, unit_name_raw, unit_cp, unit_cores, collected_at
 
-Every metric downstream is a group-by over this table, which keeps the maths
-honest: pick rate is a count of rows, synergy is a self-join, and a team never
-has to be re-parsed out of a packed string.
+A Solo Raid ranker fields five decks of five units, every unit at most once, and
+their score is the sum of the five decks' damage. Keeping the deck and its damage
+on every row is what lets the metrics see *which* deck a unit carried - the main
+deck or the fifth - which turns out to matter more than whether it was used.
 
-The parser is driven by ``config/enikk.yaml`` rather than hard-coded field names.
-Ranking sites restructure their JSON without warning, and the snapshots are
-irreplaceable (a rotated-out season is gone for good), so the recovery path has
-to be "edit a path in YAML and re-run", not "rewrite the parser".
+Every metric downstream is a group-by over this table: usage is a count of rows,
+synergy is a self-join on the deck, and nothing has to re-parse a packed string.
+
+The layout of the site's response comes from ``config/enikk.yaml``. Ranking sites
+restructure their JSON without warning and the snapshots may be irreplaceable, so
+the recovery path is "edit a path in YAML and re-run", not "rewrite the parser".
+
+Names are matched to unit ids through the roster's alias table. Two names are
+shared by two units each (``Rei``: 라이 and 레이, ``Sakura``: 사쿠라 and the 2025
+collaboration SR). The site does not say which, so a shared name is settled from
+context, in order: only a unit already released when the season started; then the
+burst stage the rest of the deck is missing (a deck needs I, II and III to burst);
+then the element the boss is weak to. Anything still undecided is reported, not
+guessed: a mis-joined name would corrupt every usage number it touches.
 """
 
 from __future__ import annotations
@@ -20,82 +31,52 @@ from __future__ import annotations
 import csv
 import json
 import logging
-from collections import Counter
-from dataclasses import dataclass, asdict
+from collections import Counter, defaultdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Iterable
 
-from ..config import FieldMapping
+from ..config import RankingMapping
 from ..paths import processed_dir
-from ..util.names import NameIndex
+from ..util.jsonpath import resolve_one, resolve_path
+from ..util.names import NameIndex, normalize_name
 from ..util.snapshot import SnapshotRun, list_runs
 from .roster import load_alias_index
 
 log = logging.getLogger(__name__)
 
+SOURCE = "enikk_soloraid"
 ENTRIES_CSV = "raid_entries.csv"
 UNRESOLVED_CSV = "raid_unresolved_names.csv"
+BURST_STAGES = ("I", "II", "III")
+
+__all__ = ["RaidEntry", "UnitResolver", "build", "parse_document", "resolve_one", "resolve_path"]
 
 
 @dataclass
 class RaidEntry:
     content: str
-    season: str
-    boss: str
+    season: int
+    server: str
     rank: int
-    score: float
     player: str
+    score: float
+    deck: int
+    deck_score: float
     slot: int
     unit_id: str
     unit_name_raw: str
+    unit_cp: float | None
+    unit_cores: int | None
+    collected_at: str
 
 
 # --------------------------------------------------------------------------
-# dotted-path access
+# value parsing
 # --------------------------------------------------------------------------
-
-def resolve_path(document: Any, path: str) -> list[Any]:
-    """Walk a dotted path, flattening any segment marked ``[]``.
-
-    ``"data.rankers[].team[].name"`` returns every unit name in the payload.
-    A missing key yields ``[]`` rather than raising: a partially-populated
-    response should cost us one field, not the whole season.
-    """
-    if not path:
-        return []
-    nodes: list[Any] = [document]
-    for segment in path.split("."):
-        iterate = segment.endswith("[]")
-        key = segment[:-2] if iterate else segment
-        next_nodes: list[Any] = []
-        for node in nodes:
-            value = node
-            if key:
-                if isinstance(node, dict):
-                    value = node.get(key)
-                elif isinstance(node, list) and key.isdigit():
-                    index = int(key)
-                    value = node[index] if index < len(node) else None
-                else:
-                    value = None
-            if value is None:
-                continue
-            if iterate:
-                if isinstance(value, list):
-                    next_nodes.extend(value)
-            else:
-                next_nodes.append(value)
-        nodes = next_nodes
-    return nodes
-
-
-def resolve_one(document: Any, path: str, default: Any = None) -> Any:
-    values = resolve_path(document, path)
-    return values[0] if values else default
-
 
 def _as_float(value: Any) -> float:
-    """Ranking scores arrive as ``"1,234,567"``, ``"12.3B"`` or plain numbers."""
+    """Scores arrive as numbers, ``"1,234,567"`` or ``"12.3B"``."""
     if value is None:
         return 0.0
     if isinstance(value, (int, float)):
@@ -113,9 +94,96 @@ def _as_float(value: Any) -> float:
 
 def _as_int(value: Any, default: int = 0) -> int:
     try:
-        return int(str(value).strip().replace(",", ""))
+        return int(float(str(value).strip().replace(",", "")))
     except (TypeError, ValueError):
         return default
+
+
+def _slot_value(values: Any, slot: int) -> Any:
+    return values[slot] if isinstance(values, list) and slot < len(values) else None
+
+
+# --------------------------------------------------------------------------
+# name resolution
+# --------------------------------------------------------------------------
+
+@dataclass(frozen=True)
+class UnitFacts:
+    release_date: str
+    element: str
+    burst: str
+
+
+class UnitResolver:
+    """Name -> unit id, using the deck and the season when a name is shared."""
+
+    def __init__(
+        self,
+        index: NameIndex,
+        units: dict[str, UnitFacts] | None = None,
+        seasons: dict[int, dict[str, str]] | None = None,
+    ):
+        self.index = index
+        self.units = units or {}
+        self.seasons = seasons or {}
+
+    @classmethod
+    def load(cls, directory: Path | None = None) -> "UnitResolver":
+        directory = directory or processed_dir()
+        index = load_alias_index(directory / "unit_aliases.csv")
+        if index is None:
+            raise RuntimeError("no alias table; run `nikke build timeline` first")
+        units = {
+            row["unit_id"]: UnitFacts(row.get("release_date", ""), row.get("element", ""), row.get("burst", ""))
+            for row in _csv_rows(directory / "roster.csv")
+        }
+        seasons = {
+            int(row["season"]): {"start": (row.get("start_at") or "")[:10], "weak": row.get("weak_element", "")}
+            for row in _csv_rows(directory / "soloraid_seasons.csv")
+            if row.get("season", "").isdigit()
+        }
+        return cls(index, units, seasons)
+
+    def direct(self, name: str) -> str | None:
+        return self.index.resolve(name)
+
+    def candidates(self, name: str) -> set[str]:
+        return self.index.candidates(name)
+
+    def settle(self, candidates: set[str], season: int, deck_bursts: Iterable[str]) -> str | None:
+        """Pick one of several units sharing a name, or ``None`` if context cannot."""
+        context = self.seasons.get(season, {})
+        start = context.get("start", "")
+        pool = sorted(candidates)
+        if start:
+            released = [u for u in pool if self.units.get(u) and self.units[u].release_date and self.units[u].release_date <= start]
+            pool = released or pool
+        if len(pool) > 1:
+            covered: set[str] = set()
+            for burst in deck_bursts:
+                if burst in BURST_STAGES:
+                    covered.add(burst)
+                elif "-" in burst:  # an all-stage burst ("I-II-III") covers every stage
+                    covered.update(BURST_STAGES)
+            missing = set(BURST_STAGES) - covered
+            if missing:
+                fitting = [u for u in pool if self.units.get(u) and self.units[u].burst in missing]
+                pool = fitting if len(fitting) == 1 else pool
+        if len(pool) > 1 and context.get("weak"):
+            matching = [u for u in pool if self.units.get(u) and self.units[u].element == context["weak"]]
+            pool = matching if len(matching) == 1 else pool
+        return pool[0] if len(pool) == 1 else None
+
+    def burst(self, unit_id: str) -> str:
+        facts = self.units.get(unit_id)
+        return facts.burst if facts else ""
+
+
+def _csv_rows(path: Path) -> list[dict[str, str]]:
+    if not path.is_file() or path.stat().st_size == 0:
+        return []
+    with path.open(encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle))
 
 
 # --------------------------------------------------------------------------
@@ -124,95 +192,88 @@ def _as_int(value: Any, default: int = 0) -> int:
 
 def parse_document(
     document: Any,
-    mapping: FieldMapping,
-    index: NameIndex,
+    mapping: RankingMapping,
+    resolver: UnitResolver,
     *,
+    season: int,
     content: str = "soloraid",
-    season_default: str = "",
-    boss_default: str = "",
-) -> tuple[list[RaidEntry], list[str]]:
-    """Extract every (rank, unit) pair from one snapshotted response.
+) -> tuple[list[RaidEntry], list[tuple[str, str]]]:
+    """Every (ranker, deck, slot) in one season's response.
 
-    Returns ``(entries, unresolved_names)``. Unresolved names are returned, never
-    dropped silently: an unmatched spelling means a unit is invisible to every
-    pick rate, so it has to reach a human.
+    Returns ``(entries, unresolved)`` where ``unresolved`` holds
+    ``(name, candidates)`` for each slot that could not be matched. An unmatched
+    slot is dropped from the entries - its deck keeps the other four - and
+    reported, never silently lost.
     """
     entries: list[RaidEntry] = []
-    unresolved: list[str] = []
+    unresolved: list[tuple[str, str]] = []
 
-    records = resolve_path(document, mapping.entries)
-    for position, record in enumerate(records, start=1):
-        rank = _as_int(resolve_one(record, mapping.rank), position)
-        score = _as_float(resolve_one(record, mapping.score))
+    for position, record in enumerate(resolve_path(document, mapping.entries), start=1):
+        rank = _as_int(resolve_one(record, mapping.rank), 0)
+        if rank <= 0:
+            continue  # outside the ranked population (enikk also lists look-ups)
         player = str(resolve_one(record, mapping.player, "") or "")
-        season = str(resolve_one(record, mapping.season, "") or season_default)
-        boss = str(resolve_one(record, mapping.boss, "") or boss_default)
+        server = str(resolve_one(record, mapping.server, "") or "")
+        collected_at = str(resolve_one(record, mapping.collected_at, "") or "")
+        decks = resolve_path(record, mapping.decks)
+        deck_scores = [_as_float(resolve_one(deck, mapping.deck_score)) for deck in decks]
+        score = _as_float(resolve_one(record, mapping.score)) or sum(deck_scores)
 
-        team = resolve_path(record, mapping.team)
-        for slot, member in enumerate(team):
-            unit_id = ""
-            if mapping.unit_id:
-                raw_id = resolve_one(member, mapping.unit_id)
-                if raw_id not in (None, ""):
-                    try:
-                        from ..util.names import normalize_unit_id
-
-                        unit_id = normalize_unit_id(str(raw_id))
-                    except ValueError:
-                        unit_id = ""
-
-            raw_name = resolve_one(member, mapping.unit_name) if mapping.unit_name else member
-            raw_name = "" if raw_name is None else str(raw_name)
-            if not unit_id and raw_name:
-                resolved = index.resolve(raw_name)
-                if resolved is None:
-                    unresolved.append(raw_name)
-                    continue
-                unit_id = resolved
-            if not unit_id:
+        for deck_number, (deck, deck_score) in enumerate(zip(decks, deck_scores), start=1):
+            names = resolve_one(deck, mapping.deck_units) or []
+            if not isinstance(names, list):
                 continue
-
-            entries.append(
-                RaidEntry(
-                    content=content,
-                    season=season,
-                    boss=boss,
-                    rank=rank,
-                    score=score,
-                    player=player,
-                    slot=slot,
-                    unit_id=unit_id,
-                    unit_name_raw=raw_name,
+            cps = resolve_one(deck, mapping.deck_unit_cp)
+            cores = resolve_one(deck, mapping.deck_unit_cores)
+            ids: list[str | None] = [resolver.direct(str(name)) for name in names]
+            for slot, name in enumerate(names):
+                if ids[slot] is not None:
+                    continue
+                candidates = resolver.candidates(str(name))
+                if len(candidates) > 1:
+                    bursts = [resolver.burst(u) for u in ids if u is not None]
+                    ids[slot] = resolver.settle(candidates, season, bursts)
+                if ids[slot] is None:
+                    unresolved.append((str(name), ";".join(sorted(candidates))))
+            for slot, (name, unit_id) in enumerate(zip(names, ids)):
+                if unit_id is None:
+                    continue
+                cp = _slot_value(cps, slot)
+                core = _slot_value(cores, slot)
+                entries.append(
+                    RaidEntry(
+                        content=content,
+                        season=season,
+                        server=server,
+                        rank=rank,
+                        player=player,
+                        score=score,
+                        deck=deck_number,
+                        deck_score=deck_score,
+                        slot=slot,
+                        unit_id=unit_id,
+                        unit_name_raw=str(name),
+                        unit_cp=_as_float(cp) if cp is not None else None,
+                        unit_cores=_as_int(core) if core is not None else None,
+                        collected_at=collected_at,
+                    )
                 )
-            )
     return entries, unresolved
 
 
-def parse_run(
-    run: SnapshotRun, mapping: FieldMapping, index: NameIndex, *, content: str = "soloraid"
-) -> tuple[list[RaidEntry], list[str]]:
-    entries: list[RaidEntry] = []
-    unresolved: list[str] = []
-    meta_by_file = {e["filename"]: e.get("meta", {}) for e in run.entries}
+def latest_by_season(runs: Iterable[SnapshotRun]) -> dict[int, tuple[SnapshotRun, str]]:
+    """The newest stored response for each season: ``{season: (run, filename)}``.
 
-    for filename, payload in run.iter_files(".json"):
-        try:
-            document = json.loads(payload.decode("utf-8"))
-        except json.JSONDecodeError as exc:
-            log.warning("bad JSON in %s/%s: %s", run.run_id, filename, exc)
-            continue
-        meta = meta_by_file.get(filename, {})
-        file_entries, file_unresolved = parse_document(
-            document,
-            mapping,
-            index,
-            content=content,
-            season_default=str(meta.get("season", "")),
-            boss_default=str(meta.get("boss", "")),
-        )
-        entries.extend(file_entries)
-        unresolved.extend(file_unresolved)
-    return entries, unresolved
+    A season is re-read while it is being played; the last read is the most
+    complete one, and after the season closes it is final.
+    """
+    latest: dict[int, tuple[SnapshotRun, str]] = {}
+    for run in runs:  # oldest first
+        for entry in run.entries:
+            meta = entry.get("meta") or {}
+            if meta.get("kind") == "rankings" and meta.get("raid"):
+                latest[int(meta["raid"])] = (run, entry["filename"])
+    return latest
 
 
 # --------------------------------------------------------------------------
@@ -221,73 +282,75 @@ def parse_run(
 
 def build(
     *,
-    mapping: FieldMapping,
-    source: str = "enikk_soloraid",
+    mapping: RankingMapping,
+    source: str = SOURCE,
     content: str = "soloraid",
     out_dir: Path | None = None,
+    resolver: UnitResolver | None = None,
+    snapshot_root: Path | None = None,
 ) -> dict[str, Any]:
-    if not mapping.configured:
-        raise RuntimeError(
-            "config/enikk.yaml has no field mapping yet. Run `nikke probe enikk`, "
-            "read data/raw/enikk_probe/*/probe-report.json, then fill in the "
-            "`mapping` block. See docs/enikk-setup.md."
-        )
-    index = load_alias_index()
-    if index is None:
-        raise RuntimeError("no alias table; run `nikke build roster` first")
-
-    runs = list_runs(source)
+    target_dir = out_dir or processed_dir()
+    resolver = resolver or UnitResolver.load(target_dir)
+    runs = list_runs(source, root=snapshot_root)
     if not runs:
         raise RuntimeError(f"no {source} snapshots found; run `nikke collect enikk` first")
 
     all_entries: list[RaidEntry] = []
-    unresolved: list[str] = []
-    for run in runs:
-        run_entries, run_unresolved = parse_run(run, mapping, index, content=content)
-        all_entries.extend(run_entries)
-        unresolved.extend(run_unresolved)
+    unresolved: Counter[tuple[str, str]] = Counter()
+    unresolved_seasons: dict[tuple[str, str], set[int]] = defaultdict(set)
+    for season, (run, filename) in sorted(latest_by_season(runs).items()):
+        try:
+            document = json.loads(run.read(filename).decode("utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            log.warning("unreadable rankings %s/%s: %s", run.run_id, filename, exc)
+            continue
+        entries, missing = parse_document(document, mapping, resolver, season=season, content=content)
+        all_entries.extend(entries)
+        for item in missing:
+            unresolved[item] += 1
+            unresolved_seasons[item].add(season)
 
-    # Later runs supersede earlier ones for the same (season, boss, rank, slot):
-    # a season is re-snapshotted as it progresses and the latest view wins.
-    deduped: dict[tuple[str, str, str, int, int], RaidEntry] = {}
-    for entry in all_entries:
-        deduped[(entry.content, entry.season, entry.boss, entry.rank, entry.slot)] = entry
-    entries = sorted(
-        deduped.values(), key=lambda e: (e.content, e.season, e.boss, e.rank, e.slot)
-    )
-
-    target_dir = out_dir or processed_dir()
+    all_entries.sort(key=lambda e: (e.content, e.season, e.server, e.rank, e.player, e.deck, e.slot))
     target_dir.mkdir(parents=True, exist_ok=True)
     entries_path = target_dir / ENTRIES_CSV
     with entries_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=[f.name for f in RaidEntry.__dataclass_fields__.values()])
+        writer = csv.DictWriter(handle, fieldnames=list(RaidEntry.__dataclass_fields__))
         writer.writeheader()
-        for entry in entries:
-            writer.writerow(asdict(entry))
+        for entry in all_entries:
+            row = asdict(entry)
+            row["unit_cp"] = "" if entry.unit_cp is None else f"{entry.unit_cp:.0f}"
+            row["unit_cores"] = "" if entry.unit_cores is None else entry.unit_cores
+            row["score"] = f"{entry.score:.0f}"
+            row["deck_score"] = f"{entry.deck_score:.0f}"
+            writer.writerow(row)
 
-    unresolved_counts = Counter(unresolved)
     unresolved_path = target_dir / UNRESOLVED_CSV
     with unresolved_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["name", "occurrences"])
+        writer = csv.DictWriter(handle, fieldnames=["name", "occurrences", "seasons", "candidates"])
         writer.writeheader()
-        for name, count in unresolved_counts.most_common():
-            writer.writerow({"name": name, "occurrences": count})
+        for (name, candidates), count in sorted(unresolved.items(), key=lambda kv: (-kv[1], normalize_name(kv[0][0]))):
+            writer.writerow(
+                {
+                    "name": name,
+                    "occurrences": count,
+                    "seasons": ";".join(str(s) for s in sorted(unresolved_seasons[(name, candidates)])),
+                    "candidates": candidates,
+                }
+            )
 
+    seasons = sorted({e.season for e in all_entries})
     summary = {
-        "runs": len(runs),
-        "rows": len(entries),
-        "seasons": sorted({e.season for e in entries}),
-        "bosses": sorted({e.boss for e in entries}),
-        "teams": len({(e.season, e.boss, e.rank) for e in entries}),
-        "distinct_units": len({e.unit_id for e in entries}),
-        "unresolved_names": len(unresolved_counts),
+        "seasons": len(seasons),
+        "season_range": [seasons[0], seasons[-1]] if seasons else [],
+        "rows": len(all_entries),
+        "rankers": len({(e.season, e.server, e.player) for e in all_entries}),
+        "decks": len({(e.season, e.server, e.player, e.deck) for e in all_entries}),
+        "distinct_units": len({e.unit_id for e in all_entries}),
+        "unresolved_slots": sum(unresolved.values()),
+        "unresolved_names": len({name for name, _ in unresolved}),
         "entries_csv": str(entries_path),
     }
-    if unresolved_counts:
-        log.warning(
-            "%s name(s) did not resolve to a unit; see %s",
-            len(unresolved_counts),
-            unresolved_path,
-        )
-    log.info("raid entries built: %s rows -> %s", len(entries), entries_path)
+    if unresolved:
+        log.warning("%s slot(s) did not resolve to a unit; see %s", summary["unresolved_slots"], unresolved_path)
+    log.info("raid entries built: %s rows over %s seasons -> %s", len(all_entries), len(seasons), entries_path)
     return summary

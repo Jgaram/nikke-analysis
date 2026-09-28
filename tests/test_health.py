@@ -101,6 +101,7 @@ def test_refresh_ends_red_when_a_source_could_not_be_collected(tmp_path, monkeyp
     monkeypatch.setattr(notices, "collect_naver", lambda: {"written": 0})
     monkeypatch.setattr(enikk, "collect_seasons", lambda: {"refreshed": []})
     monkeypatch.setattr(enikk, "collect_characters", lambda: {"changed": False})
+    monkeypatch.setattr(enikk, "collect_rankings", lambda **kwargs: {"fetched": []})
     monkeypatch.setattr(pipeline, "build_timeline", lambda: {"issues": {}})
 
     assert cli.main(["refresh"]) == 1
@@ -108,3 +109,19 @@ def test_refresh_ends_red_when_a_source_could_not_be_collected(tmp_path, monkeyp
 
     monkeypatch.setattr(notices, "collect_official", lambda: {"written": 0})
     assert cli.main(["refresh"]) == 0
+
+
+def test_ranking_findings_name_unmatched_names_and_missing_seasons(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    write(processed / "raid_unresolved_names.csv", [{"name": "Rei", "occurrences": 7, "seasons": "19;20", "candidates": "392;831"}])
+    write(processed / "metrics_seasons.csv", [{"season": "40", "rankers": "300"}])
+    played = season(40, "2026-08-20T12:00:00+09:00")
+    missing = {**season(39, "2026-07-16T12:00:00+09:00"), "end_at": "2026-07-23T04:59:59+09:00",
+               "enikk_first_seen": "2026-07-17T00:00:00+09:00"}
+    write(processed / "soloraid_seasons.csv", [missing, played])
+    issues = health.ranking_issues(processed, datetime(2026, 9, 28, tzinfo=KST))
+    codes = {(i.code, i.subject) for i in issues}
+    assert ("ranking_name_unresolved", "Rei") in codes
+    assert ("ranking_missing", "시즌 39") in codes
+    assert all(i.level == "warning" for i in issues)

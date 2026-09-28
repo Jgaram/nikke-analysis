@@ -6,8 +6,9 @@
 
 지표보다 먼저 필요한 것이 **시간축**이다. "2주년 당시 메타"를 분석하려면 그때
 어떤 솔로 레이드가 열려 있었고, 어떤 니케가 존재했는지를 먼저 정확히 알아야 한다.
-그래서 지금 단계는 공지를 자동으로 모아 **시점별 니케 풀과 솔로 레이드 일정**을
-복원하는 데 집중한다.
+그래서 공지를 자동으로 모아 **시점별 니케 풀과 솔로 레이드 일정**을 복원하고,
+그 위에서 시즌 1–41의 랭킹(서버별 상위 50명 × 5덱)으로 **시즌 티어·속성별 티어·
+종합 티어**를 계산한다. 어느 시점이든 "그때 알 수 있던 것만으로" 볼 수 있다.
 
 핵심 제약 하나: **런타임에 AI를 쓰지 않는다.** 새 패치, 새 니케, 새 시즌, 시즌
 중단·재오픈은 사람이 읽고 판단해서가 아니라 `nikke refresh` 한 번으로 반영된다.
@@ -23,11 +24,13 @@
 | 캐릭터별 출시일 | ✅ 공지 기반 134명 · 런칭 로스터 62명 · 데이터 파일 날짜 6명 |
 | 솔로 레이드 달력 | ✅ 시즌 1–41 실제 운영 구간 (연기·중단·재오픈·연장 반영), enikk와 교차검증 |
 | 시점 조회 `nikke asof` | ✅ 시즌 상태, 니케 풀, 진행 중 모집, 공지됐지만 미출시 니케 |
-| enikk 랭킹 수집 | ⏸ 보류 — API(GraphQL)는 확인됨, 지표 단계에서 연결 |
-| 지표·티어 엔진, 시각화 | ⏸ 보류 — 합성 데이터로 검증된 상태 유지 |
+| enikk 랭킹 수집 | ✅ 시즌 1–41, 서버별 상위 50명 × 5덱 (덱별 대미지·전투력 포함), 진행 중 시즌은 매번 갱신 |
+| 티어 | ✅ 시즌 티어 · 보스 약점별(속성별) 티어 · 종합 티어 · 역할(범용/하이브리드/특화) |
+| 시점 티어 `nikke tier` | ✅ 직전 시즌, 진행 중 시즌(잠정), 다음 시즌 예상, 종합 — 과거 시점도 그때 기준으로 |
+| 캐릭터별 티어 변화 | ✅ `nikke tier --unit`, 차트 7종 (`nikke viz`) |
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 
-`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 109개.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 138개.
 
 ---
 
@@ -40,9 +43,49 @@ pip install -e ".[dev]"
 nikke asof 2주년           # 2024-11-04 정오(KST) 기준 게임 상태
 nikke asof 2025-06-22      # 아무 날짜나, 2025-06-22T09:00 처럼 시각까지도
 nikke seasons              # 솔로 레이드 전 시즌 일람
-nikke refresh              # 수집 → 빌드, 의존 순서대로 전부
+nikke tier                 # 지금의 티어: 직전 시즌, 진행 중 시즌, 다음 시즌 예상, 종합
+nikke tier 2주년           # 그때 알 수 있던 것만으로 본 티어
+nikke tier --unit 크라운   # 한 니케의 시즌별 티어 변화
+nikke refresh              # 수집 → 빌드 → 지표 → 차트, 의존 순서대로 전부
 nikke check                # 사람이 봐야 할 게 있는지 (있으면 종료 코드 1)
 pytest -q
+```
+
+### 티어
+
+```
+$ nikke tier
+2026-09-28 10:51 KST 기준 티어 · 완료 시즌 1–40 · 최근 가중 반감기 180일
+
+■ 직전 시즌 40 · 사치스러운 거미 (Luxurious Spider) · 약점 작열
+  SS  아니스 : 스타 1.58 · 라피 : 레드 후드 1.58 · 브리드 : 사일런트 트랙 1.57 · 프리바티 1.52 · 미하라 : 본딩 체인 1.51
+  S   마스트 : 로망틱 메이드 1.17 · 크라운 1.12 · 리틀 머메이드 1.12
+  ...
+■ 진행 중 시즌 41 · 리버렐리오 바디 (Liberalio Body) · 약점 수냉 — 09/28 수집분 (잠정)
+  S   프리바티 1.26 · 스노우 화이트 : 헤비암즈 1.26 · 리틀 머메이드 1.23 · 크라운 1.12
+  ...
+■ 다음 시즌 42 · Altruia · 약점 전격 — 전격 약점 시즌 기록으로 본 예상
+  SS  아니스 : 스타 1.85 · 신데렐라 1.77 · 크라운 1.68 · 아르카나 1.56
+  ...
+■ 종합 티어 (5속성 균등 평균) · 괄호 = 역할
+  SS  아니스 : 스타 1.54(범용)
+  S   크라운 1.38(범용) · 마스트 : 로망틱 메이드 1.27(범용) · 리틀 머메이드 1.20(범용)
+  A   유키코 1.09*(판단 보류) · 퀸(마코토) 1.09*(판단 보류) · 라피 : 레드 후드 1.04(하이브리드) · 민트 0.82(범용)
+  ...
+```
+
+숫자는 **lift** 다. 상위권 대미지 중 그 니케가 함께 만든 몫을, 한 사람이 쓰는 25명
+기준으로 맞춘 값이라 1.0 이 평균 몫이다. 시즌 티어는 그 시즌의 lift 에 고정 컷
+(SS 1.4 · S 1.1 · A 0.8 · B 0.5 · C 0.2)을 댄 것이고, 속성별 티어는 보스 약점이 그
+속성이던 시즌들의 최근 가중 평균, 종합 티어는 다섯 속성의 평균이다. 자세한 정의는
+[docs/metrics.md](docs/metrics.md).
+
+```python
+from nikke_analysis.tierlist import TierBook
+
+book = TierBook.load()
+view = book.at("2주년")          # 그때 기준: view.finished / current / upcoming / overall
+book.unit("크라운").rows          # 시즌별 lift·티어·종합·역할
 ```
 
 ### 시점 조회
@@ -87,7 +130,11 @@ timeline.season(26).periods                              # 26시즌이 실제로
 nikke collect roster            # 게임 파일 + nikke-utils
 nikke collect notices           # 공식 공지 + 네이버 라운지 (새 것/수정된 것만)
 nikke collect enikk-meta        # enikk 시즌 메타·수집 시계열·캐릭터 표
+nikke collect enikk             # 솔로 레이드 랭킹 (새 시즌·바뀐 시즌만)
 nikke build timeline            # → roster, unit_releases, banners, soloraid_*, season_calendar
+nikke build raids               # 랭킹 스냅샷 → raid_entries.csv (니케 슬롯당 한 줄)
+nikke analyze                   # → metrics_*.csv (티어·속성별 티어·역할·메타 변화)
+nikke viz                       # → reports/*.png (라이트·다크)
 nikke status                    # 지금 디스크에 뭐가 있는지
 ```
 
@@ -136,8 +183,9 @@ nikke refresh        # 또는 python -m nikke_analysis refresh
 collect/     네트워크 → data/raw/          가져오기만 한다. 해석하지 않는다.
 build/       raw      → data/processed/    순수 파싱·조인 (공지 해석, 달력 복원)
 timeline.py  processed → 시점 조회          nikke asof / nikke seasons
-analyze/     processed → metrics_*.csv     순수 계산 (보류)
-viz/         metrics  → reports/*.png      렌더링 (보류)
+analyze/     processed → metrics_*.csv     순수 계산 (lift, 티어, 속성별 티어, 역할)
+tierlist.py  metrics  → 시점별 티어         nikke tier
+viz/         metrics  → reports/*.png      렌더링
 ```
 
 `collect` 가 아무것도 해석하지 않는 게 중요한 이유:
@@ -222,28 +270,45 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 | `soloraid_seasons.csv` | 시즌 | 보스(EN/KO)·속성·약점, 처음 공지된 일정, 실제 시작·종료, 교란 여부, 그 시점 니케 수·신규 니케, enikk 대조 결과 |
 | `soloraid_periods.csv` | 운영 구간 | 시즌별로 실제 열려 있던 구간과 끝난 이유(종료/중단/연장) |
 | `soloraid_events.csv` | 공지 문장 | 일정의 근거 (오픈·중단·재오픈·연장·연기·초기화·이슈) |
-| `season_calendar.csv` | 시즌 | 분석 단계가 읽는 시즌 달력 (자동 생성) |
+| `season_calendar.csv` | 시즌 | 시즌 번호와 시작·종료일만 뽑은 달력 (자동 생성) |
 | `notices.csv` | 공지 | 공식·네이버 공지 목록과 분류 |
 | `unit_aliases.csv` | 표기 | 니케마다 알려진 모든 표기 |
 | `timeline_issues.csv` | 점검 결과 | 규칙이 처리하지 못한 것, 약한 출처를 쓴 것 (`nikke check`) |
+| `raid_unresolved_names.csv` | 표기 | 랭킹에서 로스터와 못 맞춘 니케 이름 (지표에서 빠짐) |
+| `metrics_seasons.csv` | 시즌 | 랭커·덱 수, 메인 덱 몫, 수집일, 끝난 시즌인지 |
+| `metrics_unit_season.csv` | 시즌 × 니케 | lift·채용률·덱 몫·메인 덱 비율·덱 효과, 시즌 티어, 그 시즌 종료 시점의 속성별 티어·종합·역할 |
+| `metrics_element_tiers.csv` | 니케 | 지금의 속성별 티어 5칸, 종합 티어, 최고 속성, 커버리지, 역할 |
+| `metrics_tier_changes.csv` | 니케 × 시즌 전환 | 시즌 티어나 종합 티어가 바뀐 경우 |
+| `metrics_meta_shift.csv` · `metrics_synergy.csv` · `metrics_trajectory.csv` · `metrics_patch_impact.csv` | | 메타 변화량, 덱 안 시너지, 궤적, 패치 구간 |
+
+`raid_entries.csv`(약 30만 줄)는 커밋하지 않는다. 커밋된 랭킹 스냅샷에서 `nikke build raids` 로 다시 만든다.
 
 ---
 
-## 지표 (보류)
+## 티어는 어떻게 정하나
 
-솔로레이드 랭킹이 들어오면 채울 지표. 정의와 근거는 [docs/metrics.md](docs/metrics.md).
+솔로 레이드 상위권은 매 시즌 거의 **같은 25명**을 쓴다(과반이 쓰는 니케 수 중앙값
+25명). 그래서 "쓰였나"는 서열을 가르지 못하고, **어느 덱에 있었나**가 가른다 —
+메인 덱은 한 사람 대미지의 30% 안팎, 다섯째 덱은 13% 안팎을 낸다. 각 덱의 대미지
+몫을 덱 멤버에게 나누고 순위 가중으로 평균 낸 것이 **lift** 다.
 
-| 지표 | 답하는 질문 |
+그리고 메타는 **보스의 약점 속성**에 따라 크게 갈린다. 약점 속성 니케가 가져간
+대미지 몫은 2023년 24% → 2026년 46%로 늘었다(속성이 무관하면 20% 근처). 그래서
+티어는 세 겹이다.
+
+| 티어 | 답하는 질문 |
 |---|---|
-| `weighted_pick_rate` | 상위권 근거 중 이 니케가 차지하는 비중 (순위 가중) |
-| `lift` | 무작위 대비 몇 배 뽑히는가 (로스터 증가 보정) |
-| `score_delta` | 이 니케를 쓴 팀이 **실제로** 점수가 높은가 |
-| `tier_score` / `tier` | 위 세 축의 합성 점수와 등급 |
-| `total_variation` | 시즌 사이 메타가 몇 % 움직였는가 |
-| `pmi` (synergy) | 우연 이상으로 같이 쓰이는 조합 |
+| 시즌 티어 | 그 시즌에 얼마나 했나 (lift 고정 컷) |
+| 속성별 티어 | 보스가 X 속성에 약할 때 얼마나 하나 (그런 시즌들의 최근 가중 평균) |
+| 종합 티어 | 속성 로테이션 전체에서 얼마나 하나 (5속성 평균) |
 
-각 시즌은 **그때 출시돼 있던 유닛만** 분모로 쓴다. 이번 단계에서 만든 출시일과
-시즌 달력이 그 분모다.
+조건이 니케 자신의 속성이 아니라 **보스 약점**인 이유: 서포터는 자기가 받쳐 주는
+덱의 속성을 따라간다. 수냉 지원형인데 풍압 약점 시즌에만 나오는 니케, 작열
+화력형인데 수냉 약점 시즌에 더 쓰이는 니케가 실제로 있다. 역할도 게임 클래스가
+아니라 데이터로 정한다: 거의 모든 속성에서 쓸 만하면 **범용**, 한 속성에서만이면
+**속성 특화**, 그 사이(딜포터, 특정 덱 파트너, 두 속성용)는 **하이브리드**.
+
+정의·공식·한계는 [docs/metrics.md](docs/metrics.md).
 
 ---
 
@@ -255,8 +320,8 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 |---|---|
 | `data/manual/release_overrides.csv` | 출시일 수동 보정 (사유 필수, 공지 기반 날짜보다 우선) |
 | `data/manual/unit_aliases.csv` | 자동으로 못 찾는 표기의 수동 별칭 |
-| `config/tiers.yaml` | 티어 가중치와 컷 |
-| `config/enikk.yaml` | 랭킹 수집 엔드포인트와 JSON 필드 매핑 |
+| `config/tiers.yaml` | 티어 컷, 모집단(서버·순위·가중), 속성별 티어의 최근성·종합 방식, 역할 기준 — 인자 전체는 [docs/metrics.md](docs/metrics.md#조정-가능한-인자-configtiersyaml) |
+| `config/enikk.yaml` | 랭킹 GraphQL 쿼리와 응답 필드 위치 |
 
 ---
 
@@ -266,7 +331,8 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 |---|---|---|
 | [nikke-kr.com](https://www.nikke-kr.com) 공지 (Level Infinite CMS) | 업데이트 공지: 신규 니케·모집 기간·솔로 레이드 일정 | `collect notices` |
 | [네이버 게임 라운지](https://game.naver.com/lounge/nikke/board/11) 공지 게시판 | 운영 공지: 솔로 레이드 중단·재오픈·연장·연기 | `collect notices` |
-| [enikk](https://enikk.app/soloraid) (GraphQL) | 시즌 보스·속성, 랭킹 수집 시계열, 캐릭터 속성 | `collect enikk-meta` |
+| [enikk](https://enikk.app/soloraid) (GraphQL) | 솔로 레이드 랭킹(서버별 상위 50명 × 5덱) | `collect enikk` |
+| 〃 | 시즌 보스·속성, 랭킹 수집 시계열, 캐릭터 속성 | `collect enikk-meta` |
 | [nikke-forbidden-library](https://github.com/LiviaMedeiros/nikke-forbidden-library) | 유닛 ID, EN/KO/JA 공식 표기, 풀네임 | `collect roster` |
 | [`@sancti0n/nikke-utils`](https://www.npmjs.com/package/@sancti0n/nikke-utils) | 속성, 데이터 등재일 | `collect roster` |
 
@@ -278,6 +344,6 @@ enikk 는 일정의 출처가 아니라 **검증 수단**이다. enikk 가 랭�
 ## 문서
 
 - [docs/timeline.md](docs/timeline.md) — 출시일·솔로 레이드 달력 복원 규칙, 알려진 공백
-- [docs/metrics.md](docs/metrics.md) — 지표 정의, 공식, 한계
+- [docs/metrics.md](docs/metrics.md) — lift·티어·속성별 티어·역할의 정의, 조정 가능한 인자, 한계
 - [docs/network-policy.md](docs/network-policy.md) — 네트워크 정책 여는 법
-- [docs/enikk-setup.md](docs/enikk-setup.md) — 랭킹 사이트 연결 절차
+- [docs/enikk-setup.md](docs/enikk-setup.md) — 랭킹 수집 방식, 이름 매칭 규칙

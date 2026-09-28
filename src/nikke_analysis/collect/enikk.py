@@ -1,31 +1,33 @@
-"""Collect Solo Raid top-N rankings from enikk.
+"""Collect Solo Raid rankings and season metadata from enikk.
 
-enikk (https://enikk.app/soloraid) publishes the global Solo Raid leaderboard
-with each ranker's five-unit team, which is the single richest public signal for
-"what is actually winning right now". Rankings are also *perishable*: once a
-season rotates the previous top-50 is no longer served, so the collector's job is
-to snapshot aggressively and ask questions later.
+enikk (https://enikk.app/soloraid) publishes the Solo Raid leaderboard of every
+server: the top 50 players, each with the five decks they ran, every deck's
+damage and every unit's combat power. It is the single richest public signal for
+"what is actually winning". Rankings are also *perishable* - nothing guarantees a
+past season stays served - so the collector's job is to snapshot and ask
+questions later.
 
 Entry points:
 
-``probe``    - one-off reconnaissance. Walks the app's own asset graph looking
-               for the JSON the page renders from, saves every response (404s
-               included) and writes a report naming the endpoints that returned
-               structured data. Run this once, then fill in config/enikk.yaml.
-
-``collect``  - the routine path. Reads endpoint templates from config, expands
-               them over the requested seasons/bosses, and snapshots the raw
-               responses without interpreting them.
+``collect_rankings`` - the routine path. One GraphQL request per season, stored
+               untouched. Incremental: a season is fetched again only when
+               enikk's ``lastupdated`` stamp for it has moved, which in practice
+               means the season in progress.
 
 ``collect_seasons`` / ``collect_characters`` - season metadata and the unit
-               table, from the site's GraphQL endpoint and its /characters page.
-               These feed the timeline, not the rankings: which boss each season
-               had, when enikk actually saw it being played, and attributes for
-               units the community tables have not caught up with yet.
+               table, from the same GraphQL endpoint and the /characters page.
+               These feed the timeline: which boss each season had, when enikk
+               actually saw it being played, and attributes for units the
+               community tables have not caught up with yet.
 
-Keeping endpoint shape in config rather than code is the point: when enikk
-changes its API, the fix is a config edit plus a re-run, and every previously
-captured season stays parseable from its snapshot.
+``probe``    - reconnaissance. Walks the app's own asset graph looking for the
+               JSON the page renders from and saves every response. Only needed
+               if the site is rebuilt and the query in config/enikk.yaml stops
+               working.
+
+The query and the response layout live in config/enikk.yaml: when enikk changes
+its API, the fix is a config edit plus a re-run, and every previously captured
+season stays parseable from its snapshot.
 """
 
 from __future__ import annotations
@@ -38,7 +40,9 @@ from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
 from urllib.parse import urljoin, urlparse
 
+from ..config import EnikkConfig, load_enikk_config
 from ..util.http import Fetcher, Response
+from ..util.jsonpath import resolve_path
 from ..util.nextjs import find_objects, flight_payload
 from ..util.snapshot import SnapshotWriter, list_runs
 from .base import CollectorError
@@ -226,69 +230,8 @@ def probe(
     return report
 
 
-def expand_template(template: str, values: Mapping[str, Any]) -> str:
-    """``"/api/x?season={season}&boss={boss}"`` -> a concrete URL."""
-    try:
-        return template.format(**values)
-    except KeyError as exc:
-        raise ValueError(f"template {template!r} needs a value for {exc.args[0]!r}") from exc
-
-
-def collect(
-    *,
-    base_url: str,
-    endpoint_template: str,
-    seasons: Iterable[int | str],
-    bosses: Iterable[str] = ("",),
-    extra_params: Mapping[str, Any] | None = None,
-    fetcher: Fetcher | None = None,
-) -> str:
-    """Snapshot one response per (season, boss) pair.
-
-    Nothing here knows what a ranking looks like; that contract lives in
-    ``build/raids.py`` and config/enikk.yaml.
-    """
-    fetcher = fetcher or Fetcher(delay=1.5)
-    writer = SnapshotWriter(SOURCE)
-    requested = 0
-    saved = 0
-
-    for season in seasons:
-        for boss in bosses:
-            values = {"season": season, "boss": boss, **(extra_params or {})}
-            url = urljoin(base_url, expand_template(endpoint_template, values))
-            requested += 1
-            try:
-                response = fetcher.get(url)
-            except RuntimeError as exc:
-                log.warning("season=%s boss=%s -> %s", season, boss, exc)
-                continue
-            slug = re.sub(r"[^A-Za-z0-9]+", "-", f"s{season}-{boss}").strip("-")
-            is_json = _looks_like_json(response.content, response.content_type)
-            writer.write(
-                f"{slug}.{'json' if is_json else 'html'}",
-                response.content,
-                url=response.url,
-                status=response.status,
-                content_type=response.content_type,
-                meta={"season": str(season), "boss": str(boss)},
-            )
-            saved += 1
-
-    writer.seal(
-        {
-            "base_url": base_url,
-            "endpoint_template": endpoint_template,
-            "requested": requested,
-            "saved": saved,
-        }
-    )
-    log.info("enikk snapshot: %s/%s responses -> %s", saved, requested, writer.dir)
-    return str(writer.dir)
-
-
 # --------------------------------------------------------------------------
-# season metadata and the unit table
+# GraphQL
 # --------------------------------------------------------------------------
 
 def graphql(fetcher: Fetcher, base_url: str, query: str, variables: Mapping[str, Any] | None = None) -> Response:
@@ -306,6 +249,124 @@ def graphql(fetcher: Fetcher, base_url: str, query: str, variables: Mapping[str,
 
 def _stored_meta(source: str) -> list[dict[str, Any]]:
     return [entry.get("meta") or {} for run in list_runs(source) for entry in run.entries]
+
+
+# --------------------------------------------------------------------------
+# rankings
+# --------------------------------------------------------------------------
+
+def _summaries(fetcher: Fetcher, base_url: str) -> dict[int, str]:
+    """``{season: lastupdated}`` for every season enikk lists.
+
+    ``lastupdated`` is empty for a season with no rankings yet (announced but
+    not open), which is how an upcoming season is told apart from a played one.
+    """
+    rows = (graphql(fetcher, base_url, SUMMARIES_QUERY).json().get("data") or {}).get("soloRaidSummaries") or []
+    listed: dict[int, str] = {}
+    for row in rows:
+        raid = int(row.get("raid_number") or 0)
+        if raid > 0:
+            listed[raid] = str((row.get("data") or {}).get("lastupdated") or "")
+    return listed
+
+
+def _stored_rankings() -> dict[int, dict[str, Any]]:
+    """Newest stored snapshot per season: its ``lastupdated`` and byte digest."""
+    stored: dict[int, dict[str, Any]] = {}
+    for run in list_runs(SOURCE):  # oldest first; later wins
+        for entry in run.entries:
+            meta = entry.get("meta") or {}
+            if meta.get("kind") == "rankings" and meta.get("raid"):
+                stored[int(meta["raid"])] = {**meta, "sha256": entry.get("sha256", "")}
+    return stored
+
+
+def collect_rankings(
+    *,
+    config: EnikkConfig | None = None,
+    seasons: Iterable[int | str] | None = None,
+    full: bool = False,
+    fetcher: Fetcher | None = None,
+) -> dict[str, Any]:
+    """Snapshot the top-50-per-server rankings of every season that changed.
+
+    A finished season's ``lastupdated`` stops moving, so it is read once; the
+    season in progress is read on every run, which is what keeps the current
+    tiers current. A season with no ``lastupdated`` yet is still asked about -
+    enikk sometimes lists a season before its summary catches up - but an empty
+    answer is not stored.
+
+    ``seasons`` forces those seasons to be read again whatever their stamp;
+    ``full`` does the same for every listed season.
+    """
+    config = config or load_enikk_config()
+    fetcher = fetcher or Fetcher(delay=config.delay)
+    listed = _summaries(fetcher, config.base_url)
+    if not listed:
+        raise CollectorError("enikk returned no Solo Raid seasons")
+    stored = _stored_rankings()
+    forced = {int(s) for s in seasons or ()}
+
+    writer = SnapshotWriter(SOURCE)
+    endpoint = urljoin(config.base_url, GRAPHQL_PATH)
+    fetched: list[int] = []
+    unchanged: list[int] = []
+    empty: list[int] = []
+    failed: dict[int, str] = {}
+    attempted = 0
+    for raid in sorted(set(listed) | forced):
+        lastupdated = listed.get(raid, "")
+        previous = stored.get(raid, {})
+        if raid not in forced and not full and lastupdated and previous.get("lastupdated") == lastupdated:
+            continue
+        attempted += 1
+        try:
+            response = graphql(fetcher, config.base_url, config.rankings_query, {"raid": raid})
+        except (RuntimeError, CollectorError) as exc:
+            # One unreachable season must not cost the others; with no new
+            # snapshot on disk, the next run asks for it again.
+            log.warning("enikk rankings for season %s skipped: %s", raid, exc)
+            failed[raid] = str(exc)
+            continue
+        rankers = len(resolve_path(response.json(), config.mapping.entries))
+        if rankers == 0:
+            empty.append(raid)
+            continue
+        if previous.get("sha256") == hashlib.sha256(response.content).hexdigest():
+            unchanged.append(raid)
+            continue
+        writer.write(
+            f"season-{raid:03d}.json",
+            response.content,
+            url=endpoint,
+            status=response.status,
+            content_type=response.content_type,
+            meta={"kind": "rankings", "raid": raid, "lastupdated": lastupdated, "rankers": rankers},
+        )
+        fetched.append(raid)
+
+    result: dict[str, Any] = {
+        "listed": len(listed),
+        "fetched": fetched,
+        "unchanged": unchanged,
+        "no_rankings_yet": empty,
+        "failed": failed,
+    }
+    if attempted and len(failed) == attempted:
+        writer.discard()
+        raise CollectorError(f"every enikk rankings request failed: {failed}")
+    if writer.entry_count == 0:
+        writer.discard()
+        log.info("enikk rankings: %s seasons listed, nothing new", len(listed))
+        return {"snapshot_dir": "", **result}
+    writer.seal({"base_url": config.base_url, "query": config.rankings_query, **result})
+    log.info("enikk rankings: %s season(s) stored -> %s", len(fetched), writer.dir)
+    return {"snapshot_dir": str(writer.dir), **result}
+
+
+# --------------------------------------------------------------------------
+# season metadata and the unit table
+# --------------------------------------------------------------------------
 
 
 def collect_seasons(

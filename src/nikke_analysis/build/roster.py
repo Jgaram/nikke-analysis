@@ -29,6 +29,8 @@ released this week has a row, a name and its attributes on the next refresh.
 ``extra_elements`` is the one attribute no source has: the element(s) whose
 weakness advantage (우월 코드) a unit's skill adds to its own, kept by hand in
 data/manual/extra_elements.csv. Such a unit is tiered in each of its elements.
+``treasure_elements`` are the ones its treasure's skill adds (the rows marked
+``since`` treasure): they count from ``treasure_at`` on, not before.
 
 ``treasure_at`` is when the unit's treasure (애장품) came out, from the update
 notices (build/treasures.py). From then on it plays with it, and its tiers are
@@ -59,6 +61,9 @@ ALIAS_CSV = "unit_aliases.csv"
 OVERRIDES_CSV = "release_overrides.csv"
 MANUAL_ALIAS_CSV = "unit_aliases.csv"
 EXTRA_ELEMENTS_CSV = "extra_elements.csv"
+# When a row of extra_elements.csv holds: "" as long as the unit exists, "treasure"
+# from its treasure on (the treasure changed the skill).
+EXTRA_SINCE = {"": "", "treasure": "treasure", "애장품": "treasure"}
 
 _NAME_KEY_RE = re.compile(r"^(\d+)_name$")
 _DESCRIPTION_KEY_RE = re.compile(r"^c?(\d+)_description$")
@@ -100,6 +105,7 @@ class RosterRow:
     burst: str = ""
     element: str = ""
     extra_elements: str = ""  # elements its skill adds, "Iron" or "Iron;Water"
+    treasure_elements: str = ""  # elements its treasure's skill adds, from treasure_at on
     manufacturer: str = ""
     unit_class: str = ""
     weapon: str = ""
@@ -241,10 +247,13 @@ def load_release_overrides(path: Path | None = None) -> dict[str, dict[str, str]
     return out
 
 
-def load_extra_elements(path: Path | None = None) -> dict[str, tuple[str, ...]]:
+def load_extra_elements(path: Path | None = None, since: str = "") -> dict[str, tuple[str, ...]]:
     """Elements a unit's skill adds, from data/manual/extra_elements.csv (``unit_id``,
-    ``element``, ``reason``; one row per unit and element, the element in English
-    or Korean). A row naming no unit or no element is skipped with a warning."""
+    ``element``, ``since``, ``reason``; one row per unit and element, the element in
+    English or Korean). ``since`` picks the rows: "" those that hold as long as the
+    unit exists (an empty ``since``, or none), "treasure" those its treasure's skill
+    adds, from the treasure on (``treasure`` or ``애장품``). A row naming no unit, no
+    element or no known ``since`` is skipped with a warning."""
     target = path or (manual_dir() / EXTRA_ELEMENTS_CSV)
     if not target.is_file():
         return {}
@@ -253,6 +262,12 @@ def load_extra_elements(path: Path | None = None) -> dict[str, tuple[str, ...]]:
     out: dict[str, tuple[str, ...]] = {}
     for row in rows:
         if not row.get("unit_id") or not row.get("element"):
+            continue
+        holds = (row.get("since") or "").strip().lower()
+        if holds not in EXTRA_SINCE:
+            log.warning("%s: unknown since %r for %s", target.name, row["since"], row["unit_id"])
+            continue
+        if EXTRA_SINCE[holds] != since:
             continue
         try:
             unit_id = normalize_unit_id(row["unit_id"])
@@ -271,6 +286,7 @@ def merge_roster(
     *,
     overrides: dict[str, dict[str, str]] | None = None,
     extra_elements: dict[str, tuple[str, ...]] | None = None,
+    treasure_elements: dict[str, tuple[str, ...]] | None = None,
     patch_releases: dict[str, str] | None = None,
     release_times: dict[str, str] | None = None,
     enikk: Iterable[dict[str, Any]] | None = None,
@@ -287,10 +303,12 @@ def merge_roster(
     launch, which is what makes "never introduced by any notice" evidence of
     having shipped with the game rather than of a gap in the history.
 
-    ``treasures`` (unit id -> its ``treasures.csv`` row) gives ``treasure_at``.
+    ``treasures`` (unit id -> its ``treasures.csv`` row) gives ``treasure_at``;
+    ``treasure_elements`` the elements the treasure's skill adds from then on.
     """
     overrides = overrides or {}
     extra_elements = extra_elements or {}
+    treasure_elements = treasure_elements or {}
     patch_releases = patch_releases or {}
     release_times = release_times or {}
 
@@ -324,6 +342,8 @@ def merge_roster(
         unit.is_variant = 1 if suffix else 0
         unit.base_name_en = display.split(":")[0].strip() if suffix else display
         unit.extra_elements = ";".join(e for e in extra_elements.get(unit_id, ()) if e != unit.element)
+        unit.treasure_elements = ";".join(e for e in treasure_elements.get(unit_id, ())
+                                          if e != unit.element and e not in extra_elements.get(unit_id, ()))
 
         if unit_id in overrides:
             unit.release_date = overrides[unit_id]["release_date"]
@@ -492,6 +512,7 @@ def build(
         nikkeutils_rows,
         overrides=load_release_overrides(),
         extra_elements=load_extra_elements(),
+        treasure_elements=load_extra_elements(since="treasure"),
         patch_releases=patch_releases,
         release_times=release_times,
         enikk=enikk,

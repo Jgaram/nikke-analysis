@@ -30,7 +30,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
 
-from .paths import attribute_icon_path, icons_dir, processed_dir, unit_icon_path
+from .paths import attribute_icon_path, icons_dir, manual_dir, processed_dir, unit_icon_path
 
 ISSUES_CSV = "timeline_issues.csv"
 
@@ -198,17 +198,24 @@ def icon_issues(directory: Path, icons: Path | None = None) -> list[Issue]:
 
 def manual_issues(directory: Path, manual: Path | None = None) -> list[Issue]:
     """Hand-kept rows that point at nothing: a unit id in data/manual/extra_elements.csv
-    the roster does not have. A typo there would quietly leave the unit in its
-    own element only."""
-    from .build.roster import load_extra_elements
+    the roster does not have, or a ``since`` the build does not know. A typo there
+    would quietly leave the unit in its own element only."""
+    from .build.roster import EXTRA_SINCE, load_extra_elements
 
     roster = {row["unit_id"] for row in _rows(directory / "roster.csv")}
     if not roster:
         return []
-    extra = load_extra_elements(manual / "extra_elements.csv" if manual else None)
-    return [Issue("warning", "extra_element_unknown_unit", unit_id,
-                  "data/manual/extra_elements.csv 의 id 가 로스터에 없다 — 오타인지 확인")
-            for unit_id in sorted(set(extra) - roster)]
+    path = (manual or manual_dir()) / "extra_elements.csv"
+    extra = {unit_id for since in set(EXTRA_SINCE.values()) for unit_id in load_extra_elements(path, since)}
+    issues = [Issue("warning", "extra_element_unknown_unit", unit_id,
+                    "data/manual/extra_elements.csv 의 id 가 로스터에 없다 — 오타인지 확인")
+              for unit_id in sorted(extra - roster)]
+    for row in _rows(path):
+        since = (row.get("since") or "").strip()
+        if since.lower() not in EXTRA_SINCE:
+            issues.append(Issue("warning", "extra_element_unknown_since", row.get("unit_id", ""),
+                                f"data/manual/extra_elements.csv 의 since {since!r} — 비우거나 treasure 로"))
+    return issues
 
 
 def write(directory: Path, issues: Iterable[Issue]) -> Path:

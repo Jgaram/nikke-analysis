@@ -49,7 +49,7 @@ from typing import Any
 import pandas as pd
 
 from .analyze import tiers as tiering
-from .analyze.metrics import ELEMENTS
+from .analyze.metrics import ELEMENTS, listed_elements
 from .paths import processed_dir
 from .servers import ServerFilter, describe, ordered
 from .timeline import ELEMENT_KO, Season, Timeline, resolve_moment
@@ -73,6 +73,11 @@ def _utc(value: Any) -> pd.Timestamp:
 def _records(frame: pd.DataFrame) -> list[dict[str, Any]]:
     """Rows as plain dicts, a missing value as None (JSON null) rather than NaN."""
     return frame.astype(object).where(frame.notna(), None).to_dict(orient="records")
+
+
+def _flag(value: Any) -> bool:
+    """A flag cell as a boolean, whether it was computed or read back from a table as text."""
+    return str(value).lower() in ("true", "1")
 
 
 def _read(path: Path, **kwargs: Any) -> pd.DataFrame:
@@ -234,7 +239,7 @@ class UnitHistory:
     profile: dict[str, Any] | None
     moment: datetime
     sample: Sample | None = None
-    elements: tuple[str, ...] = ()  # the elements the unit counts as: its own, then any its skill adds
+    elements: tuple[str, ...] = ()  # the elements it counts as at ``moment``: its own, then any its skill adds
     live_seasons: list[int] = field(default_factory=list)  # in progress, counted as far as collected
     treasure_at: datetime | None = None  # when its treasure came out
     treasured: bool = False  # its treasure was out at ``moment``: the profile stands on the seasons with it
@@ -367,11 +372,9 @@ class TierBook:
         unit_id = self.find_unit(query)
         moment = resolve_moment(moment) if moment is not None else datetime.now(tz=_kst())
         rows = self.history[self.history["unit_id"] == unit_id].sort_values("season")
-        columns = ["unit_id", "name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "release_date"]
+        columns = ["unit_id", "name_ko", "name_en", "element", "extra_elements", "treasure_elements", "burst",
+                   "unit_class", "release_date"]
         info = _records(rows.iloc[[-1]].reindex(columns=columns))[0]
-        extra = info.get("extra_elements")
-        elements = tuple(e for e in [info.get("element")] + (extra.split(";") if isinstance(extra, str) else [])
-                         if isinstance(e, str) and e)
         instant = _utc(moment)
         standing = self._standings(instant)
         profile = None
@@ -392,6 +395,9 @@ class TierBook:
         unit = next((u for u in self.timeline.units if u.unit_id == unit_id), None)
         treasure_at = unit.treasure_at if unit is not None else None
         treasured = treasure_at is not None and _utc(treasure_at) <= instant
+        added = listed_elements(info.get("extra_elements")) + (
+            listed_elements(info.get("treasure_elements")) if treasured else [])
+        elements = tuple(dict.fromkeys(e for e in [info.get("element")] + added if isinstance(e, str) and e))
         return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live, treasure_at, treasured)
 
 
@@ -624,8 +630,10 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
     info = {key: value if value is not None else "" for key, value in history.info.items()}
     name = info.get("name_ko") or info.get("name_en")
     own = info.get("element", "")
-    extra = [e for e in history.elements if e != own]
-    skill = f" · 스킬로 {'·'.join(_element(e) for e in extra)} 우월 코드" if extra else ""
+    extra = listed_elements(info.get("extra_elements"))
+    by_treasure = listed_elements(info.get("treasure_elements"))
+    skill = (f" · 스킬로 {'·'.join(_element(e) for e in extra)} 우월 코드" if extra else "") + (
+        f" · 애장품 스킬로 {'·'.join(_element(e) for e in by_treasure)} 우월 코드" if by_treasure else "")
     treasure = f" · 애장품 {history.treasure_at:%Y-%m-%d}" if history.treasure_at is not None else ""
     out = [
         f"{name} ({info.get('name_en', '')}) · {_element(own)} "
@@ -642,7 +650,7 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
     ]
     marked = False
     for _, row in history.rows.iterrows():
-        if not marked and history.treasure_at is not None and str(row.get("treasure")).lower() in ("true", "1"):
+        if not marked and history.treasure_at is not None and _flag(row.get("treasure")):
             out.append(f"{rjust(TREASURE_MARK, 4)}  {history.treasure_at:%Y-%m-%d}  애장품 — 여기부터 속성·종합 티어는 "
                        "애장품을 낀 시즌만으로 매긴다")
             marked = True
@@ -650,7 +658,8 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
         start = pd.Timestamp(row["start_at"]).tz_convert("Asia/Seoul") if isinstance(row["start_at"], str) and row["start_at"] else None
         boss_name = next((row[c] for c in ("boss_ko", "boss_en") if isinstance(row.get(c), str) and row[c]), "?")
         weak = row["weak_element"] if isinstance(row["weak_element"], str) else ""
-        boss = f"{boss_name} · {'▶' if weak in history.elements else ''}{_element(weak)}"
+        favoured = _flag(row["element_match"]) if "element_match" in row.index else weak in history.elements
+        boss = f"{boss_name} · {'▶' if favoured else ''}{_element(weak)}"
         deck_share = f"{row['deck_share']:.0%}" if used and pd.notna(row["deck_share"]) else "-"
         main = f"{row['main_deck_rate']:.0%}" if used and pd.notna(row["main_deck_rate"]) else "-"
         element = f"{row['element_tier']} {row['element_lift']:.2f}" if pd.notna(row.get("element_lift")) else "-"
@@ -661,7 +670,8 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
             f"{row['presence']:>5.0%}  {deck_share:>5}  {main:>5}  {row['lift']:>6.2f}  {pad(str(row['tier']), 4)}  "
             f"{pad(element, 7)}  {overall}{live}"
         )
-    elements = "·".join(_element(e) for e in history.elements) or "?"
+    elements = "·".join([_element(e) for e in [own] + extra if e]
+                        + [f"{_element(e)}(애장품 뒤)" for e in by_treasure]) or "?"
     out += [
         f"▶ = 보스 약점이 이 니케의 속성({elements})인 시즌 · 사용 = 이 니케를 쓴 랭커 비율 · "
         "덱 몫 = 이 니케가 든 덱이 그 랭커 대미지에서 차지한 비율 · 1덱 = 가장 센 덱에 넣은 비율",

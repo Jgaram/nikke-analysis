@@ -95,6 +95,20 @@ def test_skill_elements_come_from_the_hand_kept_table(tmp_path):
     assert load_extra_elements(tmp_path / "missing.csv") == {}
 
 
+def test_an_element_the_treasure_adds_is_kept_apart(tmp_path):
+    path = tmp_path / "extra_elements.csv"
+    path.write_text(
+        "unit_id,element,since,reason\n"
+        "016,Iron,,스킬로 철갑 우월 코드\n"
+        "140,Water,treasure,애장품 스킬로 수냉 우월 코드\n"
+        "170,풍압,애장품,한국어로 적어도 된다\n"
+        "200,Fire,someday,모르는 since 는 건너뛴다\n",
+        encoding="utf-8",
+    )
+    assert load_extra_elements(path) == {"016": ("Iron",)}
+    assert load_extra_elements(path, "treasure") == {"140": ("Water",), "170": ("Wind",)}
+
+
 def test_the_roster_carries_skill_elements_but_not_the_units_own():
     roster = merge_roster(
         [{"unit_id": "016", "name_en": "Rapi: Red Hood"}],
@@ -104,6 +118,18 @@ def test_the_roster_carries_skill_elements_but_not_the_units_own():
     by_id = {u.unit_id: u for u in roster}
     assert (by_id["016"].element, by_id["016"].extra_elements) == ("Fire", "Iron")
     assert by_id["010"].extra_elements == ""
+
+
+def test_the_roster_carries_the_treasures_elements_in_a_column_of_their_own():
+    roster = merge_roster(
+        [{"unit_id": "016", "name_en": "Rapi: Red Hood"}],
+        parse_nikkeutils(CHARACTERS_JS),
+        extra_elements={"016": ("Iron",)},
+        treasure_elements={"016": ("Water", "Iron", "Fire")},
+    )
+    by_id = {u.unit_id: u for u in roster}
+    assert (by_id["016"].extra_elements, by_id["016"].treasure_elements) == ("Iron", "Water")
+    assert by_id["010"].treasure_elements == ""
 
 
 def test_datafile_date_is_marked_low_confidence():

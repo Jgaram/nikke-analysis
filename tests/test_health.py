@@ -125,6 +125,20 @@ def test_a_skill_element_for_a_unit_the_roster_lacks_is_a_warning(tmp_path):
     assert not health.has_errors(issues)
 
 
+def test_a_treasure_row_is_checked_too_and_so_is_its_since(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    write(processed / "roster.csv", [roster_row("140", "슈가", "launch")])
+    manual = tmp_path / "manual"
+    manual.mkdir()
+    (manual / "extra_elements.csv").write_text(
+        "unit_id,element,since,reason\n140,Water,treasure,애장품\n041,Water,treasure,오타\n140,Wind,언젠가,오타\n",
+        encoding="utf-8")
+    issues = health.manual_issues(processed, manual)
+    assert [(i.code, i.subject) for i in issues] == [("extra_element_unknown_unit", "041"),
+                                                     ("extra_element_unknown_since", "140")]
+
+
 def test_the_committed_skill_elements_name_units_of_the_committed_roster():
     from nikke_analysis import paths
     from nikke_analysis.build.roster import load_extra_elements

@@ -170,7 +170,8 @@ TREASURE_SEASON = 5  # the first season played with the treasure
 
 @pytest.fixture(scope="module")
 def world_with_treasure(tmp_path_factory):
-    """The synthetic world where the Water dealer gets its treasure a week before season 5."""
+    """The synthetic world where the Water dealer gets its treasure a week before season 5,
+    and the treasure's skill adds Wind (Wind-weak seasons: 3 before it, 8 after)."""
     directory = tmp_path_factory.mktemp("treasure")
     world = make_world(seasons=8, rankers=15, fillers=24, seed=11)
     unit = world.element_dps["Water"]
@@ -178,6 +179,7 @@ def world_with_treasure(tmp_path_factory):
     at = (start - pd.Timedelta(days=7)).normalize()
     world.roster["treasure_at"] = ""
     world.roster.loc[world.roster["unit_id"] == unit, "treasure_at"] = at.isoformat()
+    world.roster["treasure_elements"] = world.roster["unit_id"].map({unit: "Wind"}).fillna("")
     write_processed(world, directory)
     notice = (at - pd.Timedelta(days=3)).isoformat()
     pd.DataFrame([{"unit_id": unit, "name": "Water Dealer", "treasure_at": at.isoformat(),
@@ -243,6 +245,20 @@ def test_the_unit_is_shown_by_its_name_and_its_record_is_one_line(world_with_tre
     assert lines[marker + 1].split()[0] == str(TREASURE_SEASON)
     assert f"애장품 {at:%Y-%m-%d}" in lines[0]
     assert "♥" not in render(book.at("2026-01-01"))  # the unit itself carries no mark
+
+
+def test_the_unit_view_counts_the_treasures_element_from_the_treasure_on(world_with_treasure):
+    directory, world, unit, at = world_with_treasure
+    book = TierBook.load(directory)
+    name = world.roster.set_index("unit_id").loc[unit, "name_ko"]
+    before = book.unit(name, (at - pd.Timedelta(days=1)).to_pydatetime())
+    after = book.unit(name, "2026-01-01")
+    assert before.elements == ("Water",) and after.elements == ("Water", "Wind")
+    assert [e["element"] for e in after.profile["elements"]] == ["Water", "Wind"]
+    lines = render_unit(after, book.config).splitlines()
+    assert "애장품 스킬로 풍압 우월 코드" in lines[0]
+    rows = {int(line.split()[0]): line for line in lines if line.split() and line.split()[0].isdigit()}
+    assert "▶풍압" in rows[8] and "▶풍압" not in rows[3] and "▶수냉" in rows[2]
 
 
 def test_the_timeline_lists_treasures_but_keeps_one_unit(world_with_treasure):

@@ -33,6 +33,21 @@ def skilled(world):
     return build(world, world.roster.assign(extra_elements=extra))
 
 
+TREASURE_SEASON = 6  # the first season the partner plays with its treasure
+
+
+@pytest.fixture(scope="module")
+def treasure_skilled(world):
+    """The same world, where the (Water) partner's treasure, out before season 6, adds Wind:
+    of the Wind-weak seasons, 3 is before it and 8 after."""
+    start = pd.Timestamp(world.seasons.set_index("season").loc[TREASURE_SEASON, "start_at"])
+    roster = world.roster.assign(treasure_at="", treasure_elements="")
+    mine = roster["unit_id"] == world.partner
+    roster.loc[mine, "treasure_at"] = (start - pd.Timedelta(days=7)).isoformat()
+    roster.loc[mine, "treasure_elements"] = "Wind"
+    return build(world, roster)
+
+
 def standing_at(built, moment, config=None):
     table, summary = built
     return tiers.standings(table, summary, pd.Timestamp(moment), config or tiers.TierConfig())
@@ -170,6 +185,31 @@ def test_a_skill_element_counts_as_the_units_own(world, skilled):
     table, _ = skilled
     partner = table[table["unit_id"] == world.partner]
     assert partner["element_match"].equals(partner["weak_element"].isin(["Water", "Wind"]))
+
+
+def test_an_element_the_treasure_adds_is_the_units_from_the_treasure_on(world, treasure_skilled):
+    table, _ = treasure_skilled
+    partner = table[table["unit_id"] == world.partner].set_index("season")
+    assert list(partner.index[partner["element_match"]]) == [2, 7, 8]  # Water always, Wind with the treasure
+    assert list(partner.index[partner["treasure"]]) == list(range(TREASURE_SEASON, 11))
+
+
+def test_an_element_the_treasure_adds_is_tiered_on_its_side_only(world, treasure_skilled):
+    table, summary = treasure_skilled
+    moment = newest(treasure_skilled)
+
+    def mine(treasured):
+        standing = tiers.standings(table, summary, moment, tiers.TierConfig(), treasured=treasured)
+        return standing.elements[standing.elements["unit_id"] == world.partner].set_index("element")
+
+    with_it = mine([world.partner])
+    assert with_it["source"].to_dict() == {"Water": "own", "Wind": "skill"}
+    assert with_it.loc["Wind", "element_seasons"] == 1  # season 8 alone
+    assert mine([])["source"].to_dict() == {"Water": "own"}  # before it, Water only
+    # A season's element tier follows its side: Wind-weak season 3 was not the partner's, 8 was.
+    history = tiers.tier_history(table, summary, tiers.TierConfig())
+    rows = history[history["unit_id"] == world.partner].set_index("season")
+    assert pd.isna(rows.loc[3, "element_lift"]) and pd.notna(rows.loc[8, "element_lift"])
 
 
 def test_the_past_is_viewed_without_the_future(world, built):

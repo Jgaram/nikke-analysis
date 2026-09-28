@@ -37,14 +37,22 @@ elements: it gets an element tier in each and is listed in each element's tier
 table (`nikke tier --element`).
 
 ```csv
-unit_id,element,reason
-016,Iron,"라피 : 레드 후드 (작열): 스킬로 철갑 우월 코드도 가진다"
+unit_id,element,since,reason
+016,Iron,,"라피 : 레드 후드 (작열): 스킬로 철갑 우월 코드도 가진다"
+140,Water,treasure,"슈가 (철갑): 애장품(2026-07-23)으로 스킬이 바뀌어 수냉 우월 코드도 가진다"
 ```
 
 One row per unit and added element; the element in English (`Iron`) or Korean
-(`철갑`). Unlike the other two files these rows are not temporary: they last as
-long as the skill does. A `unit_id` the roster does not have is reported by
-`nikke check` (`extra_element_unknown_unit`).
+(`철갑`). `since` says from when the row holds: empty for as long as the unit
+exists, `treasure` (or `애장품`) from the unit's treasure on - for a skill the
+treasure changed. Those go to the roster's `treasure_elements` column instead,
+and the unit counts as that element only in the seasons played with its
+treasure (the treasure date itself comes from the update notices, not from
+here; a row written before the treasure is out waits for it). Unlike the other
+two files these rows are not temporary: they last as long as the skill does. A
+`unit_id` the roster does not have, or a `since` the build does not know, is
+reported by `nikke check` (`extra_element_unknown_unit`,
+`extra_element_unknown_since`).
 
 ## `unit_aliases.csv`
 

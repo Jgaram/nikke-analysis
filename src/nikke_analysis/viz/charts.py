@@ -694,8 +694,13 @@ def render_all(
     written: list[str] = []
     skipped: list[str] = []
     _sample_caption = sample
-    if "extra_elements" in overall.columns:
-        _extras = {str(u): _split(e) for u, e in zip(overall["unit_id"], overall["extra_elements"]) if _split(e)}
+    # The elements a unit's skill adds as of the newest data: its treasure's once it has it.
+    has = _is_true(overall["treasure"]) if "treasure" in overall.columns else pd.Series(False, index=overall.index)
+    _extras = {}
+    for i, row in overall.iterrows():
+        adds = _split(row.get("extra_elements")) + (_split(row.get("treasure_elements")) if has[i] else [])
+        if adds:
+            _extras[str(row["unit_id"])] = adds
     try:
         for theme_name in themes:
             theme = th.THEMES[theme_name]

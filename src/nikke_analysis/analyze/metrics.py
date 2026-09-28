@@ -32,7 +32,9 @@ if nobody used it - so an unused unit reads as zero, not as missing.
 **Treasure.** A unit whose treasure (애장품) was out when the season started
 played with it (every ranked player fields it once it exists): the row's
 ``treasure`` flag. It is the same unit, so its rows stay one line; the element
-and overall tiers are the ones that tell the two apart (analyze/tiers.py).
+and overall tiers are the ones that tell the two apart (analyze/tiers.py). An
+element the treasure's skill adds (the roster's ``treasure_elements``) is the
+unit's in those seasons only.
 
 **Decks that were not fought.** A deck that dealt no damage was not fought with
 (rare: six decks in seasons 1-41), so it counts for nothing: not as a deck, and
@@ -64,7 +66,8 @@ log = logging.getLogger(__name__)
 ELEMENTS = ("Fire", "Water", "Wind", "Iron", "Electric")
 RANKER_KEYS = ["season", "server", "player"]
 DECK_KEYS = RANKER_KEYS + ["deck"]
-UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "burst", "unit_class", "rarity", "release_date"]
+UNIT_INFO = ["name_ko", "name_en", "element", "extra_elements", "treasure_elements", "burst", "unit_class", "rarity",
+             "release_date"]
 
 
 # --------------------------------------------------------------------------
@@ -80,6 +83,11 @@ def rank_weight(rank: pd.Series | np.ndarray, scheme: str = "dcg") -> np.ndarray
     if scheme != "dcg":
         raise ValueError(f"unknown rank weighting {scheme!r}; use 'dcg' or 'uniform'")
     return 1.0 / np.log2(ranks + 1.0)
+
+
+def listed_elements(value) -> list[str]:
+    """A roster cell of elements, ``"Iron;Water"``, as a list; nothing for an empty or missing one."""
+    return [e for e in value.split(";") if e] if isinstance(value, str) else []
 
 
 def season_order(seasons) -> list[int]:
@@ -233,7 +241,8 @@ def unit_season(
       ``in_deck_1..5``    players who had it in their deck ranked 1..5 by damage
       ``avg_deck``        the average of that deck rank
       ``element_match``   the boss was weak to the unit's element, or to one its
-                          skill adds (the roster's ``extra_elements``)
+                          skill adds (the roster's ``extra_elements``, and in a
+                          season played with its treasure ``treasure_elements``)
       ``treasure``        the unit's treasure was out when the season started
     """
     if entries.empty:
@@ -297,15 +306,17 @@ def unit_season(
     table = table.join(info[[c for c in UNIT_INFO if c in info.columns]], on="unit_id")
     meta = seasons.set_index("season")[["boss_en", "boss_ko", "weak_element", "start_at", "end_at"]]
     table = table.join(meta, on="season")
-    table["element_match"] = table["element"].fillna("") == table["weak_element"].fillna("?")
-    if "extra_elements" in table.columns:
-        skill = [weak in str(extra).split(";") for weak, extra in zip(table["weak_element"], table["extra_elements"])]
-        table["element_match"] |= pd.Series(skill, index=table.index) & table["weak_element"].notna()
     treasure = treasure_instants(roster)
-    table["treasure"] = False
+    played = pd.Series(False, index=table.index)
     if not treasure.empty:
         at = pd.to_datetime(table["unit_id"].map(treasure), utc=True)
-        table["treasure"] = (at <= table["start_at"]).fillna(False).astype(bool)
+        played = (at <= table["start_at"]).fillna(False).astype(bool)
+    table["element_match"] = table["element"].fillna("") == table["weak_element"].fillna("?")
+    for column, holds in (("extra_elements", True), ("treasure_elements", played)):
+        if column in table.columns:
+            skill = [weak in listed_elements(extra) for weak, extra in zip(table["weak_element"], table[column])]
+            table["element_match"] |= pd.Series(skill, index=table.index) & holds
+    table["treasure"] = played
     return table.sort_values(["season", "lift", "unit_id"], ascending=[True, False, True]).reset_index(drop=True)
 
 

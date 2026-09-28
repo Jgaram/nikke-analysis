@@ -1,203 +1,203 @@
-unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,manufacturer,unit_class,weapon,squad,is_variant,base_name_en,full_name_en,full_name_ko,full_name_ja,datafile_added,release_date,release_at,release_date_source,release_date_confidence,treasure_at,in_gamefiles,in_nikkeutils,in_enikk
-010,Rapi,라피,ラピ,SR,II,Fire,,Elysion,Attacker,Assault Rifle,Counters,0,Rapi,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-011,Neon,네온,ネオン,SR,I,Fire,,Elysion,Supporter,Shotgun,Counters,0,Neon,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-012,Anis,아니스,アニス,SR,II,Iron,,Tetra Line,Defender,Rocket Launcher,Counters,0,Anis,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-014,Neon: Blue Ocean,네온 : 블루 오션,ネオン：ブルーオーシャン,SSR,III,Water,,Elysion,Attacker,Machine Gun,Counters,1,Neon,,,,2023-06-22,2023-06-22,2023-06-22T05:00:00+09:00,patchnote,high,,1,1,1
-015,Anis: Sparkling Summer,아니스 : 스파클링 서머,アニス：スパークリングサマー,SSR,III,Electric,,Tetra Line,Supporter,Shotgun,Counters,1,Anis,,,,2023-08-03,2023-08-03,2023-08-03T00:00:00+09:00,patchnote,high,,1,1,1
-016,Rapi: Red Hood,라피 : 레드 후드,ラピ：レッドフード,SSR,III,Fire,Iron,Elysion,Attacker,Machine Gun,Counters,1,Rapi,,,,2025-01-01,2025-01-01,2025-01-01T00:00:00+09:00,patchnote,high,,1,1,1
-017,Anis: Star,아니스 : 스타,アニス：スター,SSR,I,Electric,,Tetra Line,Defender,Rocket Launcher,Counters,1,Anis,,,,2026-04-23,2026-04-23,2026-04-23T00:00:00+09:00,patchnote,high,,1,1,1
-018,Neon: Vision Eye,네온 : 비전 아이,ネオン：ビジョン・アイ,SSR,III,Electric,,Missilis Industry,Attacker,Rocket Launcher,Counters,1,Neon,,,,2026-04-30,2026-04-30,2026-04-30T05:00:00+09:00,patchnote,high,,1,1,1
-020,Delta,델타,デルタ,SR,II,Wind,,Elysion,Defender,Sniper Rifle,The Scouts,0,Delta,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-022,Signal,시그널,シグナル,SSR,II,Fire,,Elysion,Attacker,Sub Machine Gun,The Scouts,0,Signal,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-023,Delta: Ninja Thief,델타 : 닌자 시프,デルタ：ニンジャシーフ,SSR,II,Water,,Elysion,Defender,Machine Gun,The Scouts,1,Delta,,,,2025-10-16,2025-10-16,2025-10-16T00:00:00+09:00,patchnote,high,,1,1,1
-030,Poli,폴리,ポリ,SSR,II,Water,,Elysion,Defender,Shotgun,A.C.P.U.,0,Poli,,,,2022-04-11,2022-11-04,,launch,medium,2025-07-17T00:00:00+09:00,1,1,1
-032,Miranda,미란다,ミランダ,SSR,I,Fire,,Elysion,Supporter,Sub Machine Gun,A.C.P.U.,0,Miranda,,,,2022-04-11,2022-11-04,,launch,medium,2025-01-16T00:00:00+09:00,1,1,1
-033,Quiry,키리,キリ,SSR,III,Wind,,Elysion,Supporter,Rocket Launcher,A.C.P.U.,0,Quiry,,,,2023-10-19,2023-10-19,2023-10-19T00:00:00+09:00,patchnote,high,,1,1,1
-040,D,D,D,SSR,III,Wind,,Elysion,Attacker,Sub Machine Gun,Perilous Siege,0,D,,,,2023-04-13,2023-04-13,2023-04-13T00:00:00+09:00,patchnote,high,,1,1,1
-041,K,K,K,SSR,III,Electric,,Elysion,Attacker,Sub Machine Gun,Perilous Siege,0,K,,,,2025-05-29,2025-05-29,2025-05-29T00:00:00+09:00,patchnote,high,,1,1,1
-043,D: Killer Wife,D : 킬러 와이프,D：キラーワイフ,SSR,I,Fire,,Elysion,Supporter,Sniper Rifle,Perilous Siege,1,D,,,,2024-03-07,2024-03-07,2024-03-07T00:00:00+09:00,patchnote,high,,1,1,1
-060,Belorta,벨로타,ベロータ,SR,II,Electric,,Tetra Line,Attacker,Rocket Launcher,The Carronades,0,Belorta,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-061,Mica,미카,ミカ,SR,I,Wind,,Tetra Line,Supporter,Rocket Launcher,The Carronades,0,Mica,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-062,Mica: Snow Buddy,미카 : 스노우 버디,ミカ：スノーバディ,SSR,I,Iron,,Tetra Line,Supporter,Sub Machine Gun,The Carronades,1,Mica,,,,2023-12-14,2023-12-14,2023-12-14T05:00:00+09:00,patchnote,high,,1,1,1
-070,Brid,브리드,ブリッド,SSR,III,Water,,Elysion,Attacker,Assault Rifle,Infinity Rail,0,Brid,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-071,Soline,솔린,ソリン,SSR,III,Iron,,Elysion,Attacker,Sub Machine Gun,Infinity Rail,0,Soline,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-072,Diesel,디젤,ディーゼル,SSR,II,Wind,,Elysion,Defender,Machine Gun,Infinity Rail,0,Diesel,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
-073,Brid: Silent Track,브리드 : 사일런트 트랙,ブリッド：サイレントトラック,SSR,II,Fire,,Elysion,Supporter,Shotgun,Infinity Rail,1,Brid,,,,2025-12-11,2025-12-11,2025-12-11T05:00:00+09:00,patchnote,high,,1,1,1
-074,Soline: Frost Ticket,솔린 : 프로스트 티켓,ソリン：フロストチケット,SSR,I,Water,,Elysion,Supporter,Shotgun,Infinity Rail,1,Soline,,,,2025-11-20,2025-11-20,2025-11-20T00:00:00+09:00,patchnote,high,,1,1,1
-075,Diesel: Winter Sweets,디젤 : 윈터 스위츠,ディーゼル：ウィンタースイーツ,SSR,III,Fire,,Elysion,Attacker,Rocket Launcher,Infinity Rail,1,Diesel,,,,2025-12-04,2025-12-04,2025-12-04T00:00:00+09:00,patchnote,high,,1,1,1
-080,Centi,센티,センチ,SSR,II,Iron,,Missilis Industry,Defender,Rocket Launcher,Mighty Tools,0,Centi,,,,2022-04-11,2022-11-04,,launch,medium,2026-02-12T00:00:00+09:00,1,1,1
-082,Liter,리타,リター,SSR,I,Iron,,Missilis Industry,Supporter,Sub Machine Gun,Mighty Tools,0,Liter,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-090,Emma,엠마,エマ,SSR,I,Fire,,Elysion,Supporter,Machine Gun,Absolute,0,Emma,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-091,Vesti,베스티,ベスティー,SSR,III,Water,,Elysion,Attacker,Rocket Launcher,Absolute,0,Vesti,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-092,Eunhwa,은화,ウンファ,SSR,II,Fire,,Elysion,Attacker,Sniper Rifle,Absolute,0,Eunhwa,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-093,Emma: Tactical Upgrade,엠마 : 택티컬 업,エマ：タクティカル・アップ,SSR,I,Fire,,Elysion,Supporter,Machine Gun,Absolute,1,Emma,,,,2025-08-07,2025-08-07,2025-08-07T00:00:00+09:00,patchnote,high,,1,1,1
-094,Vesti: Tactical Upgrade,베스티 : 택티컬 업,ベスティー：タクティカル・アップ,SSR,III,Fire,,Elysion,Attacker,Rocket Launcher,Absolute,1,Vesti,,,,2025-08-21,2025-08-21,2025-08-21T05:00:00+09:00,patchnote,high,,1,1,1
-095,Eunhwa: Tactical Upgrade,은화 : 택티컬 업,ウンファ：タクティカル・アップ,SSR,II,Fire,,Elysion,Attacker,Sniper Rifle,Absolute,1,Eunhwa,,,,2025-08-14,2025-08-14,2025-08-14T05:00:00+09:00,patchnote,high,,1,1,1
-100,Laplace,라플라스,ラプラス,SSR,III,Iron,,Missilis Industry,Attacker,Rocket Launcher,Matis,0,Laplace,,,,2022-11-24,2022-11-24,2022-11-24T00:00:00+09:00,patchnote,high,2024-05-30T00:00:00+09:00,1,1,1
-101,Drake,드레이크,ドレイク,SSR,III,Fire,,Missilis Industry,Attacker,Shotgun,Matis,0,Drake,,,,2022-04-11,2022-11-04,,launch,medium,2025-01-16T00:00:00+09:00,1,1,1
-102,Maxwell,맥스웰,マクスウェル,SSR,III,Iron,,Missilis Industry,Attacker,Sniper Rifle,Matis,0,Maxwell,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-103,Laplace: Ultimate Hero,라플라스 : 얼티밋 히어로,ラプラス：アルティメットヒーロー,SSR,III,Wind,,Missilis Industry,Attacker,Rocket Launcher,Matis,1,Laplace,,,,2026-07-23,2026-07-23,2026-07-23T00:00:00+09:00,patchnote,high,,1,1,1
-104,Drake: Great Villain,드레이크 : 그레이트 빌런,ドレイク：グレイトヴィラン,SSR,III,Wind,,Missilis Industry,Defender,Shotgun,Matis,1,Drake,,,,2026-09-03,2026-09-03,2026-09-03T00:00:00+09:00,patchnote,high,,1,1,1
-105,Maxwell: Ordinary Mechanic,맥스웰 : 오디너리 미케닉,マクスウェル：オーディナリーメカニック,SSR,II,Wind,,Missilis Industry,Supporter,Sniper Rifle,Matis,1,Maxwell,,,,2026-07-30,2026-07-30,2026-07-30T05:00:00+09:00,patchnote,high,,1,1,1
-110,Crow,크로우,クロウ,SSR,III,Fire,,Missilis Industry,Defender,Sub Machine Gun,Exotic,0,Crow,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-111,Jackal,자칼,ジャッカル,SSR,I,Iron,,Missilis Industry,Defender,Rocket Launcher,Exotic,0,Jackal,,,,2023-01-12,2023-01-12,2023-01-12T00:00:00+09:00,patchnote,high,,1,1,1
-112,Viper,바이퍼,バイパー,SSR,II,Water,,Tetra Line,Attacker,Shotgun,Exotic,0,Viper,,,,2023-01-19,2023-01-19,2023-01-19T05:00:00+09:00,patchnote,high,2024-07-04T00:00:00+09:00,1,1,1
-113,E.H.,E.H.,E.H.,SSR,III,Wind,,Elysion,Attacker,Sub Machine Gun,Exotic,0,E.H.,,,,2026-03-05,2026-03-05,2026-03-05T00:00:00+09:00,patchnote,high,,1,1,1
-120,N102,N102,N102,SR,I,Water,,Missilis Industry,Supporter,Rocket Launcher,Recall & Release,0,N102,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-121,Anne: Miracle Fairy,앤 : 미라클 페어리,エヌ : ミラクルフェアリー,SSR,II,Wind,,Missilis Industry,Supporter,Rocket Launcher,Recall & Release,1,Anne,,,,2022-12-15,2022-12-15,,datafile,low,,1,1,1
-130,Mary,메어리,メアリー,SSR,I,Water,,Tetra Line,Supporter,Shotgun,Seraphim,0,Mary,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-131,Pepper,페퍼,ペッパー,SSR,I,Wind,,Missilis Industry,Supporter,Shotgun,Seraphim,0,Pepper,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-132,Mary: Bay Goddess,메어리 : 베이 갓데스,メアリー：ベイゴッデス,SSR,I,Water,,Tetra Line,Supporter,Sniper Rifle,Seraphim,1,Mary,,,,2023-06-15,2023-06-15,2023-06-15T00:00:00+09:00,patchnote,high,,1,1,1
-140,Sugar,슈가,シュガー,SSR,III,Iron,Water,Tetra Line,Attacker,Shotgun,Cafe Sweety,0,Sugar,,,,2022-04-11,2022-11-04,,launch,medium,2026-07-23T00:00:00+09:00,1,1,1
-141,Milk,밀크,ミルク,SSR,I,Water,,Tetra Line,Attacker,Sniper Rifle,Cafe Sweety,0,Milk,,,,2022-04-11,2022-11-04,,launch,medium,2025-01-16T00:00:00+09:00,1,1,1
-142,Frima,프림,プリム,SSR,I,Iron,,Tetra Line,Supporter,Sniper Rifle,Cafe Sweety,0,Frima,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
-143,Milk: Blooming Bunny,밀크 : 블루밍 바니,ミルク：ブルーミングバニー,SSR,III,Iron,,Tetra Line,Attacker,Sniper Rifle,Cafe Sweety,1,Milk,,,,2025-09-11,2025-09-11,2025-09-11T05:00:00+09:00,patchnote,high,,1,1,1
-150,Julia,율리아,ジュリア,SSR,III,Iron,,Missilis Industry,Attacker,Assault Rifle,Master Hand,0,Julia,,,,2022-04-11,2022-11-04,,launch,medium,2025-07-17T00:00:00+09:00,1,1,1
-160,Yuni,유니,ユニ,SSR,II,Fire,,Missilis Industry,Defender,Rocket Launcher,Wardress,0,Yuni,,,,2022-11-04,2022-11-04,,launch,medium,,1,1,1
-161,Mihara,미하라,ミハラ,SR,III,Water,,Missilis Industry,Attacker,Assault Rifle,Wardress,0,Mihara,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-162,Mihara: Bonding Chain,미하라 : 본딩 체인,ミハラ：ボンディングチェーン,SSR,III,Fire,,Missilis Industry,Attacker,Machine Gun,Wardress,1,Mihara,,,,2025-05-01,2025-05-01,2025-05-01T05:00:00+09:00,patchnote,high,,1,1,1
-170,Privaty,프리바티,プリバティ,SSR,III,Water,,Elysion,Attacker,Assault Rifle,Triangle,0,Privaty,,,,2022-04-11,2022-11-04,,launch,medium,2026-02-12T00:00:00+09:00,1,1,1
-171,Yulha,율하,ユルハ,SSR,III,Fire,,Tetra Line,Attacker,Sniper Rifle,Triangle,0,Yulha,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-172,Admi,애드미,アドミ,SSR,II,Wind,,Missilis Industry,Supporter,Sniper Rifle,Triangle,0,Admi,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-180,Guillotine,길로틴,ギロチン,SSR,III,Electric,,Elysion,Attacker,Machine Gun,Extrinsic,0,Guillotine,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-181,Maiden,메이든,メイデン,SSR,III,Electric,,Elysion,Attacker,Shotgun,Extrinsic,0,Maiden,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-182,Guillotine: Winter Slayer,길로틴 : 윈터 슬레이어,ギロチン：ウィンタースレイヤー,SSR,III,Water,,Elysion,Attacker,Assault Rifle,Extrinsic,1,Guillotine,,,,2024-12-12,2024-12-12,2024-12-12T05:00:00+09:00,patchnote,high,,1,1,1
-183,Maiden: Ice Rose,메이든 : 아이스 로즈,メイデン：アイスローズ,SSR,III,Electric,,Elysion,Defender,Rocket Launcher,Extrinsic,1,Maiden,,,,2024-12-05,2024-12-05,2024-12-05T00:00:00+09:00,patchnote,high,,1,1,1
-190,Ludmilla,루드밀라,ルドミラ,SSR,I,Water,,Tetra Line,Defender,Sub Machine Gun,Unlimited,0,Ludmilla,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-191,Alice,앨리스,アリス,SSR,III,Fire,,Tetra Line,Attacker,Sniper Rifle,Unlimited,0,Alice,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-192,Tove,토브,トーブ,SSR,I,Water,,Missilis Industry,Supporter,Assault Rifle,Unlimited,0,Tove,,,,2023-11-23,2023-11-23,2023-11-23T00:00:00+09:00,patchnote,high,2025-07-17T00:00:00+09:00,1,1,1
-193,Neve,네베,ネヴェ,SR,III,Water,,Tetra Line,Attacker,Shotgun,Unlimited,0,Neve,,,,2022-12-08,2022-12-08,,datafile,low,,1,1,1
-194,Ludmilla: Winter Owner,루드밀라 : 윈터 오너,ルドミラ：ウィンターオーナー,SSR,III,Water,,Tetra Line,Attacker,Machine Gun,Unlimited,1,Ludmilla,,,,2023-12-07,2023-12-07,2023-12-07T00:00:00+09:00,patchnote,high,,1,1,1
-195,Alice: Wonderland Bunny,앨리스 : 원더랜드 바니,アリス：ワンダーランドバニー,SSR,I,Water,,Tetra Line,Supporter,Sub Machine Gun,Unlimited,1,Alice,,,,2024-06-06,2024-06-06,2024-06-06T05:00:00+09:00,patchnote,high,,1,1,1
-200,Rupee,루피,ルピー,SSR,II,Iron,,Tetra Line,Attacker,Assault Rifle,Talentum,0,Rupee,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-201,Yan,얀,ヤン,SSR,I,Fire,,Tetra Line,Supporter,Rocket Launcher,Talentum,0,Yan,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-202,Dolla,도라,ドラー,SSR,II,Wind,,Tetra Line,Supporter,Sniper Rifle,Talentum,0,Dolla,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-203,Rupee: Winter Shopper,루피 : 윈터 쇼퍼,ルピー：ウィンターショッパー,SSR,I,Electric,,Tetra Line,Defender,Assault Rifle,Talentum,1,Rupee,,,,2022-12-08,2022-12-08,,datafile,low,,1,1,1
-210,Exia,엑시아,エクシア,SSR,I,Electric,,Tetra Line,Supporter,Sniper Rifle,Protocol,0,Exia,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
-212,Novel,노벨,ノベル,SSR,II,Iron,,Tetra Line,Defender,Sub Machine Gun,Protocol,0,Novel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-220,Snow White,스노우 화이트,スノーホワイト,SSR,III,Iron,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Snow White,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-221,Rapunzel,라푼젤,ラプンツェル,SSR,I,Iron,,Pilgrim,Supporter,Rocket Launcher,Pioneer,0,Rapunzel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-222,Scarlet,홍련,紅蓮,SSR,III,Electric,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Scarlet,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-223,Nayuta,나유타,ナユタ,SSR,II,Wind,,Pilgrim,Supporter,Sub Machine Gun,Pioneer,0,Nayuta,,,,2025-10-30,2025-10-30,2025-10-30T00:00:00+09:00,patchnote,high,,1,1,1
-224,Snow White: Innocent Days,스노우 화이트 : 이노센트 데이즈,スノーホワイト：イノセントデイズ,SSR,III,Iron,,Pilgrim,Attacker,Assault Rifle,Goddess,1,Snow White,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
-225,Scarlet: Black Shadow,홍련 : 흑영,紅蓮：ブラックシャドウ,SSR,III,Wind,,Pilgrim,Attacker,Rocket Launcher,Goddess,1,Scarlet,,,,2024-01-01,2024-01-01,2024-01-01T00:00:00+09:00,patchnote,high,,1,1,1
-226,Rapunzel: Pure Grace,라푼젤 : 퓨어 그레이스,ラプンツェル：ピュアグレイス,SSR,I,Iron,,Pilgrim,Defender,Sniper Rifle,Goddess,1,Rapunzel,,,,2024-10-31,2024-10-31,2024-10-31T00:00:00+09:00,patchnote,high,,1,1,1
-230,Harran,하란,ハラン,SSR,III,Electric,,Pilgrim,Attacker,Sniper Rifle,Inherit,0,Harran,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-231,Isabel,이사벨,イサベル,SSR,III,Electric,,Pilgrim,Attacker,Shotgun,Inherit,0,Isabel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-232,Noah,노아,ノア,SSR,II,Wind,,Pilgrim,Defender,Rocket Launcher,Inherit,0,Noah,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-233,Dorothy,도로시,ドロシー,SSR,I,Water,,Pilgrim,Supporter,Assault Rifle,Inherit,0,Dorothy,,,,2023-04-27,2023-04-27,2023-04-27T00:00:00+09:00,patchnote,high,,1,1,1
-234,Dorothy: Serendipity,도로시 : 세렌디피티,ドロシー：セレンディピティ,SSR,III,Water,,Pilgrim,Attacker,Shotgun,Inherit,1,Dorothy,,,,2025-07-17,2025-07-17,2025-07-17T00:00:00+09:00,patchnote,high,,1,1,1
-240,Rumani,루마니,ルマニ,SSR,I,Fire,,Tetra Line,Defender,Rocket Launcher,Nepenthe,0,Rumani,,,,2024-10-17,2024-10-17,2024-10-17T00:00:00+09:00,patchnote,high,,1,1,1
-241,Epinel,에피넬,エピネル,SSR,III,Wind,,Missilis Industry,Attacker,Sub Machine Gun,Nepenthe,0,Epinel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-242,Folkwang,폴크방,フォルクヴァン,SSR,II,Water,,Tetra Line,Defender,Assault Rifle,Nepenthe,0,Folkwang,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-260,Modernia,모더니아,モダニア,SSR,III,Fire,,Pilgrim,Attacker,Machine Gun,Heretic,0,Modernia,,,,2023-01-01,2023-01-01,2023-01-01T00:00:00+09:00,patchnote,high,,1,1,1
-261,Nihilister,니힐리스타,ニヒリスター,SSR,II,Fire,,Pilgrim,Attacker,Sniper Rifle,Heretic,0,Nihilister,,,,2023-03-30,2023-03-30,2023-03-30T00:00:00+09:00,patchnote,high,,1,1,1
-262,Liberalio,리버렐리오,リバーレリオ,SSR,III,Wind,,Pilgrim,Attacker,Sniper Rifle,Heretic,0,Liberalio,,,,2025-11-06,2025-11-06,2025-11-06T05:00:00+09:00,patchnote,high,,1,1,1
-270,Blanc,블랑,ブラン,SSR,II,Wind,,Tetra Line,Defender,Assault Rifle,777,0,Blanc,,,,2023-05-18,2023-05-18,2023-05-18T00:00:00+09:00,patchnote,high,,1,1,1
-271,Noir,누아르,ノワール,SSR,III,Wind,,Tetra Line,Attacker,Shotgun,777,0,Noir,,,,2023-05-25,2023-05-25,2023-05-25T05:00:00+09:00,patchnote,high,,1,1,1
-272,Rouge,루주,ルージュ,SSR,I,Electric,,Tetra Line,Supporter,Sniper Rifle,777,0,Rouge,,,,2024-09-19,2024-09-19,2024-09-19T00:00:00+09:00,patchnote,high,,1,1,1
-280,Rosanna,로산나,ロザンナ,SSR,I,Electric,,Tetra Line,Attacker,Machine Gun,Underworld Queen,0,Rosanna,,,,2023-06-01,2023-06-01,2023-06-01T00:00:00+09:00,patchnote,high,2026-07-23T00:00:00+09:00,1,1,1
-281,Moran,목단,モラン,SSR,I,Electric,,Tetra Line,Defender,Assault Rifle,Underworld Queen,0,Moran,,,,2024-01-25,2024-01-25,2024-01-25T12:00:00+09:00,patchnote,high,2026-02-12T00:00:00+09:00,1,1,1
-282,Sakura,사쿠라,サクラ,SSR,I,Fire,,Tetra Line,Supporter,Sniper Rifle,Underworld Queen,0,Sakura,,,,2023-03-30,2023-03-30,2023-03-30T00:00:00+09:00,patchnote,high,,1,1,1
-283,Rosanna: Chic Ocean,로산나 : 시크 오션,ロザンナ：シックオーシャン,SSR,II,Wind,,Tetra Line,Supporter,Assault Rifle,Underworld Queen,1,Rosanna,,,,2024-07-11,2024-07-11,2024-07-11T05:00:00+09:00,patchnote,high,,1,1,1
-284,Sakura: Bloom in Summer,사쿠라 : 블룸 인 서머,サクラ：ブルーム・イン・サマー,SSR,III,Wind,,Tetra Line,Attacker,Assault Rifle,Underworld Queen,1,Sakura,,,,2024-07-04,2024-07-04,2024-07-04T00:00:00+09:00,patchnote,high,,1,1,1
-290,Mana,마나,マナ,SSR,III,Wind,,Missilis Industry,Attacker,Assault Rifle,M.M.R.,0,Mana,,,,2025-01-16,2025-01-16,2025-01-16T00:00:00+09:00,patchnote,high,,1,1,1
-291,Ether,에테르,エーテル,SR,I,Electric,,Missilis Industry,Defender,Shotgun,M.M.R.,0,Ether,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-300,Soldier EG,솔져 E.G.,ソルジャーE.G.,R,III,Electric,,Elysion,Attacker,Assault Rifle,Replace,0,Soldier EG,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-301,Soldier FA,솔져 F.A.,ソルジャーF.A.,R,II,Iron,,Elysion,Defender,Shotgun,Replace,0,Soldier FA,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-302,Product 08,프로덕트 08,プロダクト08,R,I,Electric,,Missilis Industry,Supporter,Sniper Rifle,Replace,0,Product 08,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-303,Product 12,프로덕트 12,プロダクト12,R,III,Fire,,Missilis Industry,Attacker,Machine Gun,Replace,0,Product 12,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-304,iDoll Flower,iDoll 플라워,I-DOLL・フラワー,R,I,Wind,,Tetra Line,Defender,Rocket Launcher,Replace,0,iDoll Flower,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-305,iDoll Ocean,iDoll 오션,I-DOLL・オーシャン,R,I,Water,,Tetra Line,Supporter,Sub Machine Gun,Replace,0,iDoll Ocean,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-306,Soldier OW,솔져 O.W.,ソルジャーO.W.,R,I,Fire,,Elysion,Supporter,Sub Machine Gun,Replace,0,Soldier OW,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-307,Product 23,프로덕트 23,プロダクト23,R,II,Wind,,Missilis Industry,Supporter,Shotgun,Replace,0,Product 23,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-308,iDoll Sun,iDoll 썬,I-DOLL・サン,R,III,Iron,,Tetra Line,Supporter,Assault Rifle,Replace,0,iDoll Sun,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-310,Ade,에이드,エード,SSR,II,Wind,,Tetra Line,Supporter,Assault Rifle,Maid For You,0,Ade,,,,2024-02-15,2024-02-15,2024-02-15T05:00:00+09:00,patchnote,high,,1,1,1
-311,Cocoa,코코아,ココア,SSR,I,Fire,,Tetra Line,Supporter,Sniper Rifle,Maid For You,0,Cocoa,,,,2023-02-01,2023-02-01,2023-02-01T00:00:00+09:00,patchnote,high,,1,1,1
-312,Soda,소다,ソーダ,SSR,I,Fire,,Tetra Line,Supporter,Machine Gun,Maid For You,0,Soda,,,,2023-02-01,2023-02-08,2023-02-08T05:00:00+09:00,patchnote,high,,1,1,1
-313,Privaty: Unkind Maid,프리바티 : 언카인드 메이드,プリバティ：アンカインド・メイド,SSR,III,Electric,,Elysion,Attacker,Shotgun,Maid For You,1,Privaty,,,,2024-02-05,2024-02-05,2024-02-05T00:00:00+09:00,patchnote,high,,1,1,1
-314,Soda: Twinkling Bunny,소다 : 트윙클링 바니,ソーダ：トゥインクルバニー,SSR,III,Iron,,Tetra Line,Attacker,Shotgun,Maid For You,1,Soda,,,,2024-05-30,2024-05-30,2024-05-30T00:00:00+09:00,patchnote,high,,1,1,1
-315,Ade: Agent Bunny,에이드 : 에이전트 바니,エード：エージェントバニー,SSR,II,Iron,,Tetra Line,Supporter,Sniper Rifle,Maid For You,1,Ade,,,,2025-09-04,2025-09-04,2025-09-04T00:00:00+09:00,patchnote,high,,1,1,1
-316,Velvet,벨벳,ベルベット,SSR,II,Wind,,Tetra Line,Supporter,Sniper Rifle,Maid for you,0,Velvet,,,,2026-01-29,2026-01-29,2026-01-29T00:00:00+09:00,patchnote,high,,1,1,1
-321,Marciana,마르차나,マルチャーナ,SSR,II,Iron,,Elysion,Defender,Shotgun,Academia,0,Marciana,,,,2023-09-21,2023-09-21,2023-09-21T00:00:00+09:00,patchnote,high,,1,1,1
-322,Marciana: Marine Study,마르차나 : 마린 스터디,マルチャーナ：マリンスタディ,SSR,III,Iron,,Elysion,Attacker,Assault Rifle,Academia,1,Marciana,,,,2026-07-09,2026-07-09,2026-07-09T05:00:00+09:00,patchnote,high,,1,1,1
-330,Crown,크라운,クラウン,SSR,II,Iron,,Pilgrim,Defender,Machine Gun,White Knight,0,Crown,,,,2024-04-25,2024-04-25,2024-04-25T00:00:00+09:00,patchnote,high,,1,1,1
-331,Chime,차임,チャイム,SSR,II,Iron,,Pilgrim,Supporter,Sub Machine Gun,White Knight,0,Chime,,,,2025-10-30,2025-10-30,2025-10-30T00:00:00+09:00,patchnote,high,,1,1,1
-350,Mast,마스트,マスト,SSR,II,Electric,,Elysion,Supporter,Sub Machine Gun,Aegis,0,Mast,,,,2023-07-20,2023-07-20,2023-07-20T00:00:00+09:00,patchnote,high,,1,1,1
-351,Anchor,앵커,アンカー,SR,I,Wind,,Elysion,Defender,Rocket Launcher,Aegis,0,Anchor,,,,2023-08-03,2023-08-03,2023-08-03T00:00:00+09:00,patchnote,high,,1,1,1
-352,Helm,헬름,ヘルム,SSR,III,Water,,Elysion,Attacker,Sniper Rifle,Aegis,0,Helm,,,,2022-11-10,2022-11-10,2022-11-10T00:00:00+09:00,patchnote,high,2025-01-16T00:00:00+09:00,1,1,1
-353,Helm: Aquamarine,헬름 : 아쿠아마린,ヘルム：アクアマリン,SSR,II,Iron,,Elysion,Attacker,Assault Rifle,Aegis,1,Helm,,,,2023-08-10,2023-08-10,2023-08-10T05:00:00+09:00,patchnote,high,,1,1,1
-354,Mast: Romantic Maid,마스트 : 로망틱 메이드,マスト：ロマンチックメイド,SSR,II,Water,,Elysion,Supporter,Machine Gun,Aegis,1,Mast,,,,2025-01-30,2025-01-30,2025-01-30T12:00:00+09:00,patchnote,high,,1,1,1
-355,Anchor: Innocent Maid,앵커 : 이노센트 메이드,アンカー：イノセントメイド,SSR,II,Water,,Elysion,Supporter,Rocket Launcher,Aegis,1,Anchor,,,,2025-02-06,2025-02-06,2025-02-06T05:00:00+09:00,patchnote,high,,1,1,1
-361,Kilo,킬로,キロ,SSR,III,Fire,,Missilis Industry,Defender,Machine Gun,Heavy Gram,0,Kilo,,,,2024-04-25,2024-04-25,2024-04-25T00:00:00+09:00,patchnote,high,,1,1,1
-380,Nero,네로,ネロ,SSR,II,Fire,,Tetra Line,Defender,Sub Machine Gun,Happy Zoo,0,Nero,,,,2023-06-06,2023-07-06,2023-07-06T00:00:00+09:00,patchnote,high,,1,1,1
-381,Biscuit,비스킷,ビスケット,SSR,II,Electric,,Tetra Line,Supporter,Rocket Launcher,Happy Zoo,0,Biscuit,,,,2023-03-15,2023-03-15,2023-03-15T00:00:00+09:00,patchnote,high,,1,1,1
-382,Leona,레오나,レオナ,SSR,II,Water,,Tetra Line,Supporter,Shotgun,Happy Zoo,0,Leona,,,,2024-01-11,2024-01-11,2024-01-11T00:00:00+09:00,patchnote,high,,1,1,1
-390,Zwei,츠바이,ツバイ,SSR,I,Electric,,Elysion,Supporter,Shotgun,School Circle,0,Zwei,,,,2024-08-08,2024-08-08,2024-08-08T00:00:00+09:00,patchnote,high,2026-02-12T00:00:00+09:00,1,1,1
-391,Ein,아인,アイン,SSR,III,Electric,,Missilis Industry,Attacker,Sniper Rifle,School Circle,0,Ein,,,,2024-07-25,2024-07-25,2024-07-25T00:00:00+09:00,patchnote,high,,1,1,1
-392,Rei,라이,ライ,SSR,I,Water,,Tetra Line,Defender,Sub Machine Gun,School Circle,0,Rei,,,,2023-04-27,2023-04-27,2023-04-27T00:00:00+09:00,patchnote,high,,1,1,1
-400,Guilty,길티,ギルティ,SSR,II,Wind,,Missilis Industry,Attacker,Shotgun,Real Kindness,0,Guilty,,,,2023-01-12,2023-01-12,,datafile,low,,1,1,1
-401,Sin,신,シン,SSR,II,Electric,,Missilis Industry,Defender,Assault Rifle,Real Kindness,0,Sin,,,,2023-01-12,2023-01-12,,datafile,low,,1,1,1
-402,Quency,퀀시,クエンシー,SSR,II,Electric,,Missilis Industry,Supporter,Sub Machine Gun,Real Kindness,0,Quency,,,,2023-01-12,2023-01-12,,datafile,low,,1,1,1
-403,Quency: Escape Queen,퀀시 : 이스케이프 퀸,クエンシー：エスケープクイーン,SSR,III,Water,,Missilis Industry,Attacker,Sub Machine Gun,Real Kindness,1,Quency,,,,2024-10-03,2024-10-03,2024-10-03T12:00:00+09:00,patchnote,high,,1,1,1
-404,Guilty: Mighty Bunny,길티 : 마이티 바니,ギルティ：マイティバニー,SSR,III,Water,,Missilis Industry,Attacker,Sniper Rifle,Real Kindness,1,Guilty,,,,2026-09-17,2026-09-17,2026-09-17T00:00:00+09:00,patchnote,high,,1,1,1
-405,Sin: Swift Bunny,신 : 스위프트 바니,シン：スウィフトバニー,SSR,III,Water,,Missilis Industry,Attacker,Sniper Rifle,Real Kindness,1,Sin,,,,2026-09-24,2026-09-24,2026-09-24T05:00:00+09:00,patchnote,high,,1,1,1
-411,Flora,플로라,フローラ,SSR,II,Electric,,Missilis Industry,Supporter,Machine Gun,Botanic Garden,0,Flora,,,,2024-11-21,2024-11-21,2024-11-21T00:00:00+09:00,patchnote,high,2026-07-23T00:00:00+09:00,1,1,1
-412,Trina,트리나,トリナ,SSR,II,Electric,,Missilis Industry,Supporter,Rocket Launcher,Botanic Garden,0,Trina,,,,2025-03-13,2025-03-13,2025-03-13T00:00:00+09:00,patchnote,high,,1,1,1
-430,Noise,노이즈,ノイズ,SSR,I,Electric,,Tetra Line,Supporter,Rocket Launcher,Prima Donna,0,Noise,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-431,Volume,볼륨,ボリューム,SSR,I,Wind,,Tetra Line,Attacker,Sub Machine Gun,Prima Donna,0,Volume,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-432,Aria,아리아,アリア,SSR,II,Water,,Tetra Line,Attacker,Machine Gun,Prima Donna,0,Aria,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-441,Avistar,아비스타,アビスタ,SSR,I,Electric,,Elysion,Supporter,Machine Gun,Overseer,0,Avistar,,,,2026-04-23,2026-04-23,2026-04-23T00:00:00+09:00,patchnote,high,,1,1,1
-450,Naga,나가,ナガ,SSR,II,Electric,,Missilis Industry,Supporter,Shotgun,Dazzling Pearl,0,Naga,,,,2023-10-05,2023-10-05,2023-10-05T12:00:00+09:00,patchnote,high,,1,1,1
-451,Tia,티아,ティア,SSR,I,Iron,,Missilis Industry,Defender,Rocket Launcher,Dazzling Pearl,0,Tia,,,,2023-10-12,2023-10-12,2023-10-12T05:00:00+09:00,patchnote,high,,1,1,1
-470,Red Hood,레드 후드,レッドフード,SSR,I-II-III,Iron,,Pilgrim,Attacker,Sniper Rifle,Goddess,0,Red Hood,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
-471,Snow White: Heavy Arms,스노우 화이트 : 헤비암즈,スノーホワイト：ヘビーアームズ,SSR,III,Water,,Pilgrim,Attacker,Sniper Rifle,Goddess,1,Snow White,,,,2025-12-31,2026-01-01,2026-01-01T00:00:00+09:00,patchnote,high,,1,1,1
-500,Elegg,일레그,エレグ,SSR,II,Electric,,Missilis Industry,Supporter,Machine Gun,Electric Shock,0,Elegg,,,,2024-02-22,2024-02-22,2024-02-22T00:00:00+09:00,patchnote,high,,1,1,1
-501,Trony,트로니,トロニー,SSR,III,Fire,,Missilis Industry,Attacker,Sniper Rifle,Electric Shock,0,Trony,,,,2024-05-16,2024-05-16,2024-05-16T00:00:00+09:00,patchnote,high,,1,1,1
-502,Elegg: Boom and Shock,일레그 : 붐 앤 쇼크,エレグ：ブーム・アンド・ショック,SSR,III,Water,,Missilis Industry,Attacker,Machine Gun,Electric Shock,1,Elegg,,,,2025-07-24,2025-07-24,2025-07-24T05:00:00+09:00,patchnote,high,,1,1,1
-511,Cinderella,신데렐라,シンデレラ,SSR,III,Electric,,Pilgrim,Defender,Rocket Launcher,Old Tales,0,Cinderella,,,,2024-10-31,2024-10-31,2024-10-31T00:00:00+09:00,patchnote,high,,1,1,1
-513,Little Mermaid,리틀 머메이드,リトルマーメイド,SSR,I,Wind,,Pilgrim,Supporter,Sub Machine Gun,Old Tales,0,Little Mermaid,,,,2025-04-24,2025-04-24,2025-04-24T00:00:00+09:00,patchnote,high,,1,1,1
-514,Grave,그레이브,グレイブ,SSR,II,Fire,,Pilgrim,Supporter,Assault Rifle,Old Tales,0,Grave,,,,2024-11-07,2024-11-07,2024-11-07T05:00:00+09:00,patchnote,high,,1,1,1
-515,Cinderella: Crystal Wave,신데렐라 : 크리스탈 웨이브,シンデレラ：クリスタルウェーブ,SSR,III,Iron,,Pilgrim,Attacker,Machine Gun,Old Tales,1,Cinderella,,,,2026-07-02,2026-07-02,2026-07-02T00:00:00+09:00,patchnote,high,,1,1,1
-520,Bready,브래디,ブレッディ,SSR,III,Water,,Tetra Line,Attacker,Sniper Rifle,Cooking Oil,0,Bready,,,,2025-03-27,2025-03-27,2025-03-27T00:00:00+09:00,patchnote,high,,1,1,1
-521,Crust,크러스트,クラスト,SSR,II,Water,,Tetra Line,Supporter,Rocket Launcher,Cooking Oil,0,Crust,,,,2025-04-10,2025-04-10,2025-04-10T00:00:00+09:00,patchnote,high,,1,1,1
-532,Sora,소라,ソラ,SSR,I,Wind,,Elysion,Supporter,Rocket Launcher,Over the Horizon,0,Sora,,,,2025-07-03,2025-07-03,2025-07-03T00:00:00+09:00,patchnote,high,,1,1,1
-550,Bay,베이,ベイ,SSR,II,Fire,,Tetra Line,Defender,Rocket Launcher,Rewind,0,Bay,,,,2024-04-11,2024-04-11,2024-04-11T00:00:00+09:00,patchnote,high,2025-07-17T00:00:00+09:00,1,1,1
-551,Clay,클레이,クレイ,SSR,II,Electric,,Tetra Line,Supporter,Sub Machine Gun,Rewind,0,Clay,,,,2024-07-20,2024-06-20,2024-06-20T00:00:00+09:00,patchnote,high,,1,1,1
-570,Ark Ranger Black,아크레인저 블랙,アークレンジャー・ブラック,SSR,III,Wind,,Tetra Line,Attacker,Assault Rifle,Ark Rangers,0,Ark Ranger Black,,,,2026-06-11,2026-06-11,2026-06-11T00:00:00+09:00,patchnote,high,,1,1,1
-580,Phantom,팬텀,ファントム,SSR,III,Water,,Elysion,Attacker,Assault Rifle,Best Seller,0,Phantom,,,,2024-10-10,2024-10-10,2024-10-10T05:00:00+09:00,patchnote,high,2026-07-23T00:00:00+09:00,1,1,1
-581,Arcana,아르카나,アルカナ,SSR,II,Electric,,Elysion,Supporter,Rocket Launcher,Best Seller,0,Arcana,,,,2025-05-15,2025-05-15,2025-05-15T00:00:00+09:00,patchnote,high,,1,1,1
-582,Label,레이블,レーベル,SSR,I,Iron,,Elysion,Defender,Assault Rifle,Best Seller,0,Label,,,,2026-01-15,2026-01-15,2026-01-15T00:00:00+09:00,patchnote,high,,1,1,1
-583,Arcana: Fortune Mate,아르카나 : 포츈 메이트,アルカナ：フォーチュンメイト,SSR,II,Fire,,Elysion,Attacker,Shotgun,Best Seller,1,Arcana,,,,2026-03-19,2026-03-19,2026-03-19T00:00:00+09:00,patchnote,high,,1,1,1
-590,Mori,모리,モリー,SSR,II,Wind,,Missilis Industry,Defender,Assault Rifle,Incubator,0,Mori,,,,2025-04-24,2025-04-24,2025-04-24T00:00:00+09:00,patchnote,high,,1,1,1
-600,Mint,민트,ミント,SSR,II,Iron,,Tetra Line,Supporter,Rocket Launcher,T.T. STAR,0,Mint,,,,2026-05-14,2026-05-14,2026-05-14T00:00:00+09:00,patchnote,high,,1,1,1
-601,Prika,프리카,プリカ,SSR,II,Water,,Tetra Line,Supporter,Sniper Rifle,T.T. STAR,0,Prika,,,,2026-05-28,2026-05-28,2026-05-28T00:00:00+09:00,patchnote,high,,1,1,1
-620,Snow Crane,백학,シラツル,SSR,II,Water,,Missilis Industry,Defender,Sniper Rifle,Veiled Order,0,Snow Crane,,,,2026-04-09,2026-04-09,2026-04-09T00:00:00+09:00,patchnote,high,,1,1,1
-800,Makima,마키마,マキマ,SSR,II,Water,,Abnormal,Defender,Sub Machine Gun,Devil Hunter,0,Makima,,,,2023-02-22,2023-02-22,2023-02-22T00:00:00+09:00,patchnote,high,,1,1,1
-801,Power,파워,パワー,SSR,III,Fire,,Abnormal,Attacker,Rocket Launcher,Devil Hunter,0,Power,,,,2023-02-22,2023-02-22,2023-02-22T00:00:00+09:00,patchnote,high,,1,1,1
-802,Himeno,히메노,姫野,SR,II,Wind,,Abnormal,Supporter,Sniper Rifle,Devil Hunter,0,Himeno,,,,2023-02-22,2023-02-22,2023-02-22T00:00:00+09:00,patchnote,high,,1,1,1
-810,2B,2B,2B,SSR,III,Fire,,Abnormal,Defender,Assault Rifle,YoRHa,0,2B,,,,2023-09-01,2023-09-01,2023-09-01T00:00:00+09:00,patchnote,high,,1,1,1
-811,A2,A2,A2,SSR,III,Fire,,Abnormal,Attacker,Rocket Launcher,YoRHa,0,A2,,,,2023-09-08,2023-09-08,2023-09-08T05:00:00+09:00,patchnote,high,,1,1,1
-812,Pascal,파스칼,パスカル,SR,I,Iron,,Abnormal,Supporter,Rocket Launcher,Machine Lifeform,0,Pascal,,,,2023-09-01,2023-09-01,2023-09-01T00:00:00+09:00,patchnote,high,,1,1,1
-820,Rem,렘,レム,SSR,II,Water,,Abnormal,Supporter,Machine Gun,Emilia's Faction,0,Rem,,,,2024-03-28,2024-03-28,2024-03-28T05:00:00+09:00,patchnote,high,,1,1,1
-821,Emilia,에밀리아,エミリア,SSR,III,Water,,Abnormal,Attacker,Rocket Launcher,Emilia's Faction,0,Emilia,,,,2024-03-21,2024-03-21,2024-03-21T00:00:00+09:00,patchnote,high,,1,1,1
-822,Ram,람,ラム,SR,I,Wind,,Abnormal,Defender,Sniper Rifle,Emilia's Faction,0,Ram,,,,2024-03-21,2024-03-21,2024-03-21T00:00:00+09:00,patchnote,high,,1,1,1
-830,Asuka,아스카,アスカ,SSR,III,Fire,,Abnormal,Attacker,Assault Rifle,NERV,0,Asuka,Asuka Shikinami Langley,시키나미 아스카 랑그레이,式波・アスカ・ラングレー,2024-08-21,2024-08-22,2024-08-22T00:00:00+09:00,patchnote,high,,1,1,1
-831,Rei,레이,レイ,SSR,III,Fire,,Abnormal,Attacker,Machine Gun,NERV,0,Rei,Rei Ayanami,아야나미 레이,綾波レイ,2024-08-29,2024-08-29,2024-08-29T05:00:00+09:00,patchnote,high,,1,1,1
-832,Mari,마리,マリ,SSR,II,Electric,,Abnormal,Supporter,Sniper Rifle,NERV,0,Mari,Mari Makinami Illustrious,마키나미 마리 일러스트리어스,真希波・マリ・イラストリアス,2024-09-05,2024-09-05,2024-09-05T05:00:00+09:00,patchnote,high,,1,1,1
-833,Misato,미사토,ミサト,SR,I,Iron,,Abnormal,Supporter,Sub Machine Gun,NERV,0,Misato,Misato Katsuragi,카츠라기 미사토,葛城ミサト,2024-08-22,2024-08-22,2024-08-22T00:00:00+09:00,patchnote,high,,1,1,1
-834,Rei (Tentative Name),레이 (가칭),レイ（仮称）,SSR,III,Wind,,Abnormal,Attacker,Assault Rifle,NERV,0,Rei (Tentative Name),,,,2025-02-27,2025-02-27,2025-02-27T05:00:00+09:00,patchnote,high,,1,1,1
-835,Asuka: WILLE,아스카 : WILLE,アスカ：WILLE,SSR,III,Wind,,Abnormal,Attacker,Machine Gun,WILLE,1,Asuka,Asuka Shikinami Langley,,式波・アスカ・ラングレー,2025-02-20,2025-02-20,2025-02-20T00:00:00+09:00,patchnote,high,,1,1,1
-836,Sakura,사쿠라,サクラ,SR,I,Water,,Abnormal,Supporter,Sub Machine Gun,WILLE,0,Sakura,Sakura Suzuhara,스즈하라 사쿠라,鈴原サクラ,2025-02-20,2025-02-20,2025-02-20T00:00:00+09:00,patchnote,high,,1,1,1
-840,Ada,에이다,エイダ,SSR,III,Electric,,Abnormal,Attacker,Rocket Launcher,B.S.T.,0,Ada,,,,2025-09-24,2025-09-24,2025-09-24T00:00:00+09:00,patchnote,high,,1,1,1
-841,Jill,질,ジル,SSR,III,Electric,,Abnormal,Attacker,Assault Rifle,B.S.T.,0,Jill,,질 발렌타인,ジル・バレンタイン,2025-10-02,2025-10-02,2025-10-02T05:00:00+09:00,patchnote,high,,1,1,1
-842,Claire,클레어,クレア,SR,I,Electric,,Abnormal,Supporter,Rocket Launcher,B.S.T.,0,Claire,,클레어 레드필드,クレア・レッドフィールド,2025-09-24,2025-09-24,2025-09-24T00:00:00+09:00,patchnote,high,,1,1,1
-850,EVE,이브,イヴ,SSR,III,Iron,,Abnormal,Attacker,Assault Rifle,7th Airborne Squad,0,EVE,,,,2025-06-12,2025-06-12,2025-06-12T00:00:00+09:00,patchnote,high,,1,1,1
-851,Raven,레이븐,レイヴン,SSR,III,Iron,,Abnormal,Attacker,Rocket Launcher,2nd Airborne Squad,0,Raven,,,,2025-06-19,2025-06-19,2025-06-19T05:00:00+09:00,patchnote,high,,1,1,1
-852,Lily,릴리,リリー,SR,II,Wind,,Abnormal,Supporter,Sub Machine Gun,5th Airborne Squad,0,Lily,,,,2025-06-12,2025-06-12,2025-06-12T00:00:00+09:00,patchnote,high,,1,1,1
-860,Chisato,치사토,千束,SSR,III,Iron,,Abnormal,Attacker,Sub Machine Gun,Café LycoReco,0,Chisato,Chisato Nishikigi,니시키기 치사토,錦木千束,2026-02-12,2026-02-12,2026-02-12T00:00:00+09:00,patchnote,high,,1,1,1
-861,Takina,타키나,たきな,SSR,II,Iron,,Abnormal,Supporter,Sniper Rifle,Café LycoReco,0,Takina,Takina Inoue,이노우에 타키나,井ノ上たきな,2026-02-18,2026-02-19,2026-02-19T05:00:00+09:00,patchnote,high,,1,1,1
-862,Kurumi,쿠루미,クルミ,SR,I,Iron,,Abnormal,Supporter,Assault Rifle,Café LycoReco,0,Kurumi,,,,2026-02-12,2026-02-12,2026-02-12T00:00:00+09:00,patchnote,high,,1,1,1
-870,Queen (Makoto),퀸(마코토),クイーン（真）,SSR,III,Fire,,Abnormal,Attacker,Shotgun,Phantom Thieves of Hearts,0,Queen (Makoto),Makoto Niijima,니지마 마코토,新島真,2026-08-13,2026-08-13,2026-08-13T00:00:00+09:00,patchnote,high,,1,1,1
-871,Yukiko,유키코,雪子,SSR,III,Fire,,Abnormal,Attacker,Machine Gun,Investigation Team,0,Yukiko,Yukiko Amagi,아마기 유키코,天城雪子,2026-08-20,2026-08-20,2026-08-20T05:00:00+09:00,patchnote,high,,1,1,1
-872,Aigis,아이기스,アイギス,SR,II,Iron,,Abnormal,Supporter,Sub Machine Gun,SEES,0,Aigis,,,,2026-08-14,2026-08-13,2026-08-13T00:00:00+09:00,patchnote,high,,1,1,1
+unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,treasure_elements,manufacturer,unit_class,weapon,squad,is_variant,base_name_en,full_name_en,full_name_ko,full_name_ja,datafile_added,release_date,release_at,release_date_source,release_date_confidence,treasure_at,in_gamefiles,in_nikkeutils,in_enikk
+010,Rapi,라피,ラピ,SR,II,Fire,,,Elysion,Attacker,Assault Rifle,Counters,0,Rapi,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+011,Neon,네온,ネオン,SR,I,Fire,,,Elysion,Supporter,Shotgun,Counters,0,Neon,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+012,Anis,아니스,アニス,SR,II,Iron,,,Tetra Line,Defender,Rocket Launcher,Counters,0,Anis,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+014,Neon: Blue Ocean,네온 : 블루 오션,ネオン：ブルーオーシャン,SSR,III,Water,,,Elysion,Attacker,Machine Gun,Counters,1,Neon,,,,2023-06-22,2023-06-22,2023-06-22T05:00:00+09:00,patchnote,high,,1,1,1
+015,Anis: Sparkling Summer,아니스 : 스파클링 서머,アニス：スパークリングサマー,SSR,III,Electric,,,Tetra Line,Supporter,Shotgun,Counters,1,Anis,,,,2023-08-03,2023-08-03,2023-08-03T00:00:00+09:00,patchnote,high,,1,1,1
+016,Rapi: Red Hood,라피 : 레드 후드,ラピ：レッドフード,SSR,III,Fire,Iron,,Elysion,Attacker,Machine Gun,Counters,1,Rapi,,,,2025-01-01,2025-01-01,2025-01-01T00:00:00+09:00,patchnote,high,,1,1,1
+017,Anis: Star,아니스 : 스타,アニス：スター,SSR,I,Electric,,,Tetra Line,Defender,Rocket Launcher,Counters,1,Anis,,,,2026-04-23,2026-04-23,2026-04-23T00:00:00+09:00,patchnote,high,,1,1,1
+018,Neon: Vision Eye,네온 : 비전 아이,ネオン：ビジョン・アイ,SSR,III,Electric,,,Missilis Industry,Attacker,Rocket Launcher,Counters,1,Neon,,,,2026-04-30,2026-04-30,2026-04-30T05:00:00+09:00,patchnote,high,,1,1,1
+020,Delta,델타,デルタ,SR,II,Wind,,,Elysion,Defender,Sniper Rifle,The Scouts,0,Delta,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+022,Signal,시그널,シグナル,SSR,II,Fire,,,Elysion,Attacker,Sub Machine Gun,The Scouts,0,Signal,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+023,Delta: Ninja Thief,델타 : 닌자 시프,デルタ：ニンジャシーフ,SSR,II,Water,,,Elysion,Defender,Machine Gun,The Scouts,1,Delta,,,,2025-10-16,2025-10-16,2025-10-16T00:00:00+09:00,patchnote,high,,1,1,1
+030,Poli,폴리,ポリ,SSR,II,Water,,,Elysion,Defender,Shotgun,A.C.P.U.,0,Poli,,,,2022-04-11,2022-11-04,,launch,medium,2025-07-17T00:00:00+09:00,1,1,1
+032,Miranda,미란다,ミランダ,SSR,I,Fire,,,Elysion,Supporter,Sub Machine Gun,A.C.P.U.,0,Miranda,,,,2022-04-11,2022-11-04,,launch,medium,2025-01-16T00:00:00+09:00,1,1,1
+033,Quiry,키리,キリ,SSR,III,Wind,,,Elysion,Supporter,Rocket Launcher,A.C.P.U.,0,Quiry,,,,2023-10-19,2023-10-19,2023-10-19T00:00:00+09:00,patchnote,high,,1,1,1
+040,D,D,D,SSR,III,Wind,,,Elysion,Attacker,Sub Machine Gun,Perilous Siege,0,D,,,,2023-04-13,2023-04-13,2023-04-13T00:00:00+09:00,patchnote,high,,1,1,1
+041,K,K,K,SSR,III,Electric,,,Elysion,Attacker,Sub Machine Gun,Perilous Siege,0,K,,,,2025-05-29,2025-05-29,2025-05-29T00:00:00+09:00,patchnote,high,,1,1,1
+043,D: Killer Wife,D : 킬러 와이프,D：キラーワイフ,SSR,I,Fire,,,Elysion,Supporter,Sniper Rifle,Perilous Siege,1,D,,,,2024-03-07,2024-03-07,2024-03-07T00:00:00+09:00,patchnote,high,,1,1,1
+060,Belorta,벨로타,ベロータ,SR,II,Electric,,,Tetra Line,Attacker,Rocket Launcher,The Carronades,0,Belorta,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+061,Mica,미카,ミカ,SR,I,Wind,,,Tetra Line,Supporter,Rocket Launcher,The Carronades,0,Mica,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+062,Mica: Snow Buddy,미카 : 스노우 버디,ミカ：スノーバディ,SSR,I,Iron,,,Tetra Line,Supporter,Sub Machine Gun,The Carronades,1,Mica,,,,2023-12-14,2023-12-14,2023-12-14T05:00:00+09:00,patchnote,high,,1,1,1
+070,Brid,브리드,ブリッド,SSR,III,Water,,,Elysion,Attacker,Assault Rifle,Infinity Rail,0,Brid,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+071,Soline,솔린,ソリン,SSR,III,Iron,,,Elysion,Attacker,Sub Machine Gun,Infinity Rail,0,Soline,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+072,Diesel,디젤,ディーゼル,SSR,II,Wind,,,Elysion,Defender,Machine Gun,Infinity Rail,0,Diesel,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
+073,Brid: Silent Track,브리드 : 사일런트 트랙,ブリッド：サイレントトラック,SSR,II,Fire,,,Elysion,Supporter,Shotgun,Infinity Rail,1,Brid,,,,2025-12-11,2025-12-11,2025-12-11T05:00:00+09:00,patchnote,high,,1,1,1
+074,Soline: Frost Ticket,솔린 : 프로스트 티켓,ソリン：フロストチケット,SSR,I,Water,,,Elysion,Supporter,Shotgun,Infinity Rail,1,Soline,,,,2025-11-20,2025-11-20,2025-11-20T00:00:00+09:00,patchnote,high,,1,1,1
+075,Diesel: Winter Sweets,디젤 : 윈터 스위츠,ディーゼル：ウィンタースイーツ,SSR,III,Fire,,,Elysion,Attacker,Rocket Launcher,Infinity Rail,1,Diesel,,,,2025-12-04,2025-12-04,2025-12-04T00:00:00+09:00,patchnote,high,,1,1,1
+080,Centi,센티,センチ,SSR,II,Iron,,,Missilis Industry,Defender,Rocket Launcher,Mighty Tools,0,Centi,,,,2022-04-11,2022-11-04,,launch,medium,2026-02-12T00:00:00+09:00,1,1,1
+082,Liter,리타,リター,SSR,I,Iron,,,Missilis Industry,Supporter,Sub Machine Gun,Mighty Tools,0,Liter,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+090,Emma,엠마,エマ,SSR,I,Fire,,,Elysion,Supporter,Machine Gun,Absolute,0,Emma,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+091,Vesti,베스티,ベスティー,SSR,III,Water,,,Elysion,Attacker,Rocket Launcher,Absolute,0,Vesti,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+092,Eunhwa,은화,ウンファ,SSR,II,Fire,,,Elysion,Attacker,Sniper Rifle,Absolute,0,Eunhwa,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+093,Emma: Tactical Upgrade,엠마 : 택티컬 업,エマ：タクティカル・アップ,SSR,I,Fire,,,Elysion,Supporter,Machine Gun,Absolute,1,Emma,,,,2025-08-07,2025-08-07,2025-08-07T00:00:00+09:00,patchnote,high,,1,1,1
+094,Vesti: Tactical Upgrade,베스티 : 택티컬 업,ベスティー：タクティカル・アップ,SSR,III,Fire,,,Elysion,Attacker,Rocket Launcher,Absolute,1,Vesti,,,,2025-08-21,2025-08-21,2025-08-21T05:00:00+09:00,patchnote,high,,1,1,1
+095,Eunhwa: Tactical Upgrade,은화 : 택티컬 업,ウンファ：タクティカル・アップ,SSR,II,Fire,,,Elysion,Attacker,Sniper Rifle,Absolute,1,Eunhwa,,,,2025-08-14,2025-08-14,2025-08-14T05:00:00+09:00,patchnote,high,,1,1,1
+100,Laplace,라플라스,ラプラス,SSR,III,Iron,,,Missilis Industry,Attacker,Rocket Launcher,Matis,0,Laplace,,,,2022-11-24,2022-11-24,2022-11-24T00:00:00+09:00,patchnote,high,2024-05-30T00:00:00+09:00,1,1,1
+101,Drake,드레이크,ドレイク,SSR,III,Fire,,,Missilis Industry,Attacker,Shotgun,Matis,0,Drake,,,,2022-04-11,2022-11-04,,launch,medium,2025-01-16T00:00:00+09:00,1,1,1
+102,Maxwell,맥스웰,マクスウェル,SSR,III,Iron,,,Missilis Industry,Attacker,Sniper Rifle,Matis,0,Maxwell,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+103,Laplace: Ultimate Hero,라플라스 : 얼티밋 히어로,ラプラス：アルティメットヒーロー,SSR,III,Wind,,,Missilis Industry,Attacker,Rocket Launcher,Matis,1,Laplace,,,,2026-07-23,2026-07-23,2026-07-23T00:00:00+09:00,patchnote,high,,1,1,1
+104,Drake: Great Villain,드레이크 : 그레이트 빌런,ドレイク：グレイトヴィラン,SSR,III,Wind,,,Missilis Industry,Defender,Shotgun,Matis,1,Drake,,,,2026-09-03,2026-09-03,2026-09-03T00:00:00+09:00,patchnote,high,,1,1,1
+105,Maxwell: Ordinary Mechanic,맥스웰 : 오디너리 미케닉,マクスウェル：オーディナリーメカニック,SSR,II,Wind,,,Missilis Industry,Supporter,Sniper Rifle,Matis,1,Maxwell,,,,2026-07-30,2026-07-30,2026-07-30T05:00:00+09:00,patchnote,high,,1,1,1
+110,Crow,크로우,クロウ,SSR,III,Fire,,,Missilis Industry,Defender,Sub Machine Gun,Exotic,0,Crow,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+111,Jackal,자칼,ジャッカル,SSR,I,Iron,,,Missilis Industry,Defender,Rocket Launcher,Exotic,0,Jackal,,,,2023-01-12,2023-01-12,2023-01-12T00:00:00+09:00,patchnote,high,,1,1,1
+112,Viper,바이퍼,バイパー,SSR,II,Water,,,Tetra Line,Attacker,Shotgun,Exotic,0,Viper,,,,2023-01-19,2023-01-19,2023-01-19T05:00:00+09:00,patchnote,high,2024-07-04T00:00:00+09:00,1,1,1
+113,E.H.,E.H.,E.H.,SSR,III,Wind,,,Elysion,Attacker,Sub Machine Gun,Exotic,0,E.H.,,,,2026-03-05,2026-03-05,2026-03-05T00:00:00+09:00,patchnote,high,,1,1,1
+120,N102,N102,N102,SR,I,Water,,,Missilis Industry,Supporter,Rocket Launcher,Recall & Release,0,N102,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+121,Anne: Miracle Fairy,앤 : 미라클 페어리,エヌ : ミラクルフェアリー,SSR,II,Wind,,,Missilis Industry,Supporter,Rocket Launcher,Recall & Release,1,Anne,,,,2022-12-15,2022-12-15,,datafile,low,,1,1,1
+130,Mary,메어리,メアリー,SSR,I,Water,,,Tetra Line,Supporter,Shotgun,Seraphim,0,Mary,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+131,Pepper,페퍼,ペッパー,SSR,I,Wind,,,Missilis Industry,Supporter,Shotgun,Seraphim,0,Pepper,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+132,Mary: Bay Goddess,메어리 : 베이 갓데스,メアリー：ベイゴッデス,SSR,I,Water,,,Tetra Line,Supporter,Sniper Rifle,Seraphim,1,Mary,,,,2023-06-15,2023-06-15,2023-06-15T00:00:00+09:00,patchnote,high,,1,1,1
+140,Sugar,슈가,シュガー,SSR,III,Iron,,Water,Tetra Line,Attacker,Shotgun,Cafe Sweety,0,Sugar,,,,2022-04-11,2022-11-04,,launch,medium,2026-07-23T00:00:00+09:00,1,1,1
+141,Milk,밀크,ミルク,SSR,I,Water,,,Tetra Line,Attacker,Sniper Rifle,Cafe Sweety,0,Milk,,,,2022-04-11,2022-11-04,,launch,medium,2025-01-16T00:00:00+09:00,1,1,1
+142,Frima,프림,プリム,SSR,I,Iron,,,Tetra Line,Supporter,Sniper Rifle,Cafe Sweety,0,Frima,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
+143,Milk: Blooming Bunny,밀크 : 블루밍 바니,ミルク：ブルーミングバニー,SSR,III,Iron,,,Tetra Line,Attacker,Sniper Rifle,Cafe Sweety,1,Milk,,,,2025-09-11,2025-09-11,2025-09-11T05:00:00+09:00,patchnote,high,,1,1,1
+150,Julia,율리아,ジュリア,SSR,III,Iron,,,Missilis Industry,Attacker,Assault Rifle,Master Hand,0,Julia,,,,2022-04-11,2022-11-04,,launch,medium,2025-07-17T00:00:00+09:00,1,1,1
+160,Yuni,유니,ユニ,SSR,II,Fire,,,Missilis Industry,Defender,Rocket Launcher,Wardress,0,Yuni,,,,2022-11-04,2022-11-04,,launch,medium,,1,1,1
+161,Mihara,미하라,ミハラ,SR,III,Water,,,Missilis Industry,Attacker,Assault Rifle,Wardress,0,Mihara,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+162,Mihara: Bonding Chain,미하라 : 본딩 체인,ミハラ：ボンディングチェーン,SSR,III,Fire,,,Missilis Industry,Attacker,Machine Gun,Wardress,1,Mihara,,,,2025-05-01,2025-05-01,2025-05-01T05:00:00+09:00,patchnote,high,,1,1,1
+170,Privaty,프리바티,プリバティ,SSR,III,Water,,,Elysion,Attacker,Assault Rifle,Triangle,0,Privaty,,,,2022-04-11,2022-11-04,,launch,medium,2026-02-12T00:00:00+09:00,1,1,1
+171,Yulha,율하,ユルハ,SSR,III,Fire,,,Tetra Line,Attacker,Sniper Rifle,Triangle,0,Yulha,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+172,Admi,애드미,アドミ,SSR,II,Wind,,,Missilis Industry,Supporter,Sniper Rifle,Triangle,0,Admi,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+180,Guillotine,길로틴,ギロチン,SSR,III,Electric,,,Elysion,Attacker,Machine Gun,Extrinsic,0,Guillotine,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+181,Maiden,메이든,メイデン,SSR,III,Electric,,,Elysion,Attacker,Shotgun,Extrinsic,0,Maiden,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+182,Guillotine: Winter Slayer,길로틴 : 윈터 슬레이어,ギロチン：ウィンタースレイヤー,SSR,III,Water,,,Elysion,Attacker,Assault Rifle,Extrinsic,1,Guillotine,,,,2024-12-12,2024-12-12,2024-12-12T05:00:00+09:00,patchnote,high,,1,1,1
+183,Maiden: Ice Rose,메이든 : 아이스 로즈,メイデン：アイスローズ,SSR,III,Electric,,,Elysion,Defender,Rocket Launcher,Extrinsic,1,Maiden,,,,2024-12-05,2024-12-05,2024-12-05T00:00:00+09:00,patchnote,high,,1,1,1
+190,Ludmilla,루드밀라,ルドミラ,SSR,I,Water,,,Tetra Line,Defender,Sub Machine Gun,Unlimited,0,Ludmilla,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+191,Alice,앨리스,アリス,SSR,III,Fire,,,Tetra Line,Attacker,Sniper Rifle,Unlimited,0,Alice,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+192,Tove,토브,トーブ,SSR,I,Water,,,Missilis Industry,Supporter,Assault Rifle,Unlimited,0,Tove,,,,2023-11-23,2023-11-23,2023-11-23T00:00:00+09:00,patchnote,high,2025-07-17T00:00:00+09:00,1,1,1
+193,Neve,네베,ネヴェ,SR,III,Water,,,Tetra Line,Attacker,Shotgun,Unlimited,0,Neve,,,,2022-12-08,2022-12-08,,datafile,low,,1,1,1
+194,Ludmilla: Winter Owner,루드밀라 : 윈터 오너,ルドミラ：ウィンターオーナー,SSR,III,Water,,,Tetra Line,Attacker,Machine Gun,Unlimited,1,Ludmilla,,,,2023-12-07,2023-12-07,2023-12-07T00:00:00+09:00,patchnote,high,,1,1,1
+195,Alice: Wonderland Bunny,앨리스 : 원더랜드 바니,アリス：ワンダーランドバニー,SSR,I,Water,,,Tetra Line,Supporter,Sub Machine Gun,Unlimited,1,Alice,,,,2024-06-06,2024-06-06,2024-06-06T05:00:00+09:00,patchnote,high,,1,1,1
+200,Rupee,루피,ルピー,SSR,II,Iron,,,Tetra Line,Attacker,Assault Rifle,Talentum,0,Rupee,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+201,Yan,얀,ヤン,SSR,I,Fire,,,Tetra Line,Supporter,Rocket Launcher,Talentum,0,Yan,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+202,Dolla,도라,ドラー,SSR,II,Wind,,,Tetra Line,Supporter,Sniper Rifle,Talentum,0,Dolla,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+203,Rupee: Winter Shopper,루피 : 윈터 쇼퍼,ルピー：ウィンターショッパー,SSR,I,Electric,,,Tetra Line,Defender,Assault Rifle,Talentum,1,Rupee,,,,2022-12-08,2022-12-08,,datafile,low,,1,1,1
+210,Exia,엑시아,エクシア,SSR,I,Electric,,,Tetra Line,Supporter,Sniper Rifle,Protocol,0,Exia,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
+212,Novel,노벨,ノベル,SSR,II,Iron,,,Tetra Line,Defender,Sub Machine Gun,Protocol,0,Novel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+220,Snow White,스노우 화이트,スノーホワイト,SSR,III,Iron,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Snow White,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+221,Rapunzel,라푼젤,ラプンツェル,SSR,I,Iron,,,Pilgrim,Supporter,Rocket Launcher,Pioneer,0,Rapunzel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+222,Scarlet,홍련,紅蓮,SSR,III,Electric,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Scarlet,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+223,Nayuta,나유타,ナユタ,SSR,II,Wind,,,Pilgrim,Supporter,Sub Machine Gun,Pioneer,0,Nayuta,,,,2025-10-30,2025-10-30,2025-10-30T00:00:00+09:00,patchnote,high,,1,1,1
+224,Snow White: Innocent Days,스노우 화이트 : 이노센트 데이즈,スノーホワイト：イノセントデイズ,SSR,III,Iron,,,Pilgrim,Attacker,Assault Rifle,Goddess,1,Snow White,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
+225,Scarlet: Black Shadow,홍련 : 흑영,紅蓮：ブラックシャドウ,SSR,III,Wind,,,Pilgrim,Attacker,Rocket Launcher,Goddess,1,Scarlet,,,,2024-01-01,2024-01-01,2024-01-01T00:00:00+09:00,patchnote,high,,1,1,1
+226,Rapunzel: Pure Grace,라푼젤 : 퓨어 그레이스,ラプンツェル：ピュアグレイス,SSR,I,Iron,,,Pilgrim,Defender,Sniper Rifle,Goddess,1,Rapunzel,,,,2024-10-31,2024-10-31,2024-10-31T00:00:00+09:00,patchnote,high,,1,1,1
+230,Harran,하란,ハラン,SSR,III,Electric,,,Pilgrim,Attacker,Sniper Rifle,Inherit,0,Harran,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+231,Isabel,이사벨,イサベル,SSR,III,Electric,,,Pilgrim,Attacker,Shotgun,Inherit,0,Isabel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+232,Noah,노아,ノア,SSR,II,Wind,,,Pilgrim,Defender,Rocket Launcher,Inherit,0,Noah,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+233,Dorothy,도로시,ドロシー,SSR,I,Water,,,Pilgrim,Supporter,Assault Rifle,Inherit,0,Dorothy,,,,2023-04-27,2023-04-27,2023-04-27T00:00:00+09:00,patchnote,high,,1,1,1
+234,Dorothy: Serendipity,도로시 : 세렌디피티,ドロシー：セレンディピティ,SSR,III,Water,,,Pilgrim,Attacker,Shotgun,Inherit,1,Dorothy,,,,2025-07-17,2025-07-17,2025-07-17T00:00:00+09:00,patchnote,high,,1,1,1
+240,Rumani,루마니,ルマニ,SSR,I,Fire,,,Tetra Line,Defender,Rocket Launcher,Nepenthe,0,Rumani,,,,2024-10-17,2024-10-17,2024-10-17T00:00:00+09:00,patchnote,high,,1,1,1
+241,Epinel,에피넬,エピネル,SSR,III,Wind,,,Missilis Industry,Attacker,Sub Machine Gun,Nepenthe,0,Epinel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+242,Folkwang,폴크방,フォルクヴァン,SSR,II,Water,,,Tetra Line,Defender,Assault Rifle,Nepenthe,0,Folkwang,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+260,Modernia,모더니아,モダニア,SSR,III,Fire,,,Pilgrim,Attacker,Machine Gun,Heretic,0,Modernia,,,,2023-01-01,2023-01-01,2023-01-01T00:00:00+09:00,patchnote,high,,1,1,1
+261,Nihilister,니힐리스타,ニヒリスター,SSR,II,Fire,,,Pilgrim,Attacker,Sniper Rifle,Heretic,0,Nihilister,,,,2023-03-30,2023-03-30,2023-03-30T00:00:00+09:00,patchnote,high,,1,1,1
+262,Liberalio,리버렐리오,リバーレリオ,SSR,III,Wind,,,Pilgrim,Attacker,Sniper Rifle,Heretic,0,Liberalio,,,,2025-11-06,2025-11-06,2025-11-06T05:00:00+09:00,patchnote,high,,1,1,1
+270,Blanc,블랑,ブラン,SSR,II,Wind,,,Tetra Line,Defender,Assault Rifle,777,0,Blanc,,,,2023-05-18,2023-05-18,2023-05-18T00:00:00+09:00,patchnote,high,,1,1,1
+271,Noir,누아르,ノワール,SSR,III,Wind,,,Tetra Line,Attacker,Shotgun,777,0,Noir,,,,2023-05-25,2023-05-25,2023-05-25T05:00:00+09:00,patchnote,high,,1,1,1
+272,Rouge,루주,ルージュ,SSR,I,Electric,,,Tetra Line,Supporter,Sniper Rifle,777,0,Rouge,,,,2024-09-19,2024-09-19,2024-09-19T00:00:00+09:00,patchnote,high,,1,1,1
+280,Rosanna,로산나,ロザンナ,SSR,I,Electric,,,Tetra Line,Attacker,Machine Gun,Underworld Queen,0,Rosanna,,,,2023-06-01,2023-06-01,2023-06-01T00:00:00+09:00,patchnote,high,2026-07-23T00:00:00+09:00,1,1,1
+281,Moran,목단,モラン,SSR,I,Electric,,,Tetra Line,Defender,Assault Rifle,Underworld Queen,0,Moran,,,,2024-01-25,2024-01-25,2024-01-25T12:00:00+09:00,patchnote,high,2026-02-12T00:00:00+09:00,1,1,1
+282,Sakura,사쿠라,サクラ,SSR,I,Fire,,,Tetra Line,Supporter,Sniper Rifle,Underworld Queen,0,Sakura,,,,2023-03-30,2023-03-30,2023-03-30T00:00:00+09:00,patchnote,high,,1,1,1
+283,Rosanna: Chic Ocean,로산나 : 시크 오션,ロザンナ：シックオーシャン,SSR,II,Wind,,,Tetra Line,Supporter,Assault Rifle,Underworld Queen,1,Rosanna,,,,2024-07-11,2024-07-11,2024-07-11T05:00:00+09:00,patchnote,high,,1,1,1
+284,Sakura: Bloom in Summer,사쿠라 : 블룸 인 서머,サクラ：ブルーム・イン・サマー,SSR,III,Wind,,,Tetra Line,Attacker,Assault Rifle,Underworld Queen,1,Sakura,,,,2024-07-04,2024-07-04,2024-07-04T00:00:00+09:00,patchnote,high,,1,1,1
+290,Mana,마나,マナ,SSR,III,Wind,,,Missilis Industry,Attacker,Assault Rifle,M.M.R.,0,Mana,,,,2025-01-16,2025-01-16,2025-01-16T00:00:00+09:00,patchnote,high,,1,1,1
+291,Ether,에테르,エーテル,SR,I,Electric,,,Missilis Industry,Defender,Shotgun,M.M.R.,0,Ether,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+300,Soldier EG,솔져 E.G.,ソルジャーE.G.,R,III,Electric,,,Elysion,Attacker,Assault Rifle,Replace,0,Soldier EG,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+301,Soldier FA,솔져 F.A.,ソルジャーF.A.,R,II,Iron,,,Elysion,Defender,Shotgun,Replace,0,Soldier FA,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+302,Product 08,프로덕트 08,プロダクト08,R,I,Electric,,,Missilis Industry,Supporter,Sniper Rifle,Replace,0,Product 08,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+303,Product 12,프로덕트 12,プロダクト12,R,III,Fire,,,Missilis Industry,Attacker,Machine Gun,Replace,0,Product 12,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+304,iDoll Flower,iDoll 플라워,I-DOLL・フラワー,R,I,Wind,,,Tetra Line,Defender,Rocket Launcher,Replace,0,iDoll Flower,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+305,iDoll Ocean,iDoll 오션,I-DOLL・オーシャン,R,I,Water,,,Tetra Line,Supporter,Sub Machine Gun,Replace,0,iDoll Ocean,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+306,Soldier OW,솔져 O.W.,ソルジャーO.W.,R,I,Fire,,,Elysion,Supporter,Sub Machine Gun,Replace,0,Soldier OW,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+307,Product 23,프로덕트 23,プロダクト23,R,II,Wind,,,Missilis Industry,Supporter,Shotgun,Replace,0,Product 23,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+308,iDoll Sun,iDoll 썬,I-DOLL・サン,R,III,Iron,,,Tetra Line,Supporter,Assault Rifle,Replace,0,iDoll Sun,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+310,Ade,에이드,エード,SSR,II,Wind,,,Tetra Line,Supporter,Assault Rifle,Maid For You,0,Ade,,,,2024-02-15,2024-02-15,2024-02-15T05:00:00+09:00,patchnote,high,,1,1,1
+311,Cocoa,코코아,ココア,SSR,I,Fire,,,Tetra Line,Supporter,Sniper Rifle,Maid For You,0,Cocoa,,,,2023-02-01,2023-02-01,2023-02-01T00:00:00+09:00,patchnote,high,,1,1,1
+312,Soda,소다,ソーダ,SSR,I,Fire,,,Tetra Line,Supporter,Machine Gun,Maid For You,0,Soda,,,,2023-02-01,2023-02-08,2023-02-08T05:00:00+09:00,patchnote,high,,1,1,1
+313,Privaty: Unkind Maid,프리바티 : 언카인드 메이드,プリバティ：アンカインド・メイド,SSR,III,Electric,,,Elysion,Attacker,Shotgun,Maid For You,1,Privaty,,,,2024-02-05,2024-02-05,2024-02-05T00:00:00+09:00,patchnote,high,,1,1,1
+314,Soda: Twinkling Bunny,소다 : 트윙클링 바니,ソーダ：トゥインクルバニー,SSR,III,Iron,,,Tetra Line,Attacker,Shotgun,Maid For You,1,Soda,,,,2024-05-30,2024-05-30,2024-05-30T00:00:00+09:00,patchnote,high,,1,1,1
+315,Ade: Agent Bunny,에이드 : 에이전트 바니,エード：エージェントバニー,SSR,II,Iron,,,Tetra Line,Supporter,Sniper Rifle,Maid For You,1,Ade,,,,2025-09-04,2025-09-04,2025-09-04T00:00:00+09:00,patchnote,high,,1,1,1
+316,Velvet,벨벳,ベルベット,SSR,II,Wind,,,Tetra Line,Supporter,Sniper Rifle,Maid for you,0,Velvet,,,,2026-01-29,2026-01-29,2026-01-29T00:00:00+09:00,patchnote,high,,1,1,1
+321,Marciana,마르차나,マルチャーナ,SSR,II,Iron,,,Elysion,Defender,Shotgun,Academia,0,Marciana,,,,2023-09-21,2023-09-21,2023-09-21T00:00:00+09:00,patchnote,high,,1,1,1
+322,Marciana: Marine Study,마르차나 : 마린 스터디,マルチャーナ：マリンスタディ,SSR,III,Iron,,,Elysion,Attacker,Assault Rifle,Academia,1,Marciana,,,,2026-07-09,2026-07-09,2026-07-09T05:00:00+09:00,patchnote,high,,1,1,1
+330,Crown,크라운,クラウン,SSR,II,Iron,,,Pilgrim,Defender,Machine Gun,White Knight,0,Crown,,,,2024-04-25,2024-04-25,2024-04-25T00:00:00+09:00,patchnote,high,,1,1,1
+331,Chime,차임,チャイム,SSR,II,Iron,,,Pilgrim,Supporter,Sub Machine Gun,White Knight,0,Chime,,,,2025-10-30,2025-10-30,2025-10-30T00:00:00+09:00,patchnote,high,,1,1,1
+350,Mast,마스트,マスト,SSR,II,Electric,,,Elysion,Supporter,Sub Machine Gun,Aegis,0,Mast,,,,2023-07-20,2023-07-20,2023-07-20T00:00:00+09:00,patchnote,high,,1,1,1
+351,Anchor,앵커,アンカー,SR,I,Wind,,,Elysion,Defender,Rocket Launcher,Aegis,0,Anchor,,,,2023-08-03,2023-08-03,2023-08-03T00:00:00+09:00,patchnote,high,,1,1,1
+352,Helm,헬름,ヘルム,SSR,III,Water,,,Elysion,Attacker,Sniper Rifle,Aegis,0,Helm,,,,2022-11-10,2022-11-10,2022-11-10T00:00:00+09:00,patchnote,high,2025-01-16T00:00:00+09:00,1,1,1
+353,Helm: Aquamarine,헬름 : 아쿠아마린,ヘルム：アクアマリン,SSR,II,Iron,,,Elysion,Attacker,Assault Rifle,Aegis,1,Helm,,,,2023-08-10,2023-08-10,2023-08-10T05:00:00+09:00,patchnote,high,,1,1,1
+354,Mast: Romantic Maid,마스트 : 로망틱 메이드,マスト：ロマンチックメイド,SSR,II,Water,,,Elysion,Supporter,Machine Gun,Aegis,1,Mast,,,,2025-01-30,2025-01-30,2025-01-30T12:00:00+09:00,patchnote,high,,1,1,1
+355,Anchor: Innocent Maid,앵커 : 이노센트 메이드,アンカー：イノセントメイド,SSR,II,Water,,,Elysion,Supporter,Rocket Launcher,Aegis,1,Anchor,,,,2025-02-06,2025-02-06,2025-02-06T05:00:00+09:00,patchnote,high,,1,1,1
+361,Kilo,킬로,キロ,SSR,III,Fire,,,Missilis Industry,Defender,Machine Gun,Heavy Gram,0,Kilo,,,,2024-04-25,2024-04-25,2024-04-25T00:00:00+09:00,patchnote,high,,1,1,1
+380,Nero,네로,ネロ,SSR,II,Fire,,,Tetra Line,Defender,Sub Machine Gun,Happy Zoo,0,Nero,,,,2023-06-06,2023-07-06,2023-07-06T00:00:00+09:00,patchnote,high,,1,1,1
+381,Biscuit,비스킷,ビスケット,SSR,II,Electric,,,Tetra Line,Supporter,Rocket Launcher,Happy Zoo,0,Biscuit,,,,2023-03-15,2023-03-15,2023-03-15T00:00:00+09:00,patchnote,high,,1,1,1
+382,Leona,레오나,レオナ,SSR,II,Water,,,Tetra Line,Supporter,Shotgun,Happy Zoo,0,Leona,,,,2024-01-11,2024-01-11,2024-01-11T00:00:00+09:00,patchnote,high,,1,1,1
+390,Zwei,츠바이,ツバイ,SSR,I,Electric,,,Elysion,Supporter,Shotgun,School Circle,0,Zwei,,,,2024-08-08,2024-08-08,2024-08-08T00:00:00+09:00,patchnote,high,2026-02-12T00:00:00+09:00,1,1,1
+391,Ein,아인,アイン,SSR,III,Electric,,,Missilis Industry,Attacker,Sniper Rifle,School Circle,0,Ein,,,,2024-07-25,2024-07-25,2024-07-25T00:00:00+09:00,patchnote,high,,1,1,1
+392,Rei,라이,ライ,SSR,I,Water,,,Tetra Line,Defender,Sub Machine Gun,School Circle,0,Rei,,,,2023-04-27,2023-04-27,2023-04-27T00:00:00+09:00,patchnote,high,,1,1,1
+400,Guilty,길티,ギルティ,SSR,II,Wind,,,Missilis Industry,Attacker,Shotgun,Real Kindness,0,Guilty,,,,2023-01-12,2023-01-12,,datafile,low,,1,1,1
+401,Sin,신,シン,SSR,II,Electric,,,Missilis Industry,Defender,Assault Rifle,Real Kindness,0,Sin,,,,2023-01-12,2023-01-12,,datafile,low,,1,1,1
+402,Quency,퀀시,クエンシー,SSR,II,Electric,,,Missilis Industry,Supporter,Sub Machine Gun,Real Kindness,0,Quency,,,,2023-01-12,2023-01-12,,datafile,low,,1,1,1
+403,Quency: Escape Queen,퀀시 : 이스케이프 퀸,クエンシー：エスケープクイーン,SSR,III,Water,,,Missilis Industry,Attacker,Sub Machine Gun,Real Kindness,1,Quency,,,,2024-10-03,2024-10-03,2024-10-03T12:00:00+09:00,patchnote,high,,1,1,1
+404,Guilty: Mighty Bunny,길티 : 마이티 바니,ギルティ：マイティバニー,SSR,III,Water,,,Missilis Industry,Attacker,Sniper Rifle,Real Kindness,1,Guilty,,,,2026-09-17,2026-09-17,2026-09-17T00:00:00+09:00,patchnote,high,,1,1,1
+405,Sin: Swift Bunny,신 : 스위프트 바니,シン：スウィフトバニー,SSR,III,Water,,,Missilis Industry,Attacker,Sniper Rifle,Real Kindness,1,Sin,,,,2026-09-24,2026-09-24,2026-09-24T05:00:00+09:00,patchnote,high,,1,1,1
+411,Flora,플로라,フローラ,SSR,II,Electric,,,Missilis Industry,Supporter,Machine Gun,Botanic Garden,0,Flora,,,,2024-11-21,2024-11-21,2024-11-21T00:00:00+09:00,patchnote,high,2026-07-23T00:00:00+09:00,1,1,1
+412,Trina,트리나,トリナ,SSR,II,Electric,,,Missilis Industry,Supporter,Rocket Launcher,Botanic Garden,0,Trina,,,,2025-03-13,2025-03-13,2025-03-13T00:00:00+09:00,patchnote,high,,1,1,1
+430,Noise,노이즈,ノイズ,SSR,I,Electric,,,Tetra Line,Supporter,Rocket Launcher,Prima Donna,0,Noise,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+431,Volume,볼륨,ボリューム,SSR,I,Wind,,,Tetra Line,Attacker,Sub Machine Gun,Prima Donna,0,Volume,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+432,Aria,아리아,アリア,SSR,II,Water,,,Tetra Line,Attacker,Machine Gun,Prima Donna,0,Aria,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+441,Avistar,아비스타,アビスタ,SSR,I,Electric,,,Elysion,Supporter,Machine Gun,Overseer,0,Avistar,,,,2026-04-23,2026-04-23,2026-04-23T00:00:00+09:00,patchnote,high,,1,1,1
+450,Naga,나가,ナガ,SSR,II,Electric,,,Missilis Industry,Supporter,Shotgun,Dazzling Pearl,0,Naga,,,,2023-10-05,2023-10-05,2023-10-05T12:00:00+09:00,patchnote,high,,1,1,1
+451,Tia,티아,ティア,SSR,I,Iron,,,Missilis Industry,Defender,Rocket Launcher,Dazzling Pearl,0,Tia,,,,2023-10-12,2023-10-12,2023-10-12T05:00:00+09:00,patchnote,high,,1,1,1
+470,Red Hood,레드 후드,レッドフード,SSR,I-II-III,Iron,,,Pilgrim,Attacker,Sniper Rifle,Goddess,0,Red Hood,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
+471,Snow White: Heavy Arms,스노우 화이트 : 헤비암즈,スノーホワイト：ヘビーアームズ,SSR,III,Water,,,Pilgrim,Attacker,Sniper Rifle,Goddess,1,Snow White,,,,2025-12-31,2026-01-01,2026-01-01T00:00:00+09:00,patchnote,high,,1,1,1
+500,Elegg,일레그,エレグ,SSR,II,Electric,,,Missilis Industry,Supporter,Machine Gun,Electric Shock,0,Elegg,,,,2024-02-22,2024-02-22,2024-02-22T00:00:00+09:00,patchnote,high,,1,1,1
+501,Trony,트로니,トロニー,SSR,III,Fire,,,Missilis Industry,Attacker,Sniper Rifle,Electric Shock,0,Trony,,,,2024-05-16,2024-05-16,2024-05-16T00:00:00+09:00,patchnote,high,,1,1,1
+502,Elegg: Boom and Shock,일레그 : 붐 앤 쇼크,エレグ：ブーム・アンド・ショック,SSR,III,Water,,,Missilis Industry,Attacker,Machine Gun,Electric Shock,1,Elegg,,,,2025-07-24,2025-07-24,2025-07-24T05:00:00+09:00,patchnote,high,,1,1,1
+511,Cinderella,신데렐라,シンデレラ,SSR,III,Electric,,,Pilgrim,Defender,Rocket Launcher,Old Tales,0,Cinderella,,,,2024-10-31,2024-10-31,2024-10-31T00:00:00+09:00,patchnote,high,,1,1,1
+513,Little Mermaid,리틀 머메이드,リトルマーメイド,SSR,I,Wind,,,Pilgrim,Supporter,Sub Machine Gun,Old Tales,0,Little Mermaid,,,,2025-04-24,2025-04-24,2025-04-24T00:00:00+09:00,patchnote,high,,1,1,1
+514,Grave,그레이브,グレイブ,SSR,II,Fire,,,Pilgrim,Supporter,Assault Rifle,Old Tales,0,Grave,,,,2024-11-07,2024-11-07,2024-11-07T05:00:00+09:00,patchnote,high,,1,1,1
+515,Cinderella: Crystal Wave,신데렐라 : 크리스탈 웨이브,シンデレラ：クリスタルウェーブ,SSR,III,Iron,,,Pilgrim,Attacker,Machine Gun,Old Tales,1,Cinderella,,,,2026-07-02,2026-07-02,2026-07-02T00:00:00+09:00,patchnote,high,,1,1,1
+520,Bready,브래디,ブレッディ,SSR,III,Water,,,Tetra Line,Attacker,Sniper Rifle,Cooking Oil,0,Bready,,,,2025-03-27,2025-03-27,2025-03-27T00:00:00+09:00,patchnote,high,,1,1,1
+521,Crust,크러스트,クラスト,SSR,II,Water,,,Tetra Line,Supporter,Rocket Launcher,Cooking Oil,0,Crust,,,,2025-04-10,2025-04-10,2025-04-10T00:00:00+09:00,patchnote,high,,1,1,1
+532,Sora,소라,ソラ,SSR,I,Wind,,,Elysion,Supporter,Rocket Launcher,Over the Horizon,0,Sora,,,,2025-07-03,2025-07-03,2025-07-03T00:00:00+09:00,patchnote,high,,1,1,1
+550,Bay,베이,ベイ,SSR,II,Fire,,,Tetra Line,Defender,Rocket Launcher,Rewind,0,Bay,,,,2024-04-11,2024-04-11,2024-04-11T00:00:00+09:00,patchnote,high,2025-07-17T00:00:00+09:00,1,1,1
+551,Clay,클레이,クレイ,SSR,II,Electric,,,Tetra Line,Supporter,Sub Machine Gun,Rewind,0,Clay,,,,2024-07-20,2024-06-20,2024-06-20T00:00:00+09:00,patchnote,high,,1,1,1
+570,Ark Ranger Black,아크레인저 블랙,アークレンジャー・ブラック,SSR,III,Wind,,,Tetra Line,Attacker,Assault Rifle,Ark Rangers,0,Ark Ranger Black,,,,2026-06-11,2026-06-11,2026-06-11T00:00:00+09:00,patchnote,high,,1,1,1
+580,Phantom,팬텀,ファントム,SSR,III,Water,,,Elysion,Attacker,Assault Rifle,Best Seller,0,Phantom,,,,2024-10-10,2024-10-10,2024-10-10T05:00:00+09:00,patchnote,high,2026-07-23T00:00:00+09:00,1,1,1
+581,Arcana,아르카나,アルカナ,SSR,II,Electric,,,Elysion,Supporter,Rocket Launcher,Best Seller,0,Arcana,,,,2025-05-15,2025-05-15,2025-05-15T00:00:00+09:00,patchnote,high,,1,1,1
+582,Label,레이블,レーベル,SSR,I,Iron,,,Elysion,Defender,Assault Rifle,Best Seller,0,Label,,,,2026-01-15,2026-01-15,2026-01-15T00:00:00+09:00,patchnote,high,,1,1,1
+583,Arcana: Fortune Mate,아르카나 : 포츈 메이트,アルカナ：フォーチュンメイト,SSR,II,Fire,,,Elysion,Attacker,Shotgun,Best Seller,1,Arcana,,,,2026-03-19,2026-03-19,2026-03-19T00:00:00+09:00,patchnote,high,,1,1,1
+590,Mori,모리,モリー,SSR,II,Wind,,,Missilis Industry,Defender,Assault Rifle,Incubator,0,Mori,,,,2025-04-24,2025-04-24,2025-04-24T00:00:00+09:00,patchnote,high,,1,1,1
+600,Mint,민트,ミント,SSR,II,Iron,,,Tetra Line,Supporter,Rocket Launcher,T.T. STAR,0,Mint,,,,2026-05-14,2026-05-14,2026-05-14T00:00:00+09:00,patchnote,high,,1,1,1
+601,Prika,프리카,プリカ,SSR,II,Water,,,Tetra Line,Supporter,Sniper Rifle,T.T. STAR,0,Prika,,,,2026-05-28,2026-05-28,2026-05-28T00:00:00+09:00,patchnote,high,,1,1,1
+620,Snow Crane,백학,シラツル,SSR,II,Water,,,Missilis Industry,Defender,Sniper Rifle,Veiled Order,0,Snow Crane,,,,2026-04-09,2026-04-09,2026-04-09T00:00:00+09:00,patchnote,high,,1,1,1
+800,Makima,마키마,マキマ,SSR,II,Water,,,Abnormal,Defender,Sub Machine Gun,Devil Hunter,0,Makima,,,,2023-02-22,2023-02-22,2023-02-22T00:00:00+09:00,patchnote,high,,1,1,1
+801,Power,파워,パワー,SSR,III,Fire,,,Abnormal,Attacker,Rocket Launcher,Devil Hunter,0,Power,,,,2023-02-22,2023-02-22,2023-02-22T00:00:00+09:00,patchnote,high,,1,1,1
+802,Himeno,히메노,姫野,SR,II,Wind,,,Abnormal,Supporter,Sniper Rifle,Devil Hunter,0,Himeno,,,,2023-02-22,2023-02-22,2023-02-22T00:00:00+09:00,patchnote,high,,1,1,1
+810,2B,2B,2B,SSR,III,Fire,,,Abnormal,Defender,Assault Rifle,YoRHa,0,2B,,,,2023-09-01,2023-09-01,2023-09-01T00:00:00+09:00,patchnote,high,,1,1,1
+811,A2,A2,A2,SSR,III,Fire,,,Abnormal,Attacker,Rocket Launcher,YoRHa,0,A2,,,,2023-09-08,2023-09-08,2023-09-08T05:00:00+09:00,patchnote,high,,1,1,1
+812,Pascal,파스칼,パスカル,SR,I,Iron,,,Abnormal,Supporter,Rocket Launcher,Machine Lifeform,0,Pascal,,,,2023-09-01,2023-09-01,2023-09-01T00:00:00+09:00,patchnote,high,,1,1,1
+820,Rem,렘,レム,SSR,II,Water,,,Abnormal,Supporter,Machine Gun,Emilia's Faction,0,Rem,,,,2024-03-28,2024-03-28,2024-03-28T05:00:00+09:00,patchnote,high,,1,1,1
+821,Emilia,에밀리아,エミリア,SSR,III,Water,,,Abnormal,Attacker,Rocket Launcher,Emilia's Faction,0,Emilia,,,,2024-03-21,2024-03-21,2024-03-21T00:00:00+09:00,patchnote,high,,1,1,1
+822,Ram,람,ラム,SR,I,Wind,,,Abnormal,Defender,Sniper Rifle,Emilia's Faction,0,Ram,,,,2024-03-21,2024-03-21,2024-03-21T00:00:00+09:00,patchnote,high,,1,1,1
+830,Asuka,아스카,アスカ,SSR,III,Fire,,,Abnormal,Attacker,Assault Rifle,NERV,0,Asuka,Asuka Shikinami Langley,시키나미 아스카 랑그레이,式波・アスカ・ラングレー,2024-08-21,2024-08-22,2024-08-22T00:00:00+09:00,patchnote,high,,1,1,1
+831,Rei,레이,レイ,SSR,III,Fire,,,Abnormal,Attacker,Machine Gun,NERV,0,Rei,Rei Ayanami,아야나미 레이,綾波レイ,2024-08-29,2024-08-29,2024-08-29T05:00:00+09:00,patchnote,high,,1,1,1
+832,Mari,마리,マリ,SSR,II,Electric,,,Abnormal,Supporter,Sniper Rifle,NERV,0,Mari,Mari Makinami Illustrious,마키나미 마리 일러스트리어스,真希波・マリ・イラストリアス,2024-09-05,2024-09-05,2024-09-05T05:00:00+09:00,patchnote,high,,1,1,1
+833,Misato,미사토,ミサト,SR,I,Iron,,,Abnormal,Supporter,Sub Machine Gun,NERV,0,Misato,Misato Katsuragi,카츠라기 미사토,葛城ミサト,2024-08-22,2024-08-22,2024-08-22T00:00:00+09:00,patchnote,high,,1,1,1
+834,Rei (Tentative Name),레이 (가칭),レイ（仮称）,SSR,III,Wind,,,Abnormal,Attacker,Assault Rifle,NERV,0,Rei (Tentative Name),,,,2025-02-27,2025-02-27,2025-02-27T05:00:00+09:00,patchnote,high,,1,1,1
+835,Asuka: WILLE,아스카 : WILLE,アスカ：WILLE,SSR,III,Wind,,,Abnormal,Attacker,Machine Gun,WILLE,1,Asuka,Asuka Shikinami Langley,,式波・アスカ・ラングレー,2025-02-20,2025-02-20,2025-02-20T00:00:00+09:00,patchnote,high,,1,1,1
+836,Sakura,사쿠라,サクラ,SR,I,Water,,,Abnormal,Supporter,Sub Machine Gun,WILLE,0,Sakura,Sakura Suzuhara,스즈하라 사쿠라,鈴原サクラ,2025-02-20,2025-02-20,2025-02-20T00:00:00+09:00,patchnote,high,,1,1,1
+840,Ada,에이다,エイダ,SSR,III,Electric,,,Abnormal,Attacker,Rocket Launcher,B.S.T.,0,Ada,,,,2025-09-24,2025-09-24,2025-09-24T00:00:00+09:00,patchnote,high,,1,1,1
+841,Jill,질,ジル,SSR,III,Electric,,,Abnormal,Attacker,Assault Rifle,B.S.T.,0,Jill,,질 발렌타인,ジル・バレンタイン,2025-10-02,2025-10-02,2025-10-02T05:00:00+09:00,patchnote,high,,1,1,1
+842,Claire,클레어,クレア,SR,I,Electric,,,Abnormal,Supporter,Rocket Launcher,B.S.T.,0,Claire,,클레어 레드필드,クレア・レッドフィールド,2025-09-24,2025-09-24,2025-09-24T00:00:00+09:00,patchnote,high,,1,1,1
+850,EVE,이브,イヴ,SSR,III,Iron,,,Abnormal,Attacker,Assault Rifle,7th Airborne Squad,0,EVE,,,,2025-06-12,2025-06-12,2025-06-12T00:00:00+09:00,patchnote,high,,1,1,1
+851,Raven,레이븐,レイヴン,SSR,III,Iron,,,Abnormal,Attacker,Rocket Launcher,2nd Airborne Squad,0,Raven,,,,2025-06-19,2025-06-19,2025-06-19T05:00:00+09:00,patchnote,high,,1,1,1
+852,Lily,릴리,リリー,SR,II,Wind,,,Abnormal,Supporter,Sub Machine Gun,5th Airborne Squad,0,Lily,,,,2025-06-12,2025-06-12,2025-06-12T00:00:00+09:00,patchnote,high,,1,1,1
+860,Chisato,치사토,千束,SSR,III,Iron,,,Abnormal,Attacker,Sub Machine Gun,Café LycoReco,0,Chisato,Chisato Nishikigi,니시키기 치사토,錦木千束,2026-02-12,2026-02-12,2026-02-12T00:00:00+09:00,patchnote,high,,1,1,1
+861,Takina,타키나,たきな,SSR,II,Iron,,,Abnormal,Supporter,Sniper Rifle,Café LycoReco,0,Takina,Takina Inoue,이노우에 타키나,井ノ上たきな,2026-02-18,2026-02-19,2026-02-19T05:00:00+09:00,patchnote,high,,1,1,1
+862,Kurumi,쿠루미,クルミ,SR,I,Iron,,,Abnormal,Supporter,Assault Rifle,Café LycoReco,0,Kurumi,,,,2026-02-12,2026-02-12,2026-02-12T00:00:00+09:00,patchnote,high,,1,1,1
+870,Queen (Makoto),퀸(마코토),クイーン（真）,SSR,III,Fire,,,Abnormal,Attacker,Shotgun,Phantom Thieves of Hearts,0,Queen (Makoto),Makoto Niijima,니지마 마코토,新島真,2026-08-13,2026-08-13,2026-08-13T00:00:00+09:00,patchnote,high,,1,1,1
+871,Yukiko,유키코,雪子,SSR,III,Fire,,,Abnormal,Attacker,Machine Gun,Investigation Team,0,Yukiko,Yukiko Amagi,아마기 유키코,天城雪子,2026-08-20,2026-08-20,2026-08-20T05:00:00+09:00,patchnote,high,,1,1,1
+872,Aigis,아이기스,アイギス,SR,II,Iron,,,Abnormal,Supporter,Sub Machine Gun,SEES,0,Aigis,,,,2026-08-14,2026-08-13,2026-08-13T00:00:00+09:00,patchnote,high,,1,1,1

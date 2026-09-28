@@ -18,7 +18,8 @@ and more so every year. Recent seasons count more (``half_life_days``). A unit
 that has not met such a season since its release has no element tier yet. A
 unit whose skill gives it a second element's weakness advantage (우월 코드: the
 roster's ``extra_elements``, from data/manual/extra_elements.csv) counts as
-both elements and has a tier in each.
+both elements and has a tier in each. One whose treasure's skill gave it the
+second element (``treasure_elements``) counts as both on the treasure side only.
 
 **Overall tier** - how much a unit is worth across the whole rotation. Its recent
 lift is estimated per boss weakness - five internal slots, Fire, Water, Wind,
@@ -56,7 +57,9 @@ treasure stands on the seasons played with it (the season rows' ``treasure``
 flag), a view of a moment before on the seasons before. Right after the
 treasure, before a season has been played with it, the unit has no tier yet -
 like a new release. Season tiers and the unit's history are not split: it is
-the same unit, one line, with the treasure marked where it came.
+the same unit, one line, with the treasure marked where it came. An element the
+treasure's skill adds is the unit's from the treasure on: Sugar (Iron) counts
+as Water too on the seasons with its treasure, and as Iron only before.
 """
 
 from __future__ import annotations
@@ -71,7 +74,7 @@ import yaml
 
 from ..paths import REPO_ROOT
 from ..servers import ServerFilter, split
-from .metrics import ELEMENTS, season_order
+from .metrics import ELEMENTS, listed_elements, season_order
 
 DEFAULT_TIER_CONFIG = REPO_ROOT / "config" / "tiers.yaml"
 
@@ -238,20 +241,25 @@ def counted_seasons(seasons: pd.DataFrame, moment: Any, config: TierConfig | Non
     return counted.reset_index(drop=True)
 
 
-def unit_elements(table: pd.DataFrame) -> pd.DataFrame:
+def unit_elements(table: pd.DataFrame, treasured: Any = ()) -> pd.DataFrame:
     """Every element each unit counts as, one row per unit and element (``unit_id``,
     ``element``, ``source``), from the roster columns of the season table: its
-    own ``element``, then the ``extra_elements`` its skill adds ("Iron;Water")."""
+    own ``element``, then the ``extra_elements`` its skill adds ("Iron;Water")
+    and, for the ``treasured`` units, the ``treasure_elements`` its treasure's
+    skill adds (both ``source`` "skill")."""
     columns = ["unit_id", "element", "source"]
     if table.empty or "element" not in table.columns:
         return pd.DataFrame(columns=columns)
     units = table.drop_duplicates("unit_id")
     own = units[["unit_id", "element"]].assign(source="own")
     frames = [own]
-    if "extra_elements" in units.columns:
-        extra = units[["unit_id", "extra_elements"]].assign(element=units["extra_elements"].fillna("").astype(str)
-                                                            .str.split(";")).explode("element")
-        frames.append(extra[["unit_id", "element"]].assign(source="skill"))
+    adding = [("extra_elements", units)]
+    if "treasure_elements" in units.columns:
+        adding.append(("treasure_elements", units[units["unit_id"].isin(set(treasured))]))
+    for column, which in adding:
+        if column in which.columns:
+            added = which[["unit_id"]].assign(element=which[column].map(listed_elements)).explode("element")
+            frames.append(added[["unit_id", "element"]].assign(source="skill"))
     members = pd.concat(frames, ignore_index=True)
     members = members[members["element"].isin(ELEMENTS)]
     return members.drop_duplicates(["unit_id", "element"]).reset_index(drop=True)
@@ -312,7 +320,7 @@ def standings(
     # slot takes the mean of the other-element slots seen - the unit's own level only while it
     # has met no other element yet. An own-element slot is never guessed from the other side:
     # 0 until the unit meets a season of it.
-    members = unit_elements(table)
+    members = unit_elements(table, treasured)
     members = members[members["unit_id"].isin(unit.index)].reset_index(drop=True)
     own = (pd.crosstab(members["unit_id"], members["element"]).reindex(index=unit.index, columns=list(ELEMENTS))
            .fillna(0).astype(bool))

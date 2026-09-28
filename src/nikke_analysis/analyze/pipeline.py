@@ -24,6 +24,7 @@ Outputs:
                                the tier and rank in that element, with the overall
                                tier beside - the element comparison tables. A unit
                                whose skill adds an element is listed under both
+                               (one whose treasure adds it, once it has it)
 ``metrics_tier_changes.csv``   units whose season, element or overall tier moved
 ``metrics_meta_shift.csv``     how far the meta moved each season
 ``metrics_synergy.csv``        unit pairs sharing a deck above chance, per season
@@ -176,7 +177,8 @@ def comparison_tables(standing: tiers.Standings, info: pd.DataFrame) -> tuple[pd
     roster's unit columns, by unit id."""
     names = [c for c in ("name_ko", "name_en") if c in info.columns]
     overall = standing.overall.join(info, on="unit_id")
-    first = ["overall_rank", "unit_id"] + names + [c for c in ("element", "extra_elements") if c in overall.columns]
+    first = ["overall_rank", "unit_id"] + names + [c for c in ("element", "extra_elements", "treasure_elements")
+                                                   if c in overall.columns]
     overall = overall[first + [c for c in overall.columns if c not in first]]
     beside = overall[["unit_id"] + names + ["overall_tier", "overall", "overall_rank", "provisional"]]
     elements = standing.elements.merge(beside, on="unit_id", how="left")

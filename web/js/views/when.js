@@ -32,8 +32,9 @@ export function anniversaries(launch, seasons) {
   return out;
 }
 
-// The seasons ``weak`` (a weakness) picks out; the others stay on the axis, faded.
-export function timeStrip(app, { weak = null, compact = false } = {}) {
+// The seasons ``weak`` (a weakness) picks out; the others stay on the axis, faded. Over the
+// strip, what pressing a boss does (``hint``), and where the view stands with a way back to now.
+export function timeStrip(app, { weak = null, compact = false, hint = "보스를 누르면 그 레이드가 끝난 때 기준으로 바뀝니다" } = {}) {
   const { model, state } = app;
   const pop = app.population();
   const latest = app.latestSeason();
@@ -90,7 +91,15 @@ export function timeStrip(app, { weak = null, compact = false } = {}) {
     return target ? h("a", { class: "strip-step", href: href(target.season), "aria-label": label, title: label }, dir < 0 ? "‹" : "›")
       : h("span", { class: "strip-step off", "aria-hidden": "true" }, dir < 0 ? "‹" : "›");
   };
-  return h("nav", { class: ["strip", compact && "compact"], "aria-label": "기준 시즌" }, step(-1), list, step(1));
+  const chosen = state.season != null ? model.bySeason.get(state.season) : null;
+  const head = h("div", { class: "axis-head" },
+    h("span", { class: "axis-k" }, "기준 시점"),
+    h("span", { class: "axis-hint" }, hint),
+    h("span", { class: "axis-now" },
+      h("b", null, chosen ? `S${chosen.season} ${chosen.bossKo || chosen.bossEn || "?"}` : "지금"),
+      chosen ? h("a", { class: "axis-back", href: app.link({ season: null }) }, "지금으로 ›") : null));
+  return h("div", { class: ["axis", compact && "compact"] }, head,
+    h("nav", { class: ["strip", compact && "compact"], "aria-label": "기준 시즌" }, step(-1), list, step(1)));
 }
 
 // The moment the views stand at, in words: "지금", or the chosen season over (or collected so far).
@@ -101,12 +110,4 @@ export function whenLabel(app, moment) {
   const t = kst(moment);
   const at = entry && !entry.final ? `${shortDay(entry.collectedOn)} 수집분까지` : `끝난 ${t.y}-${t.m}-${t.d}`;
   return `S${s.season} ${s.bossKo || s.bossEn || "?"} ${at}`;
-}
-
-// That, and the seasons that counted, in one line.
-export function whenLine(app, view) {
-  const live = view.live.length ? ` + 진행 중 ${view.live.join("·")}(잠정)` : "";
-  const counted = view.final.length ? `시즌 ${view.final[0]}–${view.final[view.final.length - 1]}${live}` : `끝난 시즌 없음${live}`;
-  return h("p", { class: "when" }, h("b", null, whenLabel(app, view.moment)), " 기준",
-    h("span", { class: "sep" }), h("span", { class: "muted" }, counted));
 }

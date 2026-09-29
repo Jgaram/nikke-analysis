@@ -17,7 +17,7 @@ export function seasonView(app) {
   const info = model.bySeason.get(number);
   const entry = pop.tables.get(number) || null;
   const root = h("div", { class: "view view-season" });
-  root.append(kindTabs(app), timeStrip(app), header(app, info, entry));
+  root.append(kindTabs(app), timeStrip(app, { hint: "보스를 누르면 그 레이드 하나의 티어로 바뀝니다" }), header(app, info, entry));
   if (!entry) {
     root.append(h("div", { class: "panel empty" }, "고른 표본(서버)에 이 시즌 랭킹이 없습니다."));
     return root;

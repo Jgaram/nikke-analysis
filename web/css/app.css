@@ -370,9 +370,16 @@ a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .strip.compact .schip-boss { width: 28px; height: 28px; }
 .strip.compact .schip-n { font-size: 12px; }
 .strip.compact .schip-d { font-size: 10px; }
-/* What the view stands at, under the axis. */
-.when { margin: -6px 0 0; font-size: 13px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-.when b { font-weight: 700; }
+/* Over the axis: what it is, what a press does, where the view stands (and the way back to now). */
+.axis { display: flex; flex-direction: column; gap: 2px; }
+.axis-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; padding: 0 2px; }
+.axis-k { font-weight: 800; color: var(--ink); }
+.axis-hint { color: var(--ink-3); }
+.axis-now { margin-left: auto; display: inline-flex; align-items: baseline; gap: 10px; }
+.axis-back { font-weight: 700; color: var(--accent); text-decoration: none; }
+.axis-back:hover { text-decoration: underline; }
+.axis .strip-list { padding-top: 17px; }
+.axis .strip-step { margin-top: 17px; }
 
 /* 모아 보기: one weakness's seasons side by side. */
 .cmp-head { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -407,6 +414,10 @@ a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .hero.has-boss { grid-template-columns: auto auto 1fr auto; }
+/* 종합 / 약점: the seasons counted as the number, or the weakness's icon in its place. */
+.hero-num b.range { font-size: 52px; }
+.hero-el img { width: 60px; height: auto; filter: drop-shadow(0 4px 12px rgb(0 0 0 / .35)); }
+.hero-foot { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; }
 /* The boss picture (enikk): a portrait beside the season number, lit from behind. */
 .hero-boss {
   width: 104px; height: 104px; object-fit: contain; margin: -6px 0;
@@ -876,6 +887,11 @@ svg.traj { display: block; overflow: visible; }
   .hero-boss { position: absolute; top: 10px; right: 12px; width: 72px; height: 72px; margin: 0; }
   .hero-num { flex-direction: row; align-items: baseline; gap: 8px; justify-content: flex-start; padding: 0; }
   .hero-num b { font-size: 40px; }
+  .hero-num b.range { font-size: 36px; }
+  .hero-el { position: absolute; top: 14px; right: 16px; }
+  .hero-el small { display: none; }
+  .hero-el img { width: 44px; }
+  .axis-hint { order: 3; width: 100%; font-size: 12px; }
   .hero-title { font-size: 21px; }
   .hero-sub { display: block; margin: 4px 0 0; font-size: 13px; }
   .hero-counts { grid-template-columns: repeat(3, 1fr); }

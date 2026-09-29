@@ -93,8 +93,9 @@ BOSS_TITLE_RE = re.compile(r"솔로\s*레이드\s*-\s*(?P<boss>[^\s(（][^(（]*
 # "라벨: 값" - the colon must follow a non-digit, or "00:00" would read as a label.
 FIELD_RE = re.compile(r"^(?P<label>.{1,60}?[^\d\s])\s*[:：]\s+(?P<value>.+)$")
 BOSS_INLINE_RE = re.compile(r"솔로\s*레이드\s*(?:시즌\s*\d{1,3}\s*)?-\s*(?P<boss>[^\s,.()（）]+(?:\s[^\s,.()（）0-9]+){0,2})")
-# A season's lounge post: "... 랩쳐는\n「리버렐리오 바디」입니다", at times a phrase between.
-ANNOUNCED_BOSS_RE = re.compile(r"랩쳐는[^「」]{0,80}「(?P<boss>[^「」]{1,30})」")
+# A season's lounge post: "... 랩쳐는\n「리버렐리오 바디」입니다", at times a phrase between, or
+# "이번 시즌은 스텔라 블레이드 콜라보 한정 보스,\n「프로비던스」가 등장합니다".
+ANNOUNCED_BOSS_RE = re.compile(r"(?:랩쳐는|이번 시즌은)[^「」]{0,80}「(?P<boss>[^「」]{1,30})」")
 HANGUL_RE = re.compile(r"[가-힣]")
 BOSS_PARTICLES = ("에서", "와", "과", "가", "이", "을", "를", "은", "는", "의", "에", "로")
 # Words that follow a boss name without a particle: "애니힐리오 재오픈 기간은".

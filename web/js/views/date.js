@@ -2,12 +2,13 @@
 // seasons whose boss was weak to one element - and how long each has been in use.
 
 import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
-import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable } from "../ui.js";
+import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable, int, kst } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs,
 } from "./common.js";
-import { timeStrip, whenLine } from "./when.js";
+import { timeStrip } from "./when.js";
 
+const ELEMENT_EN = { Fire: "FIRE", Water: "WATER", Wind: "WIND", Iron: "IRON", Electric: "ELECTRIC" };
 const OVERALL_KO = {
   mean: "보스 약점 다섯 가지 성적의 평균",
   frequency: "보스 약점 다섯 가지 성적을 최근 자주 나온 약점일수록 크게 친 평균",
@@ -19,8 +20,7 @@ export function dateView(app) {
   const view = app.viewAt(app.moment());
   const element = state.view !== "overall" ? state.view : null;
   const root = h("div", { class: "view view-date" });
-  root.append(kindTabs(app), timeStrip(app, { weak: element }), whenLine(app, view));
-  if (element) root.append(weakBosses(app, view, element));
+  root.append(kindTabs(app), timeStrip(app, { weak: element }), hero(app, view, element));
   if (!view.standing.overall.length) {
     root.append(h("div", { class: "panel empty" }, "이때까지 끝난 시즌이 없습니다."));
     return root;
@@ -47,7 +47,6 @@ function overallBody(app, view) {
   const rows = view.standing.overall.filter((o) => app.passes(model.units[o.u]));
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
-    `종합 티어 = ${OVERALL_KO[state.params.overall]}. `,
     "* = 잠정 (겪은 보스 약점이 적거나 자기 속성 시즌을 아직 못 겪음) · ",
     h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, overallTable(app, view, rows), explain);
@@ -103,12 +102,63 @@ function weakRows(app, view, element) {
   return { rows, seen, unseen: rows.filter((r) => !r.slot.seasons) };
 }
 
-// What a weakness tier stands on: the Solo Raid seasons whose boss was weak to that element,
-// newest first, each with its share of the recency weighting at the chosen season.
-function weakBosses(app, view, element) {
-  const params = app.state.params;
-  const counted = view.standing.counted.filter((c) => c.weak === element);
-  const weights = counted.map((c) => seasonWeight(c, view.moment, params));
+// The head of the view, as 레이드별 has one: where it stands in time, what it is, how it is
+// worked out, how many units each tier holds - and for a weakness, its seasons with their share.
+function hero(app, view, element) {
+  const { model, state } = app;
+  const { params } = state;
+  const chosen = state.season != null ? model.bySeason.get(state.season) : null;
+  const entry = chosen && app.population().tables.get(chosen.season);
+  const t = kst(view.moment);
+  const liveNote = view.live.length ? `진행 중 S${view.live.join("·S")} ${shortDay(app.population().tables.get(view.live[0])?.collectedOn)} 수집분까지 (잠정)` : null;
+  const status = chosen && entry?.final ? h("span", { class: "status done" }, `S${chosen.season} 종료 · ${t.y}-${t.m}-${t.d}`)
+    : liveNote ? h("span", { class: "status live" }, h("i", { class: "pulse", "aria-hidden": "true" }), chosen ? liveNote : `지금 · ${liveNote}`)
+      : h("span", { class: "status done" }, "지금");
+  const counted = view.standing.counted;
+  const mine = element ? counted.filter((c) => c.weak === element) : counted;
+
+  // the tiers, over every unit (the filters below narrow the board only)
+  const counts = {};
+  let cuts;
+  if (element) {
+    cuts = params.cuts;
+    const e = ELEMENTS.indexOf(element);
+    for (const o of view.standing.overall) {
+      const slot = view.standing.slots.get(o.u)?.[e];
+      if (slot?.seasons) { const k = assignTier(slot.lift, cuts); counts[k] = (counts[k] || 0) + 1; }
+    }
+  } else {
+    cuts = params.overallCuts;
+    for (const o of view.standing.overall) counts[o.tier] = (counts[o.tier] || 0) + 1;
+  }
+  const tiered = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  const art = element ? null : (chosen ?? model.bySeason.get(app.latestSeason()));
+  const first = counted.length ? counted[0].season : null, last = counted.length ? counted[counted.length - 1].season : null;
+  const servers = params.servers.length === model.servers.length ? `${model.servers.length}개 서버` : params.servers.join("·");
+  return h("section", { class: ["hero", "hero-stand", art?.bossImage && "has-boss", element && "has-foot"] },
+    element ? h("div", { class: "hero-num hero-el" }, h("small", null, "WEAK"), elementIcon(element, 60, { title: "" }))
+      : h("div", { class: "hero-num" }, h("small", null, "SEASON"), h("b", { class: first !== last ? "range" : null }, first === last ? first ?? "–" : `${first}–${last}`)),
+    art?.bossImage ? h("img", { class: "hero-boss", src: `icons/bosses/${art.bossImage}.webp`, alt: "", width: 256, height: 256, decoding: "async" }) : null,
+    h("div", { class: "hero-main" },
+      h("div", { class: "hero-top" }, status),
+      h("h2", { class: "hero-title" }, element ? `${ELEMENT_KO[element]} 약점 티어` : "종합 티어",
+        h("span", { class: "hero-sub" }, element ? ELEMENT_EN[element] : "OVERALL")),
+      h("div", { class: "hero-facts" },
+        h("span", { class: "fact" }, h("span", { class: "fact-k" }, "반영"),
+          element ? `보스 약점이 ${ELEMENT_KO[element]}인 시즌 ${mine.length}개` : `시즌 ${counted.length}개 (S${first ?? "–"}–S${last ?? "–"})`),
+        h("span", { class: "fact" }, h("span", { class: "fact-k" }, "계산"),
+          element ? `그 시즌들의 기여도 평균, 최근일수록 크게 (반감기 ${params.halfLifeDays}일)` : OVERALL_KO[params.overall])),
+      h("div", { class: "hero-sample muted" }, `표본 ${servers} × 상위 ${params.topN}위 · 니케 ${int(tiered)}명`)),
+    h("div", { class: "hero-counts", "aria-label": "티어별 인원" }, cuts.map(([k]) => h("span", { class: "count", dataset: { tier: k } },
+      h("b", null, k), h("span", null, counts[k] || 0)))),
+    element ? weakSeasons(app, view, mine) : null);
+}
+
+// A weakness's seasons, newest first, each with its share of the recency weighting at the moment.
+function weakSeasons(app, view, counted) {
+  if (!counted.length) return h("p", { class: "hero-foot note wi-empty" }, "이때까지 이 약점 시즌이 없습니다.");
+  const weights = counted.map((c) => seasonWeight(c, view.moment, app.state.params));
   const total = weights.reduce((a, b) => a + b, 0) || 1;
   const card = (s, share, live) => {
     const boss = s.bossKo || s.bossEn || "?";
@@ -123,14 +173,10 @@ function weakBosses(app, view, element) {
         h("span", { class: "wb-share", "aria-label": `비중 ${pct}%` },
           h("i", { style: { width: `${Math.max(4, pct)}%` } }), h("small", null, `${pct}%`))));
   };
-  const cards = counted.map((c, i) => ({ c, share: weights[i] / total })).reverse()
-    .map(({ c, share }) => card(app.model.bySeason.get(c.season), share, c.live));
-  return h("section", { class: "panel weak-intro" },
-    h("div", { class: "wi-head" },
-      elementIcon(element, 20, { title: "" }),
-      h("h3", null, `보스 약점 ${ELEMENT_KO[element]} · ${counted.length}시즌`),
-      h("span", { class: "muted small" }, `비중: 최근일수록 크게 (반감기 ${params.halfLifeDays}일)`)),
-    counted.length ? h("div", { class: "wb-list" }, cards) : h("p", { class: "note wi-empty" }, "아직 없음"));
+  return h("div", { class: "hero-foot" },
+    h("div", { class: "hero-foot-k fact-k" }, "시즌별 비중"),
+    h("div", { class: "wb-list" }, counted.map((c, i) => ({ c, share: weights[i] / total })).reverse()
+      .map(({ c, share }) => card(app.model.bySeason.get(c.season), share, c.live))));
 }
 
 function elementBody(app, view, element) {
@@ -139,7 +185,6 @@ function elementBody(app, view, element) {
   const { rows, seen, unseen } = weakRows(app, view, element);
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
-    `${ko} 약점 티어 = 보스 약점이 ${ko}인 시즌들의 기여도를 최근일수록 크게 친 평균. `,
     `▶ = ${ko} 니케. `, h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, elementTable(app, view, rows, element), explain);
   const board = tierBoard(app, seen.map((r) => ({ u: r.u, tier: r.tier, value: r.slot.lift, r })), {

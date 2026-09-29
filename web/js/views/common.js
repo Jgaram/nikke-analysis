@@ -1,7 +1,7 @@
 // Pieces the views share: a unit's card, the tier board, the filter row, the switches that
 // lead between views, a unit search, tooltips.
 
-import { ELEMENTS, DAY_MS, assignTier, unitElements, fielded } from "../model.js";
+import { ELEMENTS, DAY_MS, GENERALITY_BANDS, assignTier, unitElements, fielded } from "../model.js";
 import {
   h, num, pct, int, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, nameLines, unitName, withTip, tierBadge,
   deckSplit, segmented, ELEMENT_KO, CLASS_KO, BURSTS, WEAPON_SHORT, WEAPON_KO, MAKER_KO, shortDay,
@@ -15,7 +15,7 @@ export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/
 
 // ``pick`` makes the card a toggle (the comparison's list): {on, href, onclick} in place of
 // the link to the unit.
-// ``band`` is its generality band (특화 · 속성 우선 · 범용), shown as a tag under the name.
+// ``band`` is its generality band (특화 · 속성 우선 · 범용), shown as a bar under the name.
 export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, band, tip, extra, pick = null } = {}) {
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
@@ -33,7 +33,8 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
     pick?.on ? h("span", { class: "mark check", "aria-hidden": "true" }, "✓") : null,
     value != null && !Number.isNaN(value) ? h("span", { class: "val" }, num(value)) : null),
   h("span", { class: "name" }, h("span", null, first), second ? h("span", null, second) : null),
-  extra || band ? h("span", { class: "card-tags" }, extra || null, band ? generalityTag(band) : null) : null);
+  band ? generalityBar(band, unit.element) : null,
+  extra || null);
   if (tip) withTip(card, tip);
   return card;
 }
@@ -324,10 +325,22 @@ export const PATH_KO = {
   unused: "안 쓰임",
 };
 
-// A generality band as a tag: 특화 · 속성 우선 · 범용, darker the more general.
-export function generalityTag(band) {
+// A generality band in the colours of the unit's element (its primary): 특화 all of it,
+// 속성 우선 half, 범용 none - grey. As a tag with the words (the tables), or a bare bar (the cards).
+export function generalityTag(band, element) {
   if (!band) return null;
-  return h("span", { class: "gen-tag", dataset: { band } }, GENERALITY_KO[band]);
+  return h("span", { class: "gen-tag", dataset: { band, el: element } }, GENERALITY_KO[band]);
+}
+
+export function generalityBar(band, element) {
+  if (!band) return null;
+  return h("span", { class: "gen-bar", dataset: { band, el: element }, "aria-hidden": "true" });
+}
+
+// The three bars side by side, named - for a note under the board.
+export function generalityLegend(element = "Fire") {
+  return h("span", { class: "gen-legend" }, GENERALITY_BANDS.map((band) =>
+    h("span", { class: "gen-legend-item" }, generalityBar(band, element), GENERALITY_KO[band])));
 }
 
 // What the three bands are, with the parameters in force.
@@ -344,7 +357,7 @@ export function generalityColumn(app, view) {
     key: "generality", label: "범용도",
     title: `${generalityRule(app.state.params)} · 칸이 빈 니케 = 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임`,
     sort: (row) => of(row)?.generality,
-    cell: (row) => generalityTag(of(row)?.band) || h("span", { class: "muted" }, "–"),
+    cell: (row) => generalityTag(of(row)?.band, app.model.units[row.u].element) || h("span", { class: "muted" }, "–"),
   };
 }
 
@@ -482,7 +495,7 @@ export function standingTip(app, u, view, { element = null } = {}) {
         h("dd", null, r.seasons ? [tierBadge(r.tier, r.lift), ` ${counts.get(r.element)}명 중 ${r.rank}위 · 시즌 ${r.seasons}번`]
           : h("span", { class: "muted" }, "미관측 — 이 약점 시즌을 아직 못 겪음"))]),
       h("dt", null, "수명"), h("dd", null, lifePill(life), life.main, returnTag(app, life.a)),
-      view.generality.get(u)?.band ? [h("dt", null, "범용도"), h("dd", null, generalityTag(view.generality.get(u).band),
+      view.generality.get(u)?.band ? [h("dt", null, "범용도"), h("dd", null, generalityTag(view.generality.get(u).band, unit.element),
         h("span", { class: "muted" }, num(view.generality.get(u).generality)))] : null,
       life.a ? [h("dt", null, "쓰인 시즌"), h("dd", null, `출시 뒤 ${life.a.seasonsOut}시즌 중 ${life.a.seasonsUsed}번`,
         life.a.firstUsed != null ? h("span", { class: "muted" }, ` · 처음 S${life.a.firstUsed}`) : null)] : null),

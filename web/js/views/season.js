@@ -141,7 +141,7 @@ function seasonTable(app, entry, rows) {
       } },
     { key: "generality", label: "범용도", title: `그 시즌이 끝났을 때의 ${generalityRule(state.params)}`,
       sort: (r) => history.get(r.u)?.generality,
-      cell: (r) => generalityTag(history.get(r.u)?.generalityBand) || h("span", { class: "muted" }, "–") },
+      cell: (r) => generalityTag(history.get(r.u)?.generalityBand, app.model.units[r.u].element) || h("span", { class: "muted" }, "–") },
   ];
   return h("div", { class: "panel table-panel" },
     sortableTable(columns, rows, {

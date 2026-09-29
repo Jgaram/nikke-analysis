@@ -37,6 +37,7 @@
   --accent-soft: rgba(52, 150, 239, .15);
   --glow: rgba(52, 150, 239, .5);
   --el-Fire: #f07030; --el-Water: #2f80ed; --el-Wind: #1baf7a; --el-Iron: #f2c230; --el-Electric: #ff79c6;
+  --gen-neutral: #6f7a92;
   --gen-0: rgba(52, 150, 239, .07); --gen-1: rgba(52, 150, 239, .17); --gen-2: rgba(52, 150, 239, .32);
   --grid: #1d2536;
   --axis: #34405a;
@@ -74,6 +75,7 @@
   --accent-soft: rgba(42, 120, 214, .11);
   --glow: rgba(42, 120, 214, .35);
   --el-Fire: #c93a3a; --el-Water: #2a78d6; --el-Wind: #1baf7a; --el-Iron: #c98500; --el-Electric: #4a3aa7;
+  --gen-neutral: #b3bbc9;
   --gen-0: rgba(42, 120, 214, .06); --gen-1: rgba(42, 120, 214, .15); --gen-2: rgba(42, 120, 214, .28);
   --grid: #e4e8ef;
   --axis: #c3cad8;
@@ -522,16 +524,29 @@ a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .card .name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .card .name span + span { color: var(--ink); font-weight: 600; }
 .card .name span:only-child { color: var(--ink); font-weight: 600; }
-.card .tag { white-space: nowrap; }
-.card-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 3px; margin-top: -1px; }
-/* the generality band: 특화 · 속성 우선 · 범용, darker the more general */
+.card .tag { margin-top: -1px; white-space: nowrap; }
+/* the generality band in the colours of the unit's element: 특화 all of it, 속성 우선 half, 범용 grey */
+[data-el="Fire"] { --uc: var(--el-Fire); }
+[data-el="Water"] { --uc: var(--el-Water); }
+[data-el="Wind"] { --uc: var(--el-Wind); }
+[data-el="Iron"] { --uc: var(--el-Iron); }
+[data-el="Electric"] { --uc: var(--el-Electric); }
+.gen-bar { display: flex; width: 34px; height: 4px; border-radius: 2px; overflow: hidden; background: var(--gen-neutral); flex: none; }
+.gen-bar::before { content: ""; width: 0; background: var(--uc, var(--ink-3)); }
+.gen-bar[data-band="specialist"]::before { width: 100%; }
+.gen-bar[data-band="element_first"]::before { width: 50%; }
+.card .gen-bar { margin-top: -2px; }
+.card.retired .gen-bar { opacity: .45; }
+.gen-legend { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; vertical-align: middle; }
+.gen-legend-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.gen-legend .gen-bar { width: 22px; }
 .gen-tag {
   display: inline-block; font-size: 10.5px; font-weight: 700; line-height: 16px; padding: 0 5px; border-radius: 5px;
-  white-space: nowrap; color: var(--ink-2); border: 1px solid var(--line-2); background: transparent;
+  white-space: nowrap; color: var(--ink); border: 1px solid var(--line-2);
 }
-.gen-tag[data-band="element_first"] { color: var(--ink); background: var(--gen-1); border-color: color-mix(in srgb, var(--accent) 30%, transparent); }
-.gen-tag[data-band="generalist"] { color: var(--ink); background: var(--gen-2); border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
-.card.retired .gen-tag { opacity: .6; }
+.gen-tag[data-band="specialist"] { background: color-mix(in srgb, var(--uc) 30%, transparent); border-color: var(--uc); }
+.gen-tag[data-band="element_first"] { background: color-mix(in srgb, var(--uc) 12%, transparent); border-color: color-mix(in srgb, var(--uc) 55%, transparent); }
+.gen-tag[data-band="generalist"] { color: var(--ink-2); background: color-mix(in srgb, var(--gen-neutral) 30%, transparent); border-color: var(--gen-neutral); }
 .card:hover .face, .card:focus-visible .face {
   transform: translateY(-3px); border-color: var(--tc);
   box-shadow: 0 0 0 1px var(--tc), 0 10px 22px -8px color-mix(in srgb, var(--tc) 70%, transparent);

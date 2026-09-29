@@ -282,8 +282,7 @@ export function seasonTip(app, row, entry) {
     h("dl", { class: "tip-list" },
       h("dt", null, "사용"), h("dd", null, `${int(row.rankers)}명 · ${pct(row.usageRate)}`, h("span", { class: "muted" }, ` (사용 순위 ${row.usageRank}위)`)),
       row.rankers ? [h("dt", null, "덱 분포"), h("dd", null, deckSplit(row.inDeck, row.rankers, 120),
-        h("span", { class: "muted" }, ` 1덱 ${pct(row.inDeck[0] / row.rankers)} · 평균 ${num(row.avgDeck)}덱`))] : null,
-      row.rankers ? [h("dt", null, "최고 순위"), h("dd", null, `${row.bestRank}위`)] : null),
+        h("span", { class: "muted" }, ` 1덱 ${pct(row.inDeck[0] / row.rankers)} · 평균 ${num(row.avgDeck)}덱`))] : null),
     h("div", { class: "tip-notes" },
       row.elementMatch ? h("span", { class: "pill" }, "▶ 자기 속성 약점 시즌") : null,
       row.treasure ? h("span", { class: "pill heart" }, "♥ 애장품을 낀 시즌") : null));

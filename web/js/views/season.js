@@ -144,7 +144,6 @@ function seasonTable(app, entry, rows) {
     { key: "main", label: "1덱", num: true, title: "쓴 사람 중 가장 센 덱에 넣은 비율", sort: (r) => (r.rankers ? r.inDeck[0] / r.rankers : null),
       cell: (r) => (r.rankers ? pct(r.inDeck[0] / r.rankers) : "–") },
     { key: "avg", label: "평균 덱", num: true, sort: (r) => (r.rankers ? r.avgDeck : null), firstDir: "asc", cell: (r) => (r.rankers ? num(r.avgDeck) : "–") },
-    { key: "best", label: "최고 순위", num: true, sort: (r) => (r.rankers ? r.bestRank : null), firstDir: "asc", cell: (r) => (r.rankers ? `${r.bestRank}위` : "–") },
     { key: "element", label: "속성 티어", title: "그 시즌이 끝났을 때의 속성 티어 (보스 약점이 이 니케의 속성인 시즌만)",
       sort: (r) => history.get(r.u)?.elementLift, cell: (r) => {
         const x = history.get(r.u);

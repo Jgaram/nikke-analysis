@@ -165,18 +165,19 @@ def strip_chrome(ax) -> None:
 
 
 def tier_color(tier: str, theme: Theme, tier_order: list[str]) -> str:
-    """Strongest tier gets the heaviest step; the bottom tier gets the neutral.
+    """Strongest tier gets the heaviest step; the bottom tiers get the neutral.
 
-    The bottom tier means "outside the meta", so a neutral is the honest colour
-    for it - and it keeps the blue ramp to five distinguishable steps, which is
-    all one hue actually supports.
+    The bottom tiers mean "outside the meta", so a neutral is the honest colour
+    for them - and it keeps the blue ramp to five distinguishable steps, which is
+    all one hue actually supports. A tier below the fifth (D over F) is neutral too.
     """
     if not tier_order or tier not in tier_order or tier == tier_order[-1]:
         return theme.neutral
     position = tier_order.index(tier)  # 0 is the best tier
     steps = theme.ordinal
-    index = len(steps) - 1 - min(position, len(steps) - 1)
-    return steps[index]
+    if position >= len(steps):
+        return theme.neutral
+    return steps[len(steps) - 1 - position]
 
 
 def px_to_data(ax, pixels: float) -> tuple[float, float]:

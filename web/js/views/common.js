@@ -61,21 +61,32 @@ function cutText(cuts, i) {
   return `≥ ${num(lo)}`;
 }
 
+// The bottom tier (F: next to no use) starts folded; the others show up to ``collapseAt`` cards.
 export function tierBoard(app, items, { key, card, collapseAt = 36, empty = "없음", note = null }) {
   const cuts = app.state.params.cuts;
   const board = h("div", { class: "board" });
+  const toggle = (id, on) => { if (on) app.state.expanded.add(id); else app.state.expanded.delete(id); app.rerender(); };
   cuts.forEach(([label], i) => {
     const group = items.filter((it) => it.tier === label);
     const id = `${key}:${label}`;
     const open = app.state.expanded.has(id);
-    const shown = open || group.length <= collapseAt + 4 ? group : group.slice(0, collapseAt);
+    const foldable = i === cuts.length - 1 && i > 0;
+    const shown = open || (!foldable && group.length <= collapseAt + 4) ? group
+      : foldable ? [] : group.slice(0, collapseAt);
     const cards = h("div", { class: "cards" }, shown.map(card));
     if (!group.length) cards.append(h("span", { class: "row-empty" }, empty));
-    if (shown.length < group.length) {
-      cards.append(h("button", { type: "button", class: "more", onclick: () => { app.state.expanded.add(id); app.rerender(); } },
+    else if (foldable) {
+      cards.append(h("button", {
+        type: "button", class: ["fold", open && "open"], "aria-expanded": String(open), onclick: () => toggle(id, !open),
+      }, open ? "접기" : [h("b", null, `${group.length}명`), " 펼치기 · 거의 안 쓰인 니케"]));
+    } else if (shown.length < group.length) {
+      cards.append(h("button", { type: "button", class: "more", onclick: () => toggle(id, true) },
         h("b", null, `+${group.length - shown.length}`), "명 더 보기"));
     }
-    board.append(h("section", { class: "tier-row", dataset: { tier: label }, "aria-label": `${label} 티어 ${group.length}명` },
+    board.append(h("section", {
+      class: ["tier-row", foldable && !open && group.length && "folded"], dataset: { tier: label },
+      "aria-label": `${label} 티어 ${group.length}명`,
+    },
       h("div", { class: "tier-label" },
         h("span", { class: "tier-letter" }, label),
         h("span", { class: "tier-cut" }, cutText(cuts, i)),

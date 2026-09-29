@@ -74,7 +74,7 @@ def test_main_deck_units_carry_more_than_back_deck_units(world, table):
 def test_every_released_unit_gets_a_row_and_unused_ones_read_zero(world, table):
     unused = table[table["unit_id"].isin(world.never_used)]
     assert not unused.empty
-    assert (unused["lift"] == 0).all() and (unused["tier"] == "D").all()
+    assert (unused["lift"] == 0).all() and (unused["tier"] == "F").all()
     assert unused["deck_effect"].isna().all()
     assert table.groupby("season")["unit_id"].apply(lambda s: s.is_unique).all()
 

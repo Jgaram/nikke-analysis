@@ -91,7 +91,8 @@ DEFAULT_CUTS: list[tuple[str, float]] = [
     ("A", 0.8),
     ("B", 0.5),
     ("C", 0.2),
-    ("D", 0.0),
+    ("D", 0.05),
+    ("F", 0.0),
 ]
 OVERALL_MODES = ("mean", "max", "frequency")
 

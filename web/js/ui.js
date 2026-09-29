@@ -6,7 +6,7 @@
 export const ELEMENT_KO = { Fire: "작열", Water: "수냉", Wind: "풍압", Iron: "철갑", Electric: "전격" };
 export const CLASS_KO = { Attacker: "화력형", Supporter: "지원형", Defender: "방어형" };
 export const BURSTS = ["I", "II", "III"];
-export const TIERS = ["SS", "S", "A", "B", "C", "D"];
+export const TIERS = ["SS", "S", "A", "B", "C", "D", "F"];
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 

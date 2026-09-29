@@ -9,7 +9,8 @@ const OVERALL_HINT = {
   frequency: "최근 보스 약점으로 자주 나온 칸일수록 크게 친 평균.",
   max: "다섯 칸 중 겪어 본 칸의 가장 큰 값.",
 };
-const CUT_LABELS = ["SS", "S", "A", "B", "C"];
+// The cuts one can move: every tier but the bottom one (F), whose floor is 0.
+const cutLabels = (d) => d.cuts.slice(0, -1).map(([label]) => label);
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const sortedServers = (p) => [...p.servers].sort();
@@ -19,7 +20,7 @@ export function encodeParams(p, d) {
   if (!same(sortedServers(p), sortedServers(d))) q.srv = p.servers.join(",");
   if (p.topN !== d.topN) q.top = String(p.topN);
   if (p.rankWeighting !== d.rankWeighting) q.w = p.rankWeighting;
-  if (!same(p.cuts, d.cuts)) q.cuts = p.cuts.slice(0, CUT_LABELS.length).map(([, v]) => v).join(",");
+  if (!same(p.cuts, d.cuts)) q.cuts = p.cuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
   if (p.halfLifeDays !== d.halfLifeDays) q.hl = String(p.halfLifeDays);
   if (p.priorStrength !== d.priorStrength) q.k = String(p.priorStrength);
   if (p.overall !== d.overall) q.ov = p.overall;
@@ -44,9 +45,10 @@ export function decodeParams(q, d, model) {
   p.topN = Math.round(number(q.get("top"), 1, 50) ?? d.topN);
   if (["dcg", "uniform"].includes(q.get("w"))) p.rankWeighting = q.get("w");
   if (q.has("cuts")) {
+    const labels = cutLabels(d);
     const values = q.get("cuts").split(",").map((v) => number(v, 0, 10));
-    if (values.length === CUT_LABELS.length && values.every((v) => v != null) && descending(values)) {
-      p.cuts = [...CUT_LABELS.map((l, i) => [l, values[i]]), ...d.cuts.slice(CUT_LABELS.length)];
+    if (values.length === labels.length && values.every((v) => v != null) && descending(values)) {
+      p.cuts = [...labels.map((l, i) => [l, values[i]]), ...d.cuts.slice(labels.length)];
     }
   }
   p.halfLifeDays = number(q.get("hl"), 0, 3650) ?? d.halfLifeDays;
@@ -127,7 +129,9 @@ export function buildParams(app, body) {
   const cutInputs = h("div", { class: "cuts" });
   const cutError = h("p", { class: "hint error", hidden: true }, "위 티어일수록 커야 하고 0 이상이어야 합니다.");
   const readCuts = () => [...cutInputs.querySelectorAll("input")].map((i) => Number(i.value));
-  CUT_LABELS.forEach((label, i) => {
+  const labels = cutLabels(d);
+  const floor = d.cuts[d.cuts.length - 1][0];
+  labels.forEach((label, i) => {
     cutInputs.append(h("label", { class: "cut", dataset: { tier: label } },
       h("span", { class: "tb", dataset: { tier: label } }, h("b", null, label)),
       h("span", { class: "cut-ge", "aria-hidden": "true" }, "≥"),
@@ -138,7 +142,7 @@ export function buildParams(app, body) {
           const values = readCuts();
           const ok = values.every((v) => Number.isFinite(v)) && descending(values);
           cutError.hidden = ok;
-          if (ok) app.setParams({ cuts: [...CUT_LABELS.map((l, k) => [l, values[k]]), ...p.cuts.slice(CUT_LABELS.length)] });
+          if (ok) app.setParams({ cuts: [...labels.map((l, k) => [l, values[k]]), ...p.cuts.slice(labels.length)] });
         },
       })));
   });
@@ -159,7 +163,7 @@ export function buildParams(app, body) {
       h("h3", null, "티어 컷", h("small", null, "기여도 기준 · 시즌·속성·종합 공통")),
       cutInputs, cutError,
       h("p", { class: "hint" }, "기여도 1.0 = 한 사람이 쓰는 25명(5덱 × 5명)이 대미지를 똑같이 나눴을 때의 몫. "
-        + "1.5 = 그 1.5배, 0 = 아무도 안 씀. 그 아래는 D.")),
+        + `1.5 = 그 1.5배, 0 = 아무도 안 씀. 그 아래는 ${floor}(티어표에서 접어 둠).`)),
     h("section", { class: "psec" },
       h("h3", null, "속성·종합 티어", h("small", null, "여러 시즌을 하나로")),
       field("최근성 반감기", range({

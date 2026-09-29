@@ -108,7 +108,7 @@ function slotChart(app, slots, overallMode) {
   const cuts = app.state.params.cuts;
   const top = Math.max(cuts[0][1] + 0.2, ...slots.map((s) => s.lift));
   return h("div", { class: "tile slots-tile" },
-    h("div", { class: "tile-label" }, "종합을 이루는 다섯 칸", h("span", { class: "muted" }, " · 보스 약점별")),
+    h("div", { class: "tile-label" }, "보스 약점별"),
     h("div", { class: "mini-bars", role: "img", "aria-label": slots.map((s) => `${ELEMENT_KO[s.element]} ${num(s.lift)}${s.seasons ? "" : "(채운 값)"}`).join(", ") },
       slots.map((sl) => h("a", { class: ["mb", !sl.seasons && "filled", sl.own && "own"], href: app.weakHref(sl.element), title: `${sl.seasons
         ? `${ELEMENT_KO[sl.element]} 약점 시즌 ${sl.seasons}번의 기여도 가중 평균 ${num(sl.lift)}`

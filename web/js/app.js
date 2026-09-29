@@ -37,6 +37,7 @@ const state = {
   params: null,
   filters: { elements: new Set(), bursts: new Set(), classes: new Set(), weapons: new Set(), makers: new Set() },
   showUnused: false,
+  showNums: false, // 티어표 cards: their number and generality bar
   expanded: new Set(),
   sort: {},
 };
@@ -122,8 +123,8 @@ app.latestSeason = () => {
 
 app.unitIndex = (id) => app.model.byId.get(id);
 
-// The filters a view shows: element and burst everywhere, role, weapon and maker on the unit list (``more``).
-app.passes = (unit, more = false) => {
+// The filters: element, burst, role, weapon and maker.
+app.passes = (unit, more = true) => {
   const f = state.filters;
   if (f.elements.size && !M.unitElements(unit, true).some((m) => f.elements.has(m.element))) return false;
   if (f.bursts.size && !(f.bursts.has(unit.burst) || unit.burst === "I-II-III")) return false;

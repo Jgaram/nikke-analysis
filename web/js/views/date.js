@@ -4,7 +4,7 @@
 import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
 import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable, int, kst } from "../ui.js";
 import {
-  unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs,
+  unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs, numsToggle,
   generalityColumn, generalityRule, generalityLegend, curveColumn,
 } from "./common.js";
 import { timeStrip } from "./when.js";
@@ -26,7 +26,7 @@ export function dateView(app) {
     root.append(h("div", { class: "panel empty" }, "이때까지 끝난 시즌이 없습니다."));
     return root;
   }
-  root.append(h("div", { class: "toolbar" }, filterRow(app), h("div", { class: "toolbar-end" }, modeSwitch(app))));
+  root.append(h("div", { class: "toolbar" }, filterRow(app), h("div", { class: "toolbar-end" }, state.mode === "table" ? null : numsToggle(app), modeSwitch(app))));
   root.append(element ? elementBody(app, view, element) : overallBody(app, view));
   return root;
 }
@@ -41,6 +41,7 @@ function lifeNote(app, table) {
   return table
     ? `시즌별 사용 = 시즌 하나가 칸 하나, 칠한 칸은 시즌 티어 ${minTier} 이상인 시즌(색 = 그 시즌 티어) · 수명 = 지금 쓰이는 흐름이 `
       + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired} · 복귀 = 은퇴한 뒤 다시 쓰임. ${general}`
+    : !app.state.showNums ? `흑백 얼굴 = 은퇴(${retired}). `
     : [`흑백 얼굴 = 은퇴(${retired}). 이름 아래 띠 = 범용도, 속성 색이 찰수록 자기 속성 약점에서만 쓰임: `, generalityLegend(),
       ` (범용도 ${app.state.params.generalityBands.map((v) => v.toFixed(2)).join(" · ")}에서 나눔). `];
 }
@@ -58,7 +59,7 @@ function overallBody(app, view) {
     key: `overall-${state.season ?? "now"}`, cuts: state.params.overallCuts,
     card: (it) => unitCard(app, it.u, {
       value: it.value, tier: it.tier, provisional: it.o.provisional, heart: it.o.treasure,
-      retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band, tip: () => standingTip(app, it.u, view),
+      retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band, nums: state.showNums, tip: () => standingTip(app, it.u, view),
     }),
     note: explain,
   });
@@ -210,13 +211,13 @@ function elementBody(app, view, element) {
   const { rows, seen, unseen } = weakRows(app, view, element);
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
-    `▶ = ${ko} 니케. `, h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
+    table ? `▶ = ${ko} 니케. ` : null, h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, elementTable(app, view, rows, element), explain);
   const board = tierBoard(app, seen.map((r) => ({ u: r.u, tier: r.tier, value: r.slot.lift, r })), {
     key: `element-${element}-${state.season ?? "now"}`,
     card: (it) => unitCard(app, it.u, {
       value: it.value, tier: it.tier, heart: it.r.o.treasure, retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band,
-      extra: it.r.slot.own ? h("span", { class: "tag own-tag", title: `${ko} 니케 — 자기 속성 약점` }, `▶ ${ko}`) : null,
+      nums: state.showNums,
       tip: () => standingTip(app, it.u, view, { element }),
     }),
     note: explain,

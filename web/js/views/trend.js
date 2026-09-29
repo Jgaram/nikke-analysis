@@ -55,9 +55,9 @@ export function compareView(app) {
       type: "button", class: "cmp-picker-head", "aria-expanded": String(open),
       onclick: () => { if (open) state.expanded.delete(PICKER); else state.expanded.add(PICKER); app.rerender(); },
       disabled: !picked.length, // with none compared the grid stays open
-    }, h("b", null, "니케 고르기"), picked.length ? h("span", { class: "muted small" }, open ? "접기 ▴" : "펼치기 ▾ · 얼굴을 눌러 넣고 빼기") : null),
+    }, h("b", null, "니케 고르기"), picked.length ? h("span", { class: "muted small" }, open ? "접기 ▴" : "펼치기 ▾") : null),
     open ? unitPicker(app, {
-      heading: "얼굴을 눌러 넣고 빼기", sub: `${picked.length}/${COMPARE_MAX}명 골랐음`, fold: "cmp:bottom",
+      sub: `${picked.length}/${COMPARE_MAX}명 골랐음`, fold: "cmp:bottom",
       enter: (u) => { state.expanded.add(PICKER); toggle(u); }, note: `✓ = 비교 중. ${COMPARE_MAX}명까지.`,
       // picking from the grid keeps it open for the next one
       pick: (u) => ({

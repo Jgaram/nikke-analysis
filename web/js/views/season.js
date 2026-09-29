@@ -5,7 +5,7 @@ import { assignTier } from "../model.js";
 import {
   h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, tierBadge, deckSplit, sortableTable, toggle, kst,
 } from "../ui.js";
-import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs, generalityTag, generalityRule } from "./common.js";
+import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs, numsToggle, generalityTag, generalityRule } from "./common.js";
 import { timeStrip } from "./when.js";
 
 const END_KO = { suspended: "중단", extended: "연장", superseded: "일정 변경", scheduled: "" };
@@ -32,6 +32,7 @@ export function seasonView(app) {
     filterRow(app),
     h("div", { class: "toolbar-end" },
       unused ? toggle(`안 쓴 니케 ${unused}명도`, state.showUnused, (v) => { state.showUnused = v; app.rerender(); }) : null,
+      state.mode === "table" ? null : numsToggle(app),
       modeSwitch(app))));
   if (state.mode === "table") {
     root.append(seasonTable(app, entry, shown));
@@ -41,7 +42,7 @@ export function seasonView(app) {
   root.append(tierBoard(app, items, {
     key: `season-${number}`,
     card: (it) => unitCard(app, it.u, {
-      value: it.value, tier: it.tier, heart: it.row.treasure, dim: it.row.rankers === 0,
+      value: it.value, tier: it.tier, heart: it.row.treasure, dim: it.row.rankers === 0, nums: state.showNums,
       tip: () => seasonTip(app, it.row, entry),
     }),
     note: h("p", { class: "note" },

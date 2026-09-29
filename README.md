@@ -40,7 +40,7 @@
 | CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
 | 작업 반영 | ✅ 브랜치는 `main` 하나. 세션 브랜치(`claude/*`)에 push 하면 테스트 통과 후 main 에 자동 병합, 브랜치 삭제 (`.github/workflows/merge-to-main.yml`) |
 
-`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 302개.
+`data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 303개.
 
 ---
 

@@ -505,6 +505,30 @@ def _cross_weakness(lifts: pd.DataFrame, weak: pd.Series, back: int = 4) -> pd.S
     return pd.Series(out, dtype=float)
 
 
+def usage_mix(history: pd.DataFrame, config: tiers.TierConfig | None = None, days: int = 365) -> pd.DataFrame:
+    """Per season, the units in use over the ``days`` up to its start, by how general they were
+    then - with no memory beyond that window.
+
+    Per unit, over the seasons that started in the window: the mean lift in
+    its own element's seasons (O) and in the others (X), and ``2X / (O + X)``;
+    a unit counts when it met both sides in the window and either mean is at
+    the C cut or more. ``specialist`` / ``element_first`` / ``generalist``:
+    how many fall in each generality band, ``units`` all of them."""
+    config = config or tiers.TierConfig()
+    rows = history.assign(own=_flags(history, "element_match"), start=pd.to_datetime(history["start_at"], utc=True))
+    starts = rows.drop_duplicates("season").set_index("season")["start"].sort_index()
+    use, (low, high) = config.cut("C"), config.generality_bands
+    out = []
+    for season, begun in starts.items():
+        window = rows[(rows["start"] > begun - pd.Timedelta(days=days)) & (rows["start"] <= begun)]
+        sides = window.groupby(["unit_id", "own"])["lift"].mean().unstack().reindex(columns=[True, False]).dropna()
+        sides = sides[(sides[True] >= use) | (sides[False] >= use)]
+        g = 2 * sides[False] / (sides[True] + sides[False])
+        out.append({"season": season, "units": len(g), "specialist": int((g < low).sum()),
+                    "element_first": int(((g >= low) & (g < high)).sum()), "generalist": int((g >= high).sum())})
+    return pd.DataFrame(out).set_index("season")
+
+
 def meta_index(history: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.DataFrame:
     """Per season, how far the units in use depend on the boss's weakness.
 
@@ -666,6 +690,10 @@ def report(book=None) -> str:
     for name, r in block.iterrows():
         lines.append(f"   {name:<8}  {r.same:.2f} | {_pct(r.own_share):>4} | {r.good_own:.1f} · {r.good_other:.1f} | "
                      f"{r.pool:.1f}")
+    mix = usage_mix(history, config)
+    lines.append("   그 시즌까지 1년 동안 쓰인 니케(C 이상), 그 1년의 범용도로: 특화 · 속성 우선 · 범용 / 전체 (특화 비율)")
+    lines.append("   " + " | ".join(f"S{i} {r.specialist} · {r.element_first} · {r.generalist} / {r.units} "
+                                    f"({_pct(r.specialist / r.units)})" for i, r in mix.loc[mix.index % 5 == 1].iloc[1:].iterrows()))
     lines.append("   시즌별 약점 교차 유사도: " + " ".join(f"{s}:{v:.2f}" for s, v in meta["same"].dropna().items()))
     first = debuts(history, config)
     first = first.assign(era=first["first"].map(era))

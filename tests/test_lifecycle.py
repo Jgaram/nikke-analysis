@@ -152,3 +152,17 @@ def test_the_meta_index_sees_the_units_follow_the_weakness():
     assert same["same"].dropna().tolist() == pytest.approx([1.0] * 6)
     assert split.loc[10, ["good_own", "good_other", "pool", "own_share"]].tolist() == [1, 0, 1, 1.0]
     assert same.loc[10, "good_other"] == 4 and same.loc[10, "own_share"] == pytest.approx(1 / 5)
+
+
+def test_the_usage_mix_counts_units_by_their_generality_in_the_window():
+    weak = ["Fire", "Water", "Wind"] * 6  # monthly: a year back from a season holds it and the eleven before
+    lifts = {"special": [1.0 if w == "Fire" else 0.0 for w in weak], "general": [1.0] * 18,
+             "narrowed": [1.0] * 9 + [1.0 if w == "Fire" else 0.0 for w in weak[9:]], "never": [0.05] * 18}
+    table = season_table(lifts, weak)
+    start = pd.Timestamp("2024-01-01T00:00:00Z")
+    table["start_at"] = table["season"].map(lambda n: start + pd.DateOffset(months=n - 1))
+    mix = lifecycle.usage_mix(table, tiers.TierConfig())
+    assert mix.loc[1, ["units", "specialist", "generalist"]].tolist() == [0, 0, 0]  # no other-element season yet
+    assert mix.loc[6].tolist() == [3, 1, 0, 2]  # "narrowed" still general
+    # a year back from season 18 holds two of its other-element seasons at 1.0 of eight: X 0.25, g 0.4
+    assert mix.loc[18].tolist() == [3, 1, 1, 1]

@@ -5,6 +5,7 @@ import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
 import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable, int, kst } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs,
+  generalityColumn, generalityRule,
 } from "./common.js";
 import { timeStrip } from "./when.js";
 
@@ -36,10 +37,11 @@ export function dateView(app) {
 function lifeNote(app, table) {
   const { minTier } = app.state.params;
   const retired = retiredText(app.state.params);
+  const general = `${generalityRule(app.state.params)}. `;
   return table
     ? `시즌별 사용 = 시즌 하나가 칸 하나, 칠한 칸은 시즌 티어 ${minTier} 이상인 시즌(색 = 그 시즌 티어) · 수명 = 지금 쓰이는 흐름이 `
-      + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired} · 복귀 = 은퇴한 뒤 다시 쓰임. `
-    : `흑백 얼굴 = 은퇴(${retired}). `;
+      + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired} · 복귀 = 은퇴한 뒤 다시 쓰임. ${general}`
+    : `흑백 얼굴 = 은퇴(${retired}). 이름 아래 = ${general}`;
 }
 
 function overallBody(app, view) {
@@ -55,7 +57,7 @@ function overallBody(app, view) {
     key: `overall-${state.season ?? "now"}`, cuts: state.params.overallCuts,
     card: (it) => unitCard(app, it.u, {
       value: it.value, tier: it.tier, provisional: it.o.provisional, heart: it.o.treasure,
-      retired: view.life.get(it.u)?.retired, tip: () => standingTip(app, it.u, view),
+      retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band, tip: () => standingTip(app, it.u, view),
     }),
     note: explain,
   });
@@ -77,6 +79,7 @@ function overallTable(app, view, rows) {
     { key: "element", label: "속성 티어", title: "그 니케가 속한 속성에서의 티어", sort: (o) => Math.max(...(mine.get(o.u) || []).map((r) => (r.seasons ? r.lift : -1))),
       cell: (o) => h("span", { class: "el-tiers" }, (mine.get(o.u) || []).map((r) => h("span", { class: "el-tier" },
         elementIcon(r.element, 14), r.seasons ? tierBadge(r.tier, r.lift) : h("span", { class: "muted" }, "미관측")))) },
+    generalityColumn(app, view),
     ...lifeColumns(app, view),
   ];
   return sortableTable(columns, rows, {
@@ -210,7 +213,7 @@ function elementBody(app, view, element) {
   const board = tierBoard(app, seen.map((r) => ({ u: r.u, tier: r.tier, value: r.slot.lift, r })), {
     key: `element-${element}-${state.season ?? "now"}`,
     card: (it) => unitCard(app, it.u, {
-      value: it.value, tier: it.tier, heart: it.r.o.treasure, retired: view.life.get(it.u)?.retired,
+      value: it.value, tier: it.tier, heart: it.r.o.treasure, retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band,
       extra: it.r.slot.own ? h("span", { class: "tag own-tag", title: `${ko} 니케 — 자기 속성 약점` }, `▶ ${ko}`) : null,
       tip: () => standingTip(app, it.u, view, { element }),
     }),
@@ -241,6 +244,7 @@ function elementTable(app, view, rows, element) {
     { key: "seasons", label: "약점 시즌", title: `겪은 ${ko} 약점 시즌 수`, num: true, sort: (r) => r.slot.seasons, cell: (r) => `${r.slot.seasons}번` },
     { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", null, tierBadge(r.o.tier, r.o.overall),
       r.o.provisional ? h("sup", { class: "muted" }, "*") : null, h("span", { class: "muted" }, ` ${r.o.rank}위`)) },
+    generalityColumn(app, view),
     ...lifeColumns(app, view),
   ];
   return sortableTable(columns, rows, {

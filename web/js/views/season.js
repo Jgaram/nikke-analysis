@@ -5,7 +5,7 @@ import { assignTier } from "../model.js";
 import {
   h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, tierBadge, deckSplit, sortableTable, toggle, kst,
 } from "../ui.js";
-import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs } from "./common.js";
+import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs, generalityTag, generalityRule } from "./common.js";
 import { timeStrip } from "./when.js";
 
 const END_KO = { suspended: "중단", extended: "연장", superseded: "일정 변경", scheduled: "" };
@@ -123,7 +123,7 @@ function seasonTable(app, entry, rows) {
       cell: (r) => tierBadge(assignTier(r.lift, cuts), r.lift) },
     { key: "rankers", label: "사용", title: "그 니케를 쓴 랭커 수와 비율", num: true, sort: (r) => r.rankers,
       cell: (r) => (r.rankers ? h("span", null, int(r.rankers), h("span", { class: "muted" }, ` ${pct(r.usageRate)}`)) : "–") },
-    { key: "split", label: "덱 분포", title: "쓴 사람 중 몇 번째로 센 덱에 넣었나 (1덱 = 가장 센 덱)", sort: (r) => r.rankers ? -r.avgDeck : null,
+    { key: "split", label: "덱 분포", title: "쓴 사람 중 몇 번째 덱에 넣었나 — 막대 하나가 덱 하나(1덱 = 가장 센 덱), 진한 막대 = 가장 많이 넣은 덱", sort: (r) => r.rankers ? -r.avgDeck : null,
       cell: (r) => deckSplit(r.inDeck, r.rankers) },
     { key: "main", label: "1덱", num: true, title: "쓴 사람 중 가장 센 덱에 넣은 비율", sort: (r) => (r.rankers ? r.inDeck[0] / r.rankers : null),
       cell: (r) => (r.rankers ? pct(r.inDeck[0] / r.rankers) : "–") },
@@ -139,6 +139,9 @@ function seasonTable(app, entry, rows) {
         return x && !Number.isNaN(x.overall) ? h("span", null, tierBadge(x.overallTier, x.overall), x.provisional ? h("sup", { class: "muted" }, "*") : null)
           : h("span", { class: "muted" }, "–");
       } },
+    { key: "generality", label: "범용도", title: `그 시즌이 끝났을 때의 ${generalityRule(state.params)}`,
+      sort: (r) => history.get(r.u)?.generality,
+      cell: (r) => generalityTag(history.get(r.u)?.generalityBand) || h("span", { class: "muted" }, "–") },
   ];
   return h("div", { class: "panel table-panel" },
     sortableTable(columns, rows, {
@@ -146,5 +149,5 @@ function seasonTable(app, entry, rows) {
       onSort: (key, dir) => { state.sort.season = { key, dir }; app.rerender(); },
       rowAttrs: (r) => ({ class: r.rankers ? null : "dim" }),
     }),
-    h("p", { class: "note" }, "속성·종합 티어 = 그 시즌이 끝났을 때 기준 (진행 중 시즌은 지금까지). * = 잠정. 열 이름을 누르면 정렬."));
+    h("p", { class: "note" }, "속성·종합 티어·범용도 = 그 시즌이 끝났을 때 기준 (진행 중 시즌은 지금까지). * = 잠정. 열 이름을 누르면 정렬."));
 }

@@ -15,14 +15,15 @@ export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/
 
 // ``pick`` makes the card a toggle (the comparison's list): {on, href, onclick} in place of
 // the link to the unit.
-export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, tip, extra, pick = null } = {}) {
+// ``band`` is its generality band (특화 · 속성 우선 · 범용), shown as a tag under the name.
+export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, band, tip, extra, pick = null } = {}) {
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
   const card = h("a", {
     class: ["card", dim && "dim", retired && "retired", pick && "pickable", pick?.on && "picked"],
     href: pick ? pick.href : app.unitHref(unit.id), dataset: { tier: tier || "D" },
     "aria-pressed": pick ? String(pick.on) : null, onclick: pick ? (e) => { e.preventDefault(); pick.onclick(); } : null,
-    "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}`,
+    "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}${band ? ` ${GENERALITY_KO[band]}` : ""}`,
   },
   h("span", { class: "face" },
     face(unit, 64),
@@ -32,7 +33,7 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
     pick?.on ? h("span", { class: "mark check", "aria-hidden": "true" }, "✓") : null,
     value != null && !Number.isNaN(value) ? h("span", { class: "val" }, num(value)) : null),
   h("span", { class: "name" }, h("span", null, first), second ? h("span", null, second) : null),
-  extra || null);
+  extra || band ? h("span", { class: "card-tags" }, extra || null, band ? generalityTag(band) : null) : null);
   if (tip) withTip(card, tip);
   return card;
 }
@@ -155,10 +156,10 @@ export function filterRow(app) {
   return h("div", { class: "filters", role: "group", "aria-label": "필터" }, groups, clear);
 }
 
-// Tiers or table.
+// Tiers or the list (the same units as a table, with their columns).
 export function modeSwitch(app) {
   return segmented([
-    { value: "tiers", label: "티어표" }, { value: "table", label: "표" },
+    { value: "tiers", label: "티어표" }, { value: "table", label: "목록", title: "니케마다 한 줄, 열 이름을 눌러 정렬" },
   ], app.state.mode, (v) => app.go({ mode: v }, { replace: true }), { class: "mode", label: "보기" });
 }
 
@@ -323,6 +324,30 @@ export const PATH_KO = {
   unused: "안 쓰임",
 };
 
+// A generality band as a tag: 특화 · 속성 우선 · 범용, darker the more general.
+export function generalityTag(band) {
+  if (!band) return null;
+  return h("span", { class: "gen-tag", dataset: { band } }, GENERALITY_KO[band]);
+}
+
+// What the three bands are, with the parameters in force.
+export function generalityRule(params) {
+  const [low, high] = params.generalityBands;
+  return `범용도 = 보스 약점이 자기 속성이 아닐 때도 얼마나 쓰이나: 특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용`;
+}
+
+// The generality column of a date-view table; its rows carry the unit as ``.u``. Sorted by
+// the value under the band.
+export function generalityColumn(app, view) {
+  const of = (row) => view.generality.get(row.u);
+  return {
+    key: "generality", label: "범용도",
+    title: `${generalityRule(app.state.params)} · 칸이 빈 니케 = 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임`,
+    sort: (row) => of(row)?.generality,
+    cell: (row) => generalityTag(of(row)?.band) || h("span", { class: "muted" }, "–"),
+  };
+}
+
 // What the view says of unit ``u``'s path, in words (tierlist.py _career_lines says the same).
 export function careerText(app, view, u) {
   const c = view.careers.get(u);
@@ -433,8 +458,8 @@ export function seasonTip(app, row, entry) {
     h("div", { class: "tip-main" }, tierBadge(tier, row.lift), h("span", { class: "muted" }, `시즌 ${entry.season} 기여도`)),
     h("dl", { class: "tip-list" },
       h("dt", null, "사용"), h("dd", null, `${int(row.rankers)}명 · ${pct(row.usageRate)}`, h("span", { class: "muted" }, ` (사용 순위 ${row.usageRank}위)`)),
-      row.rankers ? [h("dt", null, "덱 분포"), h("dd", null, deckSplit(row.inDeck, row.rankers, 120),
-        h("span", { class: "muted" }, ` 1덱 ${pct(row.inDeck[0] / row.rankers)} · 평균 ${num(row.avgDeck)}덱`))] : null),
+      row.rankers ? [h("dt", null, "덱 분포"), h("dd", null, deckSplit(row.inDeck, row.rankers),
+        h("span", { class: "muted" }, `평균 ${num(row.avgDeck)}덱`))] : null),
     h("div", { class: "tip-notes" },
       row.elementMatch ? h("span", { class: "pill" }, "▶ 자기 속성 약점 시즌") : null,
       row.treasure ? h("span", { class: "pill heart" }, "♥ 애장품을 낀 시즌") : null));
@@ -457,6 +482,8 @@ export function standingTip(app, u, view, { element = null } = {}) {
         h("dd", null, r.seasons ? [tierBadge(r.tier, r.lift), ` ${counts.get(r.element)}명 중 ${r.rank}위 · 시즌 ${r.seasons}번`]
           : h("span", { class: "muted" }, "미관측 — 이 약점 시즌을 아직 못 겪음"))]),
       h("dt", null, "수명"), h("dd", null, lifePill(life), life.main, returnTag(app, life.a)),
+      view.generality.get(u)?.band ? [h("dt", null, "범용도"), h("dd", null, generalityTag(view.generality.get(u).band),
+        h("span", { class: "muted" }, num(view.generality.get(u).generality)))] : null,
       life.a ? [h("dt", null, "쓰인 시즌"), h("dd", null, `출시 뒤 ${life.a.seasonsOut}시즌 중 ${life.a.seasonsUsed}번`,
         life.a.firstUsed != null ? h("span", { class: "muted" }, ` · 처음 S${life.a.firstUsed}`) : null)] : null),
     life.a ? h("div", { class: "tip-life" }, h("div", { class: "muted small" }, lifeSub(life)), lifeStrip(app, view, u, { width: 240 })) : null,

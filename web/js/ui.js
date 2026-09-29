@@ -274,14 +274,18 @@ export function sortableTable(columns, rows, { sortKey, sortDir = "desc", onSort
       h("thead", null, head), h("tbody", null, body)));
 }
 
-// Five segments, the players who fielded a unit by the deck rank they put it in (1덱 = strongest).
-export function deckSplit(inDeck, total, width = 112) {
+// The players who fielded a unit by the deck they put it in, 1 (their strongest) to 5: a
+// column a deck, as tall as its share, the deck's number under it - and the commonest in words.
+export function deckSplit(inDeck, total, { note = true } = {}) {
   if (!total) return h("span", { class: "muted" }, "–");
-  const bar = h("span", { class: "split", style: { width: `${width}px` }, role: "img",
-    "aria-label": inDeck.map((n, k) => `${k + 1}덱 ${Math.round((n / total) * 100)}%`).join(", ") });
-  inDeck.forEach((n, k) => {
-    if (!n) return;
-    bar.append(h("span", { class: "split-seg", style: { flexGrow: n, background: `var(--deck-${k + 1})` } }));
-  });
-  return bar;
+  const shares = inDeck.map((n) => n / total);
+  const top = shares.indexOf(Math.max(...shares));
+  const chart = h("span", { class: "decks", role: "img",
+    "aria-label": shares.map((x, k) => `${k + 1}덱 ${pct(x)}`).join(", ") },
+  shares.map((x, k) => h("span", { class: ["deck", k === top && "top", !x && "none"], title: `${k + 1}덱 ${pct(x)}` },
+    h("span", { class: "deck-bar" }, h("i", { style: { height: x ? `${Math.max(12, x * 100)}%` : "0" } })),
+    h("span", { class: "deck-k" }, k + 1))));
+  if (!note) return chart;
+  return h("span", { class: "deck-split" }, chart,
+    h("span", { class: "deck-note" }, h("b", null, `${top + 1}덱`), ` ${pct(shares[top])}`));
 }

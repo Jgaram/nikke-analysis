@@ -235,7 +235,8 @@ function seasonTable(app, u, records) {
       !r.season.final ? h("span", { class: "pill live" }, "진행 중") : null,
       r.season.season === firstTreasure ? h("span", { class: "pill heart", title: `애장품 ${day(unit.treasure)}` }, "♥ 애장품부터") : null) },
     { key: "usage", label: "사용", num: true, sort: (r) => r.row.usageRate, cell: (r) => (r.row.rankers ? pct(r.row.usageRate) : h("span", { class: "muted" }, "0%")) },
-    { key: "split", label: "덱 분포", sort: (r) => (r.row.rankers ? -r.row.avgDeck : null), cell: (r) => deckSplit(r.row.inDeck, r.row.rankers, 96) },
+    { key: "split", label: "덱 분포", title: "쓴 사람 중 몇 번째 덱에 넣었나 — 막대 하나가 덱 하나(1덱 = 가장 센 덱), 진한 막대 = 가장 많이 넣은 덱",
+      sort: (r) => (r.row.rankers ? -r.row.avgDeck : null), cell: (r) => deckSplit(r.row.inDeck, r.row.rankers) },
     { key: "lift", label: "기여도", sort: (r) => r.row.lift, cell: (r) => tierBadge(assignTier(r.row.lift, cuts), r.row.lift) },
     { key: "element", label: "속성 티어", title: "그 시즌이 끝났을 때 (자기 속성 약점 시즌만)", sort: (r) => (r.hist?.counted ? r.hist.elementLift : null),
       cell: (r) => (r.hist?.counted && !Number.isNaN(r.hist.elementLift) ? tierBadge(r.hist.elementTier, r.hist.elementLift) : h("span", { class: "muted" }, "–")) },
@@ -249,7 +250,7 @@ function seasonTable(app, u, records) {
       onSort: (key, dir) => { state.sort.unit = { key, dir }; app.rerender(); },
       rowAttrs: (r) => ({ class: [r.row.elementMatch && "own-row", !r.season.final && "live-row"].filter(Boolean).join(" ") || null }),
     }),
-    h("p", { class: "note" }, "▶ = 보스 약점이 이 니케의 속성인 시즌 · 사용 = 그 니케를 쓴 랭커 비율 · 덱 분포 = 쓴 사람 중 몇 번째로 센 덱에 넣었나 · "
+    h("p", { class: "note" }, "▶ = 보스 약점이 이 니케의 속성인 시즌 · 사용 = 그 니케를 쓴 랭커 비율 · 덱 분포 = 쓴 사람 중 몇 번째 덱에 넣었나 (막대 하나가 덱 하나, 1덱 = 가장 센 덱, 진한 막대와 옆 글 = 가장 많이 넣은 덱) · "
       + "속성·종합 티어 = 그 시즌이 끝났을 때 (애장품 전과 뒤는 따로 매김) · * = 잠정"));
 }
 

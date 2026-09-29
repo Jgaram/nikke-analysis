@@ -2,25 +2,18 @@
 
 import { assignTier, unitSeasons } from "../model.js";
 import {
-  h, num, pct, face, elementIcon, classIcon, burstIcon, ELEMENT_KO, CLASS_KO, day, todayKst,
-  tierBadge, deckSplit, sortableTable, unitName, kst,
+  h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
+  WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst,
 } from "../ui.js";
-import { provisionalReason, lifeText, lifeStrip, returnTag } from "./common.js";
+import { provisionalReason, lifeText, lifeStrip, returnTag, fold } from "./common.js";
 import { trajectoryChart } from "../chart.js";
-
-const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/g, "");
 
 export function unitView(app) {
   const { model, state } = app;
   const pop = app.population();
   const history = app.history();
   const moment = app.moment();
-  let u = state.unit;
-  if (u == null) {
-    const view = app.viewAt(Date.now());
-    u = view.standing.overall[0]?.u ?? 0;
-    state.unit = u;
-  }
+  const u = state.unit;
   const unit = model.units[u];
   const records = unitSeasons(pop, history, u).map(({ season, row, hist }) => ({ season, row, hist }));
   const prof = app.profile(u, moment);
@@ -60,7 +53,7 @@ function picker(app, current) {
   });
   let active = 0;
   let shown = [];
-  const choose = (u) => { list.hidden = true; app.go({ unit: u }); window.scrollTo({ top: 0 }); };
+  const choose = (u) => { list.hidden = true; app.go({ unit: u }); };
   const paint = () => {
     list.replaceChildren(...shown.map((u, i) => {
       const unit = model.units[u];
@@ -106,7 +99,10 @@ function picker(app, current) {
       list.hidden = true;
     }
   });
-  return h("div", { class: "picker" }, h("span", { class: "picker-icon", "aria-hidden": "true" }, "⌕"), input, list);
+  return h("div", { class: "unit-top" },
+    h("a", { class: "btn ghost back", href: app.href("unit") },
+      h("span", { class: "back-arrow", "aria-hidden": "true" }, "‹"), h("span", { class: "back-k" }, "니케 "), "목록"),
+    h("div", { class: "picker" }, h("span", { class: "picker-icon", "aria-hidden": "true" }, "⌕"), input, list));
 }
 
 // ---------------------------------------------------------------------------
@@ -189,7 +185,9 @@ function profile(app, u, prof, moment) {
           byTreasure.length ? h("span", { class: "muted" }, ` + 애장품 뒤 ${byTreasure.join("·")}`) : null),
         h("span", { class: "attr" }, classIcon(unit.class, 15), CLASS_KO[unit.class] || unit.class),
         h("span", { class: "attr" }, burstIcon(unit.burst), `버스트 ${unit.burst}`),
-        unit.weapon ? h("span", { class: "attr muted" }, unit.weapon) : null,
+        unit.weapon ? h("span", { class: "attr", title: WEAPON_KO[unit.weapon] || unit.weapon }, weaponIcon(unit.weapon, 15),
+          WEAPON_SHORT[unit.weapon] || unit.weapon) : null,
+        unit.manufacturer ? h("span", { class: "attr" }, makerIcon(unit.manufacturer, 15), MAKER_KO[unit.manufacturer] || unit.manufacturer) : null,
         h("span", { class: "attr" }, h("span", { class: "fact-k" }, "출시"), unit.releaseDate || "?"),
         unit.treasure != null ? h("span", { class: "attr heart-attr" }, h("span", { class: "fact-k" }, "애장품"), `♥ ${day(unit.treasure)}`) : null),
       h("div", { class: "tiles" }, tiles)));

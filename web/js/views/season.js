@@ -62,9 +62,17 @@ function strip(app, selected, pop) {
       title: `시즌 ${s.season} · ${boss} · 약점 ${ELEMENT_KO[s.weak] || "?"}${entry && !entry.final ? " · 진행 중" : ""}`,
     }, h("span", { class: "schip-n" }, s.season), elementIcon(s.weak, 15, { title: "" }));
   }));
+  // The chosen season goes to the middle: the strip slides there from where the one on
+  // screen was, or starts there when the season tab is just opened.
+  const before = document.querySelector(".view-season .strip-list")?.scrollLeft;
   requestAnimationFrame(() => {
     const on = list.querySelector(".schip.on");
-    if (on) list.scrollLeft = on.offsetLeft - list.clientWidth / 2 + on.offsetWidth / 2;
+    if (!on) return;
+    const left = on.offsetLeft - (list.clientWidth - on.offsetWidth) / 2;
+    if (before == null) { list.scrollLeft = left; return; }
+    list.scrollLeft = before;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    list.scrollTo({ left, behavior: still ? "auto" : "smooth" });
   });
   const step = (d, label) => {
     const target = seasons[index + d];

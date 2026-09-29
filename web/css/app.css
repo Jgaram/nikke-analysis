@@ -295,7 +295,7 @@ sup { font-size: 11px; margin-left: 1px; }
 
 .strip { display: flex; align-items: stretch; gap: 6px; }
 .strip-list {
-  display: flex; gap: 4px; overflow-x: auto; scroll-behavior: smooth; padding: 4px 2px 8px; flex: 1; min-width: 0;
+  position: relative; display: flex; gap: 4px; overflow-x: auto; padding: 4px 2px 8px; flex: 1; min-width: 0;
   scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
   mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
@@ -543,8 +543,34 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .around b { font: 700 14px/1 var(--display); letter-spacing: .03em; }
 .around:hover { border-color: var(--accent); }
 
+/* ------------------------------------------------------------------------ unit list */
+
+.view-pick { gap: 10px; }
+.pick-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pick-bar .picker { flex: 1 1 300px; }
+.pick-count { color: var(--ink-2); font-weight: 700; }
+.pick-panel { margin-top: 4px; }
+.pick-panel .cards { padding: 14px 14px 18px; }
+.pick-panel .note { padding: 0 16px 14px; }
+/* a tier's mark, kept on one line with the tier's first card */
+.pick-lead { display: flex; gap: 8px; }
+.pick-tier {
+  flex: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  width: 30px; height: 64px; border-radius: 9px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--tc) 30%, transparent), color-mix(in srgb, var(--tc) 6%, transparent));
+  border: 1px solid color-mix(in srgb, var(--tc) 55%, var(--line));
+}
+.pick-tier b { font: 700 17px/1 var(--display); color: var(--ti); letter-spacing: .02em; }
+.pick-tier small { font-size: 10px; font-weight: 700; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+
 /* ------------------------------------------------------------------------ unit view */
 
+.unit-top { display: flex; align-items: center; gap: 10px; }
+.unit-top .picker { flex: 1; }
+.back { flex: none; height: 42px; gap: 0; padding: 0 14px 0 11px; text-decoration: none; color: var(--ink-2); }
+.back:hover { color: var(--ink); }
+.back-arrow { font-size: 18px; line-height: 1; margin: -2px 6px 0 0; }
+.back-k { white-space: pre; }
 .picker { position: relative; max-width: 460px; }
 .picker-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-52%); color: var(--ink-3); font-size: 18px; pointer-events: none; }
 .picker-input {
@@ -736,6 +762,11 @@ svg.traj { display: block; overflow: visible; }
   .card .face { width: 54px; height: 54px; }
   .card .name { font-size: 10.5px; }
   .more { width: 62px; height: 54px; }
+  .pick-tier { width: 26px; height: 54px; }
+  .pick-bar .picker { flex-basis: 100%; }
+  .pick-panel .cards { padding: 12px 10px 14px; }
+  .back { padding: 0 11px 0 9px; }
+  .back-k { display: none; }
   .profile { grid-template-columns: 1fr; padding: 16px; gap: 14px; }
   .pf-face, .pf-face .face-img { width: 84px; height: 84px; }
   .pf-name { font-size: 23px; }

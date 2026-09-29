@@ -7,6 +7,15 @@ export const ELEMENT_KO = { Fire: "작열", Water: "수냉", Wind: "풍압", Iro
 export const CLASS_KO = { Attacker: "화력형", Supporter: "지원형", Defender: "방어형" };
 export const BURSTS = ["I", "II", "III"];
 export const TIERS = ["SS", "S", "A", "B", "C", "D", "F"];
+// Weapons and makers in the game's own order; a value the roster adds later goes last.
+export const WEAPON_SHORT = {
+  "Assault Rifle": "AR", "Sub Machine Gun": "SMG", Shotgun: "SG", "Sniper Rifle": "SR", "Rocket Launcher": "RL", "Machine Gun": "MG",
+};
+export const WEAPON_KO = {
+  "Assault Rifle": "돌격소총", "Sub Machine Gun": "기관단총", Shotgun: "샷건", "Sniper Rifle": "저격소총",
+  "Rocket Launcher": "로켓 런처", "Machine Gun": "머신건",
+};
+export const MAKER_KO = { Elysion: "엘리시온", "Missilis Industry": "미실리스", "Tetra Line": "테트라", Pilgrim: "필그림", Abnormal: "어브노멀" };
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -117,6 +126,16 @@ export function burstIcon(burst) {
 export function classIcon(unitClass, size = 16) {
   if (!unitClass) return null;
   return glyph("classes", unitClass, size, size, CLASS_KO[unitClass] || unitClass);
+}
+
+export function weaponIcon(weapon, size = 16) {
+  if (!weapon) return null;
+  return glyph("weapons", weapon, size, size, WEAPON_KO[weapon] || weapon);
+}
+
+export function makerIcon(maker, size = 16) {
+  if (!maker) return null;
+  return glyph("manufacturers", maker, size, size, MAKER_KO[maker] || maker);
 }
 
 export function face(unit, size = 64, attrs = {}) {

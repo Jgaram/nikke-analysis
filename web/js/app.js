@@ -1,14 +1,15 @@
 // The page: state in the URL, the computation cached per parameter set, three views.
 
 import * as M from "./model.js";
-import { h, initTip, hideTip, day, noonKst, todayKst } from "./ui.js";
+import { h, initTip, hideTip, day, noonKst, todayKst, unitName } from "./ui.js";
 import { buildParams, encodeParams, decodeParams, changedParams, renderParamsFoot } from "./params.js";
 import { seasonView } from "./views/season.js";
 import { dateView } from "./views/date.js";
 import { unitView } from "./views/unit.js";
+import { pickView } from "./views/pick.js";
 
 const TABS = ["season", "date", "unit"];
-const VIEWS = { season: seasonView, date: dateView, unit: unitView };
+const VIEWS = { season: seasonView, date: dateView, unit: (app) => (app.state.unit == null ? pickView(app) : unitView(app)) };
 
 const state = {
   tab: "season",
@@ -16,9 +17,10 @@ const state = {
   date: null, // "YYYY-MM-DD"; null = now
   view: "overall", // date tab: overall or an element
   mode: "tiers", // tiers | table
-  unit: null, // unit index
+  unit: null, // unit index; null on the unit tab = the list to pick one from
+  query: "", // the unit list's search
   params: null,
-  filters: { elements: new Set(), classes: new Set(), bursts: new Set() },
+  filters: { elements: new Set(), bursts: new Set(), classes: new Set(), weapons: new Set(), makers: new Set() },
   showUnused: false,
   expanded: new Set(),
   sort: {},
@@ -76,11 +78,15 @@ app.latestSeason = () => {
 
 app.unitIndex = (id) => app.model.byId.get(id);
 
-app.passes = (unit) => {
+// The filters a view shows: element and burst everywhere, role, weapon and maker on the unit list (``more``).
+app.passes = (unit, more = false) => {
   const f = state.filters;
   if (f.elements.size && !M.unitElements(unit, true).some((m) => f.elements.has(m.element))) return false;
-  if (f.classes.size && !f.classes.has(unit.class)) return false;
   if (f.bursts.size && !(f.bursts.has(unit.burst) || unit.burst === "I-II-III")) return false;
+  if (!more) return true;
+  if (f.classes.size && !f.classes.has(unit.class)) return false;
+  if (f.weapons.size && !f.weapons.has(unit.weapon)) return false;
+  if (f.makers.size && !f.makers.has(unit.manufacturer)) return false;
   return true;
 };
 
@@ -124,25 +130,32 @@ function readHash() {
   }
   if (state.tab === "unit") {
     const u = arg != null ? app.unitIndex(decodeURIComponent(arg)) : undefined;
-    if (u != null) state.unit = u;
+    state.unit = u ?? null;
   }
 }
 
 // Navigation and view changes: a history entry per place, a replaced one per tweak.
+//
+// A place just reached opens at its top; back and forward leave the scroll to the
+// browser, which puts it back where it was. The entries the page has shown carry a
+// state, so one without is a place a followed link or an edited address just made.
+const SHOWN = { shown: true };
 let shownHash = null;
 
 app.go = (patch, { replace = false } = {}) => {
   Object.assign(state, patch);
   const hash = currentHash();
-  if (replace) history.replaceState(null, "", hash);
-  else if (location.hash !== hash) history.pushState(null, "", hash);
+  const moved = !replace && location.hash !== hash;
+  if (replace) history.replaceState(SHOWN, "", hash);
+  else if (moved) history.pushState(SHOWN, "", hash);
   shownHash = location.hash;
   render();
+  if (moved) window.scrollTo(0, 0);
 };
 
 app.setParams = (patch) => {
   state.params = M.normalizeParams({ ...state.params, ...patch });
-  history.replaceState(null, "", currentHash());
+  history.replaceState(SHOWN, "", currentHash());
   shownHash = location.hash;
   renderSoon();
 };
@@ -151,9 +164,12 @@ app.setParams = (patch) => {
 function onNavigate() {
   if (location.hash === shownHash) return;
   shownHash = location.hash;
+  const fresh = history.state == null;
+  if (fresh) history.replaceState(SHOWN, "");
   readHash();
   buildParams(app, document.getElementById("params-body"));
   render();
+  if (fresh) window.scrollTo(0, 0);
 }
 
 app.resetParams = () => app.setParams(app.defaults);
@@ -178,9 +194,8 @@ function render() {
   for (const a of document.querySelectorAll("[data-tab]")) {
     const on = a.dataset.tab === state.tab;
     a.setAttribute("aria-current", on ? "page" : "false");
-    const arg = a.dataset.tab === "season" ? state.season : a.dataset.tab === "unit" && state.unit != null
-      ? app.model.units[state.unit].id : null;
-    a.href = app.href(a.dataset.tab, arg);
+    // the unit tab opens on its list, to pick a unit from
+    a.href = app.href(a.dataset.tab, a.dataset.tab === "season" ? state.season : null);
   }
   renderParamsBadge();
   const started = performance.now();
@@ -194,7 +209,8 @@ function render() {
   main.replaceChildren(content);
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
-  document.title = `${{ season: "시즌별 티어", date: "날짜별 티어", unit: "니케 추이" }[state.tab]} · 니케 솔로 레이드 티어`;
+  const unit = state.tab === "unit" && state.unit != null ? `${unitName(app.model.units[state.unit])} · ` : "";
+  document.title = `${unit}${{ season: "시즌별 티어", date: "날짜별 티어", unit: "니케 추이" }[state.tab]} · 니케 솔로 레이드 티어`;
 }
 
 function renderParamsBadge() {
@@ -251,6 +267,7 @@ async function boot() {
   document.getElementById("asof").textContent = `랭킹 ${day(collected)} 수집분까지`;
   readHash();
   shownHash = location.hash;
+  if (history.state == null) history.replaceState(SHOWN, "");
   buildParams(app, document.getElementById("params-body"));
   window.addEventListener("popstate", onNavigate);
   window.addEventListener("hashchange", onNavigate);

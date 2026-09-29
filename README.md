@@ -73,7 +73,7 @@ pytest -q
 |---|---|---|
 | 시즌별 티어 | 한 시즌의 모든 니케를 그 시즌 기여도로. 사용·덱 분포·그 시즌이 끝났을 때의 속성·종합 티어는 표 보기에 | `nikke raid 40` |
 | 날짜별 티어 | 고른 날(기본 오늘) 기준 종합 티어와 속성별 티어, 그리고 니케마다 수명: 시즌별 사용 띠(시즌 하나가 칸 하나), 현역·은퇴, 지금 흐름이 언제부터 얼마나 이어졌나, 쓰인 시즌 수. 티어표에서는 은퇴한 니케가 흑백이고, 거의 안 쓰인 F 티어(기여도 0.05 미만) 줄은 접혀 있다. 1·2·3주년, 시즌이 끝난 날로 바로 가기 | `nikke tier 2주년` · `--element` |
-| 니케 추이 | 한 니케의 속성·종합 티어, 수명, 종합을 이루는 다섯 칸, 시즌별 기여도와 티어 변화 차트(애장품 ♥ 포함)와 표 | `nikke tier --unit 크라운` |
+| 니케 추이 | 먼저 니케 목록: 고른 날(기본 오늘) 종합 티어가 높은 니케부터 왼쪽 위에서 채우고, 이름 찾기와 속성·버스트·역할군·무기군·기업 필터로 좁힌다(다른 두 탭의 필터는 속성·버스트). 하나를 고르면 그 니케의 속성·종합 티어, 수명, 종합을 이루는 다섯 칸, 시즌별 기여도와 티어 변화 차트(애장품 ♥ 포함)와 표 | `nikke tier --unit 크라운` |
 
 `config/tiers.yaml` 의 인자 — 서버, 서버마다 상위 몇 위, 순위 가중, 티어 컷, 최근성 반감기, 종합 방식,
 축소, 잠정 기준, 진행 중 시즌 포함, 수명의 기준(쓰인 시즌·은퇴) — 는 전부 페이지의 **인자** 패널에서 바꿀 수 있다. 바꾸면 브라우저가
@@ -314,16 +314,16 @@ nikke status                    # 지금 디스크에 뭐가 있는지
 `fonts-nanum` 을 깐다). 없으면 글자가 네모로 나오고 `nikke viz` 가 경고한다. 행 라벨은 얼굴 옆에 그 니케의 속성(스킬로 더해진 속성까지)과
 버스트를 붙이고, 보스 약점 열·행도 속성 아이콘으로 표시한다. `tier-trajectories`·`tier-heatmap` 은 한
 니케의 줄 위에서 애장품이 나온 자리에 하트를 찍는다(얼굴에는 표시하지 않는다). 클래스·기업·무기군
-아이콘은 받아 두기만 하고 차트에는 그리지 않는다.
+아이콘은 차트에는 그리지 않고 티어 사이트(필터, 니케 정보)에만 쓴다.
 
 | 파일 | 출처 |
 |---|---|
 | `data/assets/icons/units/<unit_id>.webp` | blablalink 게임 리소스 CDN의 128×128 얼굴 (`si_c<id>_00_s`). 로스터의 `unit_id` 가 곧 게임 리소스 id 다 (`010` = 라피) |
 | `data/assets/icons/elements/<속성>.png` | blablalink 사이트의 색 있는 속성 육각형 (`icon-code-*`) |
-| `data/assets/icons/classes/<클래스>.png` | blablalink 사이트의 클래스 문양 (`icon-job-*`) — 보관만 |
+| `data/assets/icons/classes/<클래스>.png` | blablalink 사이트의 클래스 문양 (`icon-job-*`) — 티어 사이트만 |
 | `data/assets/icons/bursts/<버스트>.png` | 버스트 단계 숫자 (`icon-burst-1/2/3`, 전 단계 `I-II-III` 는 `icon-burst-p`) |
-| `data/assets/icons/manufacturers/<기업>.png` | 기업 문양 (`icon-manufacturer-*`) — 보관만 |
-| `data/assets/icons/weapons/<무기군>.png` | 무기군 문양 (`icon-weapon-*`) — 보관만 |
+| `data/assets/icons/manufacturers/<기업>.png` | 기업 문양 (`icon-manufacturer-*`) — 티어 사이트만 |
+| `data/assets/icons/weapons/<무기군>.png` | 무기군 문양 (`icon-weapon-*`) — 티어 사이트만 |
 
 파일 이름은 로스터 표기를 소문자·하이픈으로 바꾼 것이다(`Tetra Line` →
 `manufacturers/tetra-line.png`, `I-II-III` → `bursts/i-ii-iii.png`). 속성 육각형 말고는

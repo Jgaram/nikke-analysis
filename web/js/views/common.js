@@ -2,12 +2,15 @@
 
 import { ELEMENTS, DAY_MS, assignTier } from "../model.js";
 import {
-  h, num, pct, int, face, elementIcon, classIcon, burstIcon, nameLines, unitName, withTip, tierBadge, deckSplit,
-  segmented, ELEMENT_KO, CLASS_KO, BURSTS, shortDay,
+  h, num, pct, int, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, nameLines, unitName, withTip, tierBadge,
+  deckSplit, segmented, ELEMENT_KO, CLASS_KO, BURSTS, WEAPON_SHORT, WEAPON_KO, MAKER_KO, shortDay,
 } from "../ui.js";
 
 // ---------------------------------------------------------------------------
 // a unit
+
+// A name as the unit searches compare it: "라피 : 레드 후드" -> "라피레드후드".
+export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/g, "");
 
 export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, tip, extra } = {}) {
   const unit = app.model.units[u];
@@ -100,24 +103,49 @@ export function tierBoard(app, items, { key, card, collapseAt = 36, empty = "없
 // ---------------------------------------------------------------------------
 // filters and switches
 
-export function filterRow(app) {
+// The values of ``key`` the roster has, those ``order`` knows first in its order.
+function present(units, key, order) {
+  const have = new Set(units.map((u) => u[key]).filter(Boolean));
+  return [...order.filter((v) => have.delete(v)), ...[...have].sort()];
+}
+
+// The tier boards filter by element and burst; the unit list (``more``) also by role,
+// weapon and maker. Each group keeps its choice while the tabs change. The groups come
+// in that order, with a button that clears them all while any is on.
+export function filterGroups(app, { more = false } = {}) {
   const f = app.state.filters;
-  const any = f.elements.size || f.classes.size || f.bursts.size;
+  const units = app.model.units;
   const chip = (set, value, content, title) => h("button", {
     type: "button", class: "fchip", "aria-pressed": String(set.has(value)), title,
     onclick: () => { if (set.has(value)) set.delete(value); else set.add(value); app.rerender(); },
   }, content);
-  return h("div", { class: "filters", role: "group", "aria-label": "필터" },
-    h("div", { class: "fgroup", role: "group", "aria-label": "속성" },
-      ELEMENTS.map((e) => chip(f.elements, e, elementIcon(e, 17, { title: "" }), ELEMENT_KO[e]))),
-    h("div", { class: "fgroup", role: "group", "aria-label": "클래스" },
-      ["Attacker", "Supporter", "Defender"].map((c) => chip(f.classes, c, [classIcon(c, 15), h("span", { class: "fl" }, CLASS_KO[c])], CLASS_KO[c]))),
-    h("div", { class: "fgroup", role: "group", "aria-label": "버스트" },
-      BURSTS.map((b) => chip(f.bursts, b, burstIcon(b), `버스트 ${b}`))),
-    any ? h("button", {
+  const groups = [
+    ["elements", "속성", ELEMENTS.map((e) => [e, elementIcon(e, 17, { title: "" }), ELEMENT_KO[e]])],
+    ["bursts", "버스트", BURSTS.map((b) => [b, burstIcon(b), `버스트 ${b}`])],
+  ];
+  if (more) {
+    groups.push(
+      ["classes", "역할군", present(units, "class", Object.keys(CLASS_KO))
+        .map((c) => [c, [classIcon(c, 15), h("span", { class: "fl" }, CLASS_KO[c] || c)], CLASS_KO[c] || c])],
+      ["weapons", "무기군", present(units, "weapon", Object.keys(WEAPON_SHORT))
+        .map((w) => [w, [weaponIcon(w, 15), h("span", null, WEAPON_SHORT[w] || w)], WEAPON_KO[w] || w])],
+      ["makers", "기업", present(units, "manufacturer", Object.keys(MAKER_KO))
+        .map((m) => [m, [makerIcon(m, 15), h("span", { class: "fl" }, MAKER_KO[m] || m)], MAKER_KO[m] || m])],
+    );
+  }
+  return {
+    groups: groups.map(([key, label, chips]) => h("div", { class: "fgroup", role: "group", "aria-label": label },
+      chips.map(([value, content, title]) => chip(f[key], value, content, title)))),
+    clear: groups.some(([key]) => f[key].size) ? h("button", {
       type: "button", class: "fclear",
-      onclick: () => { f.elements.clear(); f.classes.clear(); f.bursts.clear(); app.rerender(); },
-    }, "필터 해제") : null);
+      onclick: () => { for (const [key] of groups) f[key].clear(); app.rerender(); },
+    }, "필터 해제") : null,
+  };
+}
+
+export function filterRow(app) {
+  const { groups, clear } = filterGroups(app);
+  return h("div", { class: "filters", role: "group", "aria-label": "필터" }, groups, clear);
 }
 
 export function modeSwitch(app) {

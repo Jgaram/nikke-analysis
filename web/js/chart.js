@@ -4,7 +4,7 @@
 // cuts as bands, and the treasure where it came. One axis: every value is lift. The bands
 // are the season/element cuts; the overall line is tiered by the overall's own, lower cuts.
 
-import { assignTier } from "./model.js";
+import { assignTier, GENERALITY_MAX } from "./model.js";
 import { h, s, num, pct, elementIcon, ELEMENT_KO, day, shortDay, showTip, moveTip, hideTip, tierBadge, unitName, kst } from "./ui.js";
 
 const HEIGHT = 300;
@@ -298,7 +298,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
 }
 
 // ---------------------------------------------------------------------------
-// One unit's generality once each season was over: a line on 0-1 over the bands
+// One unit's generality once each season was over: a line on 0-GENERALITY_MAX over the bands
 // (특화 · 속성 우선 · 범용), broken at the treasure and where there is no value.
 
 const G_HEIGHT = 190;
@@ -357,7 +357,7 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
     const g = value(records[i]);
     if (g != null) svg.append(s("circle", { class: "hover-dot ink", cx, cy: y(g), r: 4.5 }));
     const box = host.getBoundingClientRect();
-    showTip(host, tipFor(i), pointer || { x: box.left + cx, y: box.top + y(g ?? 0.5) });
+    showTip(host, tipFor(i), pointer || { x: box.left + cx, y: box.top + y(g ?? 1) });
   }
 
   function draw() {
@@ -370,18 +370,21 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
     const n = records.length;
     const band = iw / Math.max(n, 1);
     const x = (i) => m.l + band * (i + 0.5);
-    const y = (v) => m.t + ih * (1 - v);
+    const y = (v) => m.t + ih * (1 - v / GENERALITY_MAX);
     const base = y(0);
     const svg = s("svg", { width, height: H, viewBox: `0 0 ${width} ${H}`, class: "traj gen" });
 
     const zones = s("g", { class: "bands" });
-    [[0, low], [low, high], [high, 1]].forEach(([a, b], k) => {
+    [[0, low], [low, high], [high, GENERALITY_MAX]].forEach(([a, b], k) => {
       if (b > a) zones.append(s("rect", { class: `zone z${k}`, x: m.l, y: y(b), width: iw, height: y(a) - y(b) }));
-      if (b - a >= 0.12) zones.append(s("text", { class: `ax zone-label z${k}`, x: m.l + iw + 8, y: (y(a) + y(b)) / 2 + 4 }, BAND_KO[k]));
+      if (y(a) - y(b) >= 16) zones.append(s("text", { class: `ax zone-label z${k}`, x: m.l + iw + 8, y: (y(a) + y(b)) / 2 + 4 }, BAND_KO[k]));
     });
-    for (const v of [0, low, high, 1]) {
+    // the band edges, and 1 (the weakness makes no difference) unless an edge sits right by it
+    const marks = [0, low, high, GENERALITY_MAX];
+    if (marks.every((v) => Math.abs(y(v) - y(1)) >= 12)) marks.push(1);
+    for (const v of new Set(marks)) {
       zones.append(s("line", { class: v === 0 ? "axis" : "grid", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }));
-      zones.append(s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, v === 0 || v === 1 ? String(v) : num(v)));
+      zones.append(s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, Number.isInteger(v) ? String(v) : num(v)));
     }
     svg.append(zones);
 

@@ -328,20 +328,20 @@ export const PATH_KO = {
 export function careerText(app, view, u) {
   const c = view.careers.get(u);
   if (!c) return null;
-  const { generalistSeasons: gen, leftAfter: left } = app.state.params;
+  const { leftAfter: left } = app.state.params;
   const last = c.lastOther != null ? `S${c.lastOther}` : null;
   const detail = {
     generalist: `다른 속성 시즌 ${c.otherUsed}번 쓰임 · 마지막 ${last}`,
     element_only: `다른 속성은 ${last} 뒤 ${c.otherSince}시즌 내리 안 쓰임, 자기 속성 시즌엔 ${c.ownAfter}번 쓰임`,
     left_others: `다른 속성은 ${last} 뒤 ${c.otherSince}시즌 내리 안 쓰임, 그 뒤 자기 속성 시즌엔 아직 안 쓰임`,
-    specialist: `다른 속성 시즌엔 ${c.otherUsed}번 쓰임 (범용은 ${gen}번부터)`,
+    specialist: "다른 속성 시즌엔 안 쓰임",
     retired_generalist: `다른 속성 시즌 ${c.otherUsed}번 쓰이다 ${last} 뒤 자기 속성 시즌에서도 안 쓰이고 은퇴`,
     retired_element_only: `${last} 뒤 다른 속성에서 빠지고 자기 속성 시즌 ${c.ownAfter}번 더 쓰이다 은퇴`,
     retired_specialist: `다른 속성 시즌엔 ${c.otherUsed}번 쓰이고 은퇴`,
     unused: "쓰인 시즌 없음",
   }[c.path];
   return { c, label: PATH_KO[c.path], detail,
-    rule: `범용 = 다른 속성 시즌 ${gen}번 이상 쓰임 · 빠짐 = 최근 다른 속성 시즌 ${left}번 내리 안 쓰임` };
+    rule: `범용 = 다른 속성 시즌에 쓰인 적 있음 · 빠짐 = 최근 다른 속성 시즌 ${left}번 내리 안 쓰임` };
 }
 
 export function lifePill(text) {

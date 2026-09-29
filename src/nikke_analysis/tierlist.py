@@ -732,7 +732,7 @@ def _career_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]
         "generalist": f"다른 속성 시즌 {c['other_used']}번 쓰임 · 마지막 {last}",
         "element_only": f"다른 속성은 {last} 뒤 {c['other_since']}시즌 내리 안 쓰임, 자기 속성 시즌엔 {c['own_after']}번 쓰임",
         "left_others": f"다른 속성은 {last} 뒤 {c['other_since']}시즌 내리 안 쓰임, 그 뒤 자기 속성 시즌엔 아직 안 쓰임",
-        "specialist": f"다른 속성 시즌엔 {c['other_used']}번 쓰임 (범용은 {config.generalist_seasons}번부터)",
+        "specialist": "다른 속성 시즌엔 안 쓰임",
         "retired_generalist": f"다른 속성 시즌 {c['other_used']}번 쓰이다 {last} 뒤 자기 속성 시즌에서도 안 쓰이고 은퇴",
         "retired_element_only": f"{last} 뒤 다른 속성에서 빠지고 자기 속성 시즌 {c['own_after']}번 더 쓰이다 은퇴",
         "retired_specialist": f"다른 속성 시즌엔 {c['other_used']}번 쓰이고 은퇴",
@@ -740,12 +740,12 @@ def _career_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]
     }[c["path"]]
     g = c.get("generality")
     general = (f"{GENERALITY_KO[c['generality_band']]} {g:.2f} (2 × 다른 속성 칸 평균 {c['other_level']:.2f} ÷ "
-               f"(자기 속성 칸 {c['own_level']:.2f} + {c['other_level']:.2f}), 1 이 최대)" if g is not None else "없음")
+               f"(자기 속성 칸 {c['own_level']:.2f} + {c['other_level']:.2f}), 0–2)" if g is not None else "없음")
     low, high = config.generality_bands
     return [f"  {pad('범용도', 9)}  {general}",
-            f"  {pad('경로', 9)}  {PATH_KO[c['path']]} — {detail}",
-            f"  {pad('', 9)}  범용도 띠 = 특화 < {low:g} ≤ 속성 우선 < {high:g} ≤ 범용 · 범용 = 다른 속성 시즌 "
-            f"{config.generalist_seasons}번 이상 쓰임 · 빠짐 = 최근 다른 속성 시즌 {config.left_after}번 내리 안 쓰임"]
+            f"  {pad('최근 흐름', 9)}  {PATH_KO[c['path']]} — {detail}",
+            f"  {pad('', 9)}  범용도 띠 = 특화 < {low:g} ≤ 속성 우선 < {high:g} ≤ 범용 · 범용 = 다른 속성 시즌에 "
+            f"쓰인 적 있음 · 빠짐 = 최근 다른 속성 시즌 {config.left_after}번 내리 안 쓰임"]
 
 
 def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) -> str:

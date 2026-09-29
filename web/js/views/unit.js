@@ -1,6 +1,6 @@
 // 티어 변화 · 니케 한 명: one unit - where it stands now (or on the chosen day), and season by season.
 
-import { assignTier, unitSeasons, ELEMENTS } from "../model.js";
+import { assignTier, unitSeasons, ELEMENTS, GENERALITY_MAX } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented, infoButton,
@@ -46,7 +46,7 @@ export function unitView(app) {
     root.append(h("section", { class: "panel chart-panel" },
       h("div", { class: "panel-head" },
         h("h3", null, "범용도 변화"), infoButton("범용도", () => generalityHelp(app)),
-        h("span", { class: "muted small" }, "각 시즌이 끝났을 때의 범용도 · 위로 갈수록 약점과 무관하게 쓰임")),
+        h("span", { class: "muted small" }, "각 시즌이 끝났을 때의 범용도 · 1 = 약점과 무관, 위로 갈수록 다른 속성 시즌에 쓰임")),
       generalityChart(app, u, all, { treasureAt: unit.treasure, at })));
   }
   if (records.length) root.append(seasonTable(app, u, records));
@@ -135,13 +135,13 @@ function generalityHelp(app, g = null, career = null) {
   return h("div", { class: "tip tip-help" },
     h("div", { class: "tip-name" }, "범용도"),
     h("p", null, "보스 약점이 이 니케의 속성이 ", h("b", null, "아닐"), " 때도 얼마나 쓰이나. 0 = 약점이 자기 속성일 때만 쓰임, "
-      + "1 = 약점과 무관하게 쓰임 (다른 속성 덱에서 더 쓰여도 1)."),
-    h("p", { class: "muted" }, "= 2 × 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균), 1 에서 멈춤. "
+      + `1 = 약점과 무관하게 쓰임, ${GENERALITY_MAX} = 약점이 다른 속성일 때만 쓰임.`),
+    h("p", { class: "muted" }, "= 2 × 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균). "
       + "칸은 종합 티어를 이루는 보스 약점별 값이고, 자기 속성 칸은 속성 티어의 값이다."),
     h("div", { class: "gauge-legend" },
       h("span", { class: "z0" }, h("b", null, "특화"), ` 0 – ${num(low)}`),
       h("span", { class: "z1" }, h("b", null, "속성 우선"), ` ${num(low)} – ${num(high)}`),
-      h("span", { class: "z2" }, h("b", null, "범용"), ` ${num(high)} – 1`)),
+      h("span", { class: "z2" }, h("b", null, "범용"), ` ${num(high)} – ${GENERALITY_MAX}`)),
     g ? h("p", null, !Number.isNaN(g.generality)
       ? `이 니케: 2 × ${num(g.otherLevel)} ÷ (${num(g.ownLevel)} + ${num(g.otherLevel)}) → ${num(g.generality)}`
       : "이 니케: 아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임") : null,
@@ -149,14 +149,15 @@ function generalityHelp(app, g = null, career = null) {
     h("p", { class: "muted" }, "띠의 경계는 인자에서 바꿀 수 있다. 티어에는 들어가지 않는다."));
 }
 
-// 0-1 as a bar over the three bands, the unit's value marked.
+// 0-GENERALITY_MAX as a bar over the three bands, the unit's value marked.
 function gauge(app, value) {
   const [low, high] = app.state.params.generalityBands;
+  const at = (v) => `${(v / GENERALITY_MAX) * 100}%`;
   return h("div", { class: "gauge", "aria-hidden": "true" },
-    h("span", { class: "gz z0", style: { width: `${low * 100}%` } }),
-    h("span", { class: "gz z1", style: { width: `${(high - low) * 100}%` } }),
-    h("span", { class: "gz z2", style: { width: `${(1 - high) * 100}%` } }),
-    value != null ? h("span", { class: "gauge-mark", style: { left: `${value * 100}%` } }) : null);
+    h("span", { class: "gz z0", style: { width: at(low) } }),
+    h("span", { class: "gz z1", style: { width: at(high - low) } }),
+    h("span", { class: "gz z2", style: { width: at(GENERALITY_MAX - high) } }),
+    value != null ? h("span", { class: "gauge-mark", style: { left: at(value) } }) : null);
 }
 
 // How general the unit is, with its recent turn in the words under it.

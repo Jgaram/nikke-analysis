@@ -4,7 +4,7 @@
 
 import * as M from "./model.js";
 import { h, initTip, hideTip, day, noonKst, todayKst, unitName, ELEMENT_KO } from "./ui.js";
-import { buildParams, encodeParams, decodeParams, changedParams, renderParamsFoot } from "./params.js";
+import { buildParams, encodeParams, decodeParams, changedParams, renderParamsFoot, renderHowto } from "./params.js";
 import { seasonView } from "./views/season.js";
 import { dateView } from "./views/date.js";
 import { unitView } from "./views/unit.js";
@@ -287,6 +287,7 @@ function renderParamsBadge() {
   const where = !dropped.length ? "전 서버" : dropped.length <= 2 ? `${dropped.join("·")} 제외` : state.params.servers.join("·");
   sample.textContent = `${where} · 상위 ${state.params.topN}위`;
   renderParamsFoot(app, () => buildParams(app, document.getElementById("params-body")));
+  renderHowto(state.params);
 }
 
 // ---------------------------------------------------------------------------

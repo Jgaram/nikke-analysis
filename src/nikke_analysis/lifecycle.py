@@ -367,7 +367,8 @@ def report(book=None) -> str:
                  f"{_pct(same.mean())} ({int(same.sum())}/{len(same)})")
     lines.append("")
 
-    lines.append("2. 범용도 g = min(1, 2X / (O + X)) — O 자기 속성 칸(속성 티어), X 다른 속성 칸 평균. 1 = 약점과 무관")
+    lines.append("2. 범용도 g = 2X / (O + X) — O 자기 속성 칸(속성 티어), X 다른 속성 칸 평균. "
+                 "1 = 약점과 무관, 2 = 다른 속성 시즌에만 쓰임")
     here = panel[(panel["season"] == newest) & panel["generality"].notna() & ~_true(panel["retired"])]
     here = here.assign(name=here["unit_id"].map(label)).sort_values("generality")
     for band, group in here.groupby("generality_band", sort=False):
@@ -375,9 +376,9 @@ def report(book=None) -> str:
         lines.append(f"   {GENERALITY_KO[band]} ({len(group)}명): {units}")
     lines.append("")
 
-    lines.append(f"3. 범용이던 니케의 길 (다른 속성 시즌 {config.generalist_seasons}번 이상 쓰인 니케)")
+    lines.append("3. 범용이던 니케의 길 (다른 속성 시즌에 쓰인 적 있는 니케)")
     paths = tiers.careers(history, seasons, now, config, life)
-    general = paths[paths["other_used"] >= config.generalist_seasons].assign(cls=lambda f: f["unit_id"].map(klass))
+    general = paths[paths["other_used"] > 0].assign(cls=lambda f: f["unit_id"].map(klass))
     table = pd.crosstab(general["path"], general["cls"]).reindex([p for p in tiers.PATHS if p in set(general["path"])])
     for path, row in table.iterrows():
         members = general[general["path"] == path]

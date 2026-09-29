@@ -42,7 +42,6 @@ export function defaultParams(model) {
     minTier: d.minTier,
     retireAfterDays: d.retireAfterDays,
     retireAfterOwnSeasons: d.retireAfterOwnSeasons,
-    generalistSeasons: d.generalistSeasons,
     leftAfter: d.leftAfter,
     generalityBands: d.generalityBands,
   });
@@ -68,8 +67,7 @@ export function tierKey(p) {
 }
 
 export function lifeKey(p) {
-  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.generalistSeasons, p.leftAfter,
-    p.generalityBands]);
+  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.leftAfter, p.generalityBands]);
 }
 
 // ---------------------------------------------------------------------------
@@ -458,6 +456,8 @@ export function lifespans(model, population, moment, params) {
 // generality, careers)
 
 export const GENERALITY_MIN_LEVEL = 0.05;
+// Fielded only when the weakness is another element's (own = 0): the most generality can be.
+export const GENERALITY_MAX = 2;
 export const GENERALITY_BANDS = ["specialist", "element_first", "generalist"];
 
 export function generalityBand(value, params) {
@@ -467,9 +467,9 @@ export function generalityBand(value, params) {
 }
 
 // Per unit of the standing: ownLevel (its element tier's lift, the higher of two), otherLevel
-// (the mean of its other elements' slots seen), generality = min(1, 2 x other / (own + other)):
-// 0 = fielded only in its own element's seasons, 1 = whatever the weakness - NaN until both
-// are seen, or with own + other under GENERALITY_MIN_LEVEL.
+// (the mean of its other elements' slots seen), generality = 2 x other / (own + other):
+// 0 = fielded only in its own element's seasons, 1 = whatever the weakness, 2 = only in other
+// elements' - NaN until both are seen, or with own + other under GENERALITY_MIN_LEVEL.
 export function generality(standing, params) {
   const own = new Map();
   for (const r of standing.elements) {
@@ -481,7 +481,7 @@ export function generality(standing, params) {
     const ownLevel = own.has(o.u) ? own.get(o.u) : NaN;
     const otherLevel = others.length ? others.reduce((a, b) => a + b, 0) / others.length : NaN;
     const level = ownLevel + otherLevel;
-    const value = level >= GENERALITY_MIN_LEVEL ? Math.min(1, (2 * otherLevel) / level) : NaN;
+    const value = level >= GENERALITY_MIN_LEVEL ? (2 * otherLevel) / level : NaN;
     out.set(o.u, { ownLevel, otherLevel, generality: value, band: generalityBand(value, params) });
   }
   return out;
@@ -510,7 +510,7 @@ export function careers(model, population, moment, params, life) {
       otherUsed: usedOthers.length, lastOther, otherSince: others.filter(after).length,
       ownAfter: rows.filter((x) => x.own && x.used && after(x)).length,
     };
-    const general = a.otherUsed >= params.generalistSeasons;
+    const general = a.otherUsed > 0;
     let path;
     if (!rows.some((x) => x.used)) path = "unused";
     else if (life.get(u)?.retired) path = general ? (a.ownAfter ? "retired_element_only" : "retired_generalist") : "retired_specialist";

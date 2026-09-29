@@ -70,9 +70,10 @@ own-element season is what keeps the window short without retiring a
 specialist whose element has not come round: an element can take a year to.
 
 And its **career** across the element rotation: how general it is - from 0,
-fielded only in its own element's seasons, to 1, fielded whatever the
-weakness: ``min(1, 2X / (O + X))`` from its element tier's slot O and the
-mean X of its other-element slots (``generality``) - and
+fielded only in its own element's seasons, through 1, fielded whatever the
+weakness, to 2, fielded only when the weakness is another element's:
+``2X / (O + X)`` from its element tier's slot O and the mean X of its
+other-element slots (``generality``) - and
 which way it is going: fielded in the other elements' seasons still, only in
 its own element's by now, or retired from either (``careers``).
 
@@ -126,6 +127,7 @@ DEFAULT_OVERALL_CUTS: list[tuple[str, float]] = [
     ("F", 0.0),
 ]
 OVERALL_MODES = ("mean", "max", "frequency")
+GENERALITY_MAX = 2.0  # generality of a unit fielded only when the weakness is another element's
 
 
 @dataclass
@@ -151,9 +153,8 @@ class TierConfig:
     min_tier: str | None = None
     retire_after_days: float = 90.0
     retire_after_own_seasons: int = 1
-    # career: fielded in this many other-element seasons, a generalist once; not fielded in
-    # its last ``left_after`` of them, it has left them. Generality bands, low to high.
-    generalist_seasons: int = 3
+    # career: a generalist once fielded in an other-element season; not fielded in its last
+    # ``left_after`` of them, it has left them. Generality bands, low to high (0-2).
     left_after: int = 3
     generality_bands: tuple[float, float] = (0.3, 0.7)
     # diagnostics
@@ -177,8 +178,9 @@ class TierConfig:
         if self.min_tier not in labels:
             raise ValueError(f"lifespan.min_tier must be one of the cuts' labels {labels}, not {self.min_tier!r}")
         low, high = (float(v) for v in self.generality_bands)
-        if not 0 <= low <= high <= 1:
-            raise ValueError(f"career.generality_bands must be two values 0 <= low <= high <= 1, not {self.generality_bands}")
+        if not 0 <= low <= high <= GENERALITY_MAX:
+            raise ValueError(f"career.generality_bands must be two values 0 <= low <= high <= {GENERALITY_MAX:g}, "
+                             f"not {self.generality_bands}")
         self.generality_bands = (low, high)
 
     @property
@@ -228,7 +230,6 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         min_tier=str(lifespan["min_tier"]) if lifespan.get("min_tier") else None,
         retire_after_days=float(lifespan.get("retire_after_days", defaults.retire_after_days)),
         retire_after_own_seasons=int(lifespan.get("retire_after_own_seasons", defaults.retire_after_own_seasons)),
-        generalist_seasons=int(career.get("generalist_seasons", defaults.generalist_seasons)),
         left_after=int(career.get("left_after", defaults.left_after)),
         generality_bands=tuple(float(v) for v in career.get("generality_bands", defaults.generality_bands)),
         deck_effect_ridge=float(diagnostics.get("deck_effect_ridge", defaults.deck_effect_ridge)),
@@ -570,13 +571,13 @@ def generality(standing: Standings, config: TierConfig | None = None) -> pd.Data
 
     ``own_level``: its element tier's lift (the higher, for a unit with two
     elements); ``other_level``: the mean of its overall's slots for the other
-    elements it was seen in. ``generality = min(1, 2 x other / (own + other))``:
+    elements it was seen in. ``generality = 2 x other / (own + other)``:
     0 for a unit fielded only when the boss is weak to its element, 1 for one
-    the weakness makes no difference to (other = own) - and for one other
-    elements' decks field more than its own, which is at least as general.
+    the weakness makes no difference to (other = own), 2 for one fielded only
+    when the boss is weak to another element (own = 0, as Delta: Ninja Thief).
     With the default overall (the slots' mean) the overall is (own + 4 x other)
     / 5, so this is the ratio the two tiers already carry, taken out and scaled
-    to 0-1. Empty until the unit has met both sides, and when it is
+    to 0-2. Empty until the unit has met both sides, and when it is
     barely used at all (own + other under ``GENERALITY_MIN_LEVEL``). It shares
     the tiers' memory: see ``careers`` for a unit's recent turn.
     """
@@ -591,7 +592,7 @@ def generality(standing: Standings, config: TierConfig | None = None) -> pd.Data
     frame = pd.DataFrame({"own_level": own, "other_level": other.groupby("unit_id")["lift"].mean()})
     frame = frame.reindex(standing.overall["unit_id"])
     level = frame["own_level"] + frame["other_level"]
-    frame["generality"] = (2 * frame["other_level"] / level).clip(upper=1.0).where(level >= GENERALITY_MIN_LEVEL)
+    frame["generality"] = (2 * frame["other_level"] / level).where(level >= GENERALITY_MIN_LEVEL)
     frame["generality_band"] = frame["generality"].map(lambda g: generality_band(g, config))
     return frame.rename_axis("unit_id").reset_index()[GENERALITY_COLUMNS]
 
@@ -607,14 +608,14 @@ def careers(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: Tie
     own element's seasons that fielded it after that (``own_after``; all of them
     when no other-element season did). Its ``path``:
 
-    * ``generalist`` - fielded in ``generalist_seasons`` other-element seasons,
-      and in one of its latest ``left_after``;
+    * ``generalist`` - fielded in an other-element season, and in one of its
+      latest ``left_after``;
     * ``element_only`` - a generalist once, not fielded in its latest
       ``left_after`` other-element seasons, fielded in its own since;
     * ``left_others`` - the same, with no own-element season fielding it since
       (none may have come round yet);
-    * ``specialist`` - never fielded in enough other-element seasons to be a
-      generalist (a new unit too, until it is);
+    * ``specialist`` - never fielded in an other-element season (a new unit
+      too, until it is);
     * ``retired_generalist`` / ``retired_element_only`` - retired straight from
       general use, or after fielded only in its own element's seasons for a
       while; ``retired_specialist`` - retired, never a generalist;
@@ -638,7 +639,7 @@ def careers(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: Tie
         after = (lambda frame: frame) if last_other is None else (lambda frame: frame[frame["season"] > last_other])
         record = {"unit_id": unit_id, "other_used": len(other_used), "last_other": last_other,
                   "other_since": len(after(other)), "own_after": int(after(own)["used"].sum())}
-        general = record["other_used"] >= config.generalist_seasons
+        general = record["other_used"] > 0
         if not group["used"].any():
             path = "unused"
         elif bool(retired.get(unit_id, False)):

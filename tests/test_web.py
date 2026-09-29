@@ -36,8 +36,8 @@ CONFIGS = {
     "servers-top-uniform": {"exclude_servers": ("S2",), "top_n": 8, "rank_weighting": "uniform"},
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
                              "min_elements_observed": 2, "min_tier": "B", "retire_after_days": 40.0,
-                             "retire_after_own_seasons": 0, "generalist_seasons": 2, "left_after": 1,
-                             "generality_bands": (0.4, 0.9)},
+                             "retire_after_own_seasons": 0, "left_after": 1,
+                             "generality_bands": (0.4, 1.2)},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
                                "overall_cuts": [("SS", 1.0), ("S", 0.7), ("A", 0.4), ("B", 0.2), ("C", 0.1),
@@ -178,7 +178,7 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "priorStrength": config.prior_strength, "overall": config.overall,
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
         "minTier": config.min_tier, "retireAfterDays": config.retire_after_days,
-        "retireAfterOwnSeasons": config.retire_after_own_seasons, "generalistSeasons": config.generalist_seasons,
+        "retireAfterOwnSeasons": config.retire_after_own_seasons,
         "leftAfter": config.left_after, "generalityBands": list(config.generality_bands),
     }
 

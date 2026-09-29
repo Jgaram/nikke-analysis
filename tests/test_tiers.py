@@ -108,7 +108,7 @@ def test_config_file_round_trip(tmp_path):
         "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
         "          include_live: false}\n"
         "lifespan: {min_tier: A, retire_after_days: 200, retire_after_own_seasons: 2}\n"
-        "career: {generalist_seasons: 4, left_after: 2, generality_bands: [0.1, 0.4]}\n",
+        "career: {left_after: 2, generality_bands: [0.1, 1.5]}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
@@ -117,7 +117,7 @@ def test_config_file_round_trip(tmp_path):
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
     assert config.min_tier == "A" and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
-    assert config.generalist_seasons == 4 and config.left_after == 2 and config.generality_bands == (0.1, 0.4)
+    assert config.left_after == 2 and config.generality_bands == (0.1, 1.5)
 
 
 def test_the_lifespan_tier_must_be_one_of_the_cuts():
@@ -125,6 +125,8 @@ def test_the_lifespan_tier_must_be_one_of_the_cuts():
         tiers.TierConfig(min_tier="E")
     with pytest.raises(ValueError, match="generality_bands"):
         tiers.TierConfig(generality_bands=(0.4, 0.1))
+    with pytest.raises(ValueError, match="generality_bands"):
+        tiers.TierConfig(generality_bands=(0.4, 2.5))  # generality goes up to 2
 
 
 def test_repo_config_loads():
@@ -494,8 +496,8 @@ def test_generality_splits_specialists_from_units_that_go_anywhere(world, built)
         assert g.loc[dealer, "generality"] < 0.05 and g.loc[dealer, "generality_band"] == "specialist"
     for unit in world.universal:  # strong everywhere
         assert g.loc[unit, "generality"] == pytest.approx(1.0, abs=0.1) and g.loc[unit, "generality_band"] == "generalist"
-    assert g.loc[world.partner, "generality"] == 1.0  # a Water support that only Wind decks field: capped at 1
-    assert g["generality"].dropna().between(0, 1).all()
+    assert g.loc[world.partner, "generality"] == 2.0  # a Water support that only Wind decks field: the most there is
+    assert g["generality"].dropna().between(0, 2).all()
     # own and other are the numbers behind the two tiers: overall = (own + 4 x other) / 5
     overall = standing.overall.set_index("unit_id")["overall"]
     dealer = world.element_dps["Fire"]
@@ -538,8 +540,9 @@ def test_careers_tell_the_two_ways_a_generalist_retires():
     late = careers_of(lifts, EVERY_THIRD, 18)  # "narrowed" sat out Fire season 16, over 90 days after season 13
     assert late.loc["narrowed", "path"] == "retired_element_only" and late.loc["dropped", "path"] == "retired_generalist"
     assert late.loc["special", "path"] == "specialist"
-    # a stricter bar for "a generalist once", a quicker one for "left the others"
-    assert careers_of(lifts, EVERY_THIRD, 12, generalist_seasons=5).loc["narrowed", "path"] == "specialist"
+    # one other-element season makes a generalist; a quicker bar for "left the others"
+    once = {"once": [1.0 if w == "Fire" else 0.0 for w in EVERY_THIRD[:4]] + [1.0] + [0.0] * 13}
+    assert careers_of(once, EVERY_THIRD, 6).loc["once", ["path", "other_used"]].tolist() == ["generalist", 1]
     assert careers_of(lifts, EVERY_THIRD, 8, left_after=1).loc["narrowed", "path"] == "element_only"
     assert careers_of(lifts, EVERY_THIRD, 8).loc["narrowed", "path"] == "generalist"  # left only one behind yet
 

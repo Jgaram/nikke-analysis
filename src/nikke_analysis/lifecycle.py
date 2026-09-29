@@ -21,10 +21,10 @@ which is what retires them (``analyze.tiers.lifespans``).
 rules season by season against what happened after.
 
 Where the study splits units in two, the split is the class (``class_group``:
-화력형 or the rest), not the role. Whether a unit deals the damage or supports
-is not in the data - the rankings give a deck's damage, not a unit's - and the
-class only mostly follows it. ``class_group`` is the one place to swap a role
-judgement in once there is one.
+화력형 or the rest), and it is read as the class only. Whether a unit deals the
+damage or supports needs its damage, which the rankings do not give (they give
+a deck's) - that takes other data, later. ``class_group`` is the one place a
+judgement from it would go.
 
 Nothing computed only here feeds the tiers, the committed tables or the tier site.
 """
@@ -49,9 +49,9 @@ CLASS_GROUPS = ("화력형", "지원·방어형")
 def class_group(unit_class: pd.Series) -> pd.Series:
     """The half of the split each unit falls in: 화력형 (Attacker) or 지원·방어형 (the rest).
 
-    The class, not the role. Most 화력형 deal the damage and most of the rest
-    support, but not all, and the data cannot tell which - there is no damage
-    per unit. Until a dealer/support judgement exists, this stands in for it."""
+    The class only - not whether the unit deals the damage or supports, which
+    needs damage per unit from other data. A judgement from such data would go
+    here."""
     return (unit_class == "Attacker").map({True: CLASS_GROUPS[0], False: CLASS_GROUPS[1]})
 
 

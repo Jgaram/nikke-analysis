@@ -132,6 +132,9 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
 
     // tier bands and cuts
     const bands = s("g", { class: "bands" });
+    // cut values on the axis, skipping one that would crowd a label already there (0 first)
+    const placed = [base];
+    const roomy = (at) => !placed.some((p) => Math.abs(p - at) < 12) && placed.push(at);
     cuts.forEach(([label, lo], k) => {
       const hi = k === 0 ? yMax : cuts[k - 1][1];
       if (lo >= yMax) return;
@@ -139,7 +142,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
       if (k < cuts.length - 1) bands.append(s("rect", { class: "band", "data-tier": label, x: m.l, y: y0, width: iw, height: y1 - y0 }));
       if (lo > 0) {
         bands.append(s("line", { class: "grid", x1: m.l, x2: m.l + iw, y1, y2: y1 }));
-        bands.append(s("text", { class: "ax", x: m.l - 6, y: y1 + 4, "text-anchor": "end" }, tick(lo)));
+        if (roomy(y1)) bands.append(s("text", { class: "ax", x: m.l - 6, y: y1 + 4, "text-anchor": "end" }, tick(lo)));
       }
       if (y1 - y0 >= 11) bands.append(s("text", { class: "ax tier", "data-tier": label, x: m.l + iw + 8, y: (y0 + y1) / 2 + 4 }, label));
     });
@@ -437,6 +440,181 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
     if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
       e.preventDefault();
       setHover(Math.max(0, Math.min(records.length - 1, (hover < 0 ? records.length : hover) + (e.key === "ArrowRight" ? 1 : -1))));
+    } else if (e.key === "Escape") setHover(-1);
+  });
+  host.addEventListener("blur", () => setHover(-1));
+  let lastWidth = 0;
+  new ResizeObserver(() => {
+    const w = Math.floor(host.clientWidth);
+    if (w && w !== lastWidth) { lastWidth = w; draw(); }
+  }).observe(host);
+  return root;
+}
+
+// ---------------------------------------------------------------------------
+// Several units on one axis: a line each, in its colour slot (1-5, fixed to the unit
+// while it stays in the list), over the tier bands of ``cuts``. ``points`` are the x
+// positions, each {season} (a summary entry); a series is {u, slot, values (one per
+// point, null for none), breakAt (a point the line restarts at: the treasure) }.
+// Each line ends in the unit's name where there is room; a legend is always there.
+
+const S_HEIGHT = 300;
+const S_MARGIN = { l: 40, r: 104, t: 20, b: 34 };
+
+export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, at = null, legendNote = null }) {
+  const unitOf = (sr) => app.model.units[sr.u];
+  const host = h("div", { class: "chart-host", tabindex: "0", role: "img", "aria-label": ariaLabel });
+  const legend = h("div", { class: "legend" },
+    series.map((sr) => h("span", { class: "lg" }, h("i", { class: `sw line ser s${sr.slot + 1}` }), unitName(unitOf(sr)))),
+    legendNote ? h("span", { class: "lg muted" }, legendNote) : null);
+  const root = h("div", { class: "chart" }, legend, host);
+  let hover = -1;
+  let geometry = null;
+
+  function tipFor(i) {
+    const info = points[i].season.info;
+    const rows = series.map((sr) => ({ sr, v: sr.values[i] })).sort((a, b) => (b.v ?? -1) - (a.v ?? -1));
+    return h("div", { class: "tip" },
+      h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
+      h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
+        h("span", { class: "muted" }, ` · ${day(info.start)}${points[i].season.final ? "" : " · 진행 중"}`)),
+      h("dl", { class: "tip-list" }, rows.map(({ sr, v }) => [
+        h("dt", { class: "tip-ser" }, h("i", { class: `sw line ser s${sr.slot + 1}` }), unitName(unitOf(sr))),
+        h("dd", null, v != null ? tierBadge(assignTier(v, cuts), v) : h("span", { class: "muted" }, "–"))])),
+      h("div", { class: "muted small" }, valueLabel));
+  }
+
+  function setHover(i, pointer = null) {
+    if (i === hover && i >= 0 && pointer && geometry) { moveTip(host, pointer); return; }
+    hover = i;
+    if (!geometry) return;
+    const { svg, x, y } = geometry;
+    const cross = svg.querySelector(".cross");
+    for (const dot of svg.querySelectorAll(".hover-dot")) dot.remove();
+    if (i < 0) { cross.setAttribute("visibility", "hidden"); hideTip(host); return; }
+    const cx = x(i);
+    cross.setAttribute("x1", cx);
+    cross.setAttribute("x2", cx);
+    cross.setAttribute("visibility", "visible");
+    let top = null;
+    for (const sr of series) {
+      const v = sr.values[i];
+      if (v == null) continue;
+      svg.append(s("circle", { class: `hover-dot ser s${sr.slot + 1}`, cx, cy: y(v), r: 4.5 }));
+      top = Math.max(top ?? v, v);
+    }
+    const box = host.getBoundingClientRect();
+    showTip(host, tipFor(i), pointer || { x: box.left + cx, y: box.top + y(top ?? 0) });
+  }
+
+  function draw() {
+    const width = Math.max(300, Math.floor(host.clientWidth));
+    const narrow = width < 560;
+    const H = narrow ? 260 : S_HEIGHT;
+    const m = { ...S_MARGIN, l: narrow ? 34 : S_MARGIN.l, r: narrow ? 14 : S_MARGIN.r };
+    const iw = width - m.l - m.r;
+    const ih = H - m.t - m.b;
+    const n = points.length;
+    const band = iw / Math.max(n, 1);
+    const x = (i) => m.l + band * (i + 0.5);
+    const values = series.flatMap((sr) => sr.values).filter((v) => v != null);
+    const yMax = Math.ceil(Math.max(cuts[0][1] + 0.2, ...values) * 1.06 * 5) / 5;
+    const y = (v) => m.t + ih * (1 - v / yMax);
+    const base = y(0);
+    const svg = s("svg", { width, height: H, viewBox: `0 0 ${width} ${H}`, class: "traj multi" });
+
+    const bands = s("g", { class: "bands" });
+    // cut values on the axis, skipping one that would crowd a label already there (0 first)
+    const placed = [base];
+    const roomy = (at) => !placed.some((p) => Math.abs(p - at) < 12) && placed.push(at);
+    cuts.forEach(([label, lo], k) => {
+      const hi = k === 0 ? yMax : cuts[k - 1][1];
+      if (lo >= yMax) return;
+      const y0 = y(Math.min(hi, yMax)), y1 = y(lo);
+      if (k < cuts.length - 1) bands.append(s("rect", { class: "band", "data-tier": label, x: m.l, y: y0, width: iw, height: y1 - y0 }));
+      if (lo > 0) {
+        bands.append(s("line", { class: "grid", x1: m.l, x2: m.l + iw, y1, y2: y1 }));
+        if (roomy(y1)) bands.append(s("text", { class: "ax", x: m.l - 6, y: y1 + 4, "text-anchor": "end" }, tick(lo)));
+      }
+      if (y1 - y0 >= 11) bands.append(s("text", { class: "ax tier", "data-tier": label, x: m.l + 6, y: (y0 + y1) / 2 + 4 }, label));
+    });
+    bands.append(s("line", { class: "axis", x1: m.l, x2: m.l + iw, y1: base, y2: base }));
+    bands.append(s("text", { class: "ax", x: m.l - 6, y: base + 4, "text-anchor": "end" }, "0"));
+    svg.append(bands);
+    dayMarker(svg, points, at, { m, band, top: m.t, bottom: base });
+
+    const ends = [];
+    for (const sr of series) {
+      const cls = `ser s${sr.slot + 1}`;
+      const parts = [];
+      let cur = [];
+      sr.values.forEach((v, i) => {
+        if (i === sr.breakAt && sr.breakAt > 0) { if (cur.length) parts.push(cur); cur = []; }
+        if (v == null) { if (cur.length) parts.push(cur); cur = []; return; }
+        cur.push([i, v]);
+      });
+      if (cur.length) parts.push(cur);
+      const g = s("g", { class: cls });
+      for (const part of parts) {
+        if (part.length > 1) g.append(s("path", { class: `line ${cls}`, d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
+        else g.append(s("circle", { class: `dot ${cls}`, cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
+      }
+      if (sr.breakAt > 0 && sr.values[sr.breakAt] != null) {
+        g.append(s("text", { class: "treasure-mark small", x: x(sr.breakAt), y: y(sr.values[sr.breakAt]) - 8, "text-anchor": "middle" }, "♥"));
+      }
+      const last = parts.length ? parts[parts.length - 1][parts[parts.length - 1].length - 1] : null;
+      if (last) {
+        g.append(s("circle", { class: `dot ${cls}`, cx: x(last[0]), cy: y(last[1]), r: 4 }));
+        ends.push({ sr, cls, x: x(last[0]), y: y(last[1]) });
+      }
+      svg.append(g);
+    }
+    // names at the line ends, pushed apart where they would overlap
+    if (!narrow) {
+      ends.sort((a, b) => a.y - b.y);
+      for (let k = 1; k < ends.length; k++) ends[k].ly = Math.max(ends[k].y, (ends[k - 1].ly ?? ends[k - 1].y) + 13);
+      if (ends.length) ends[0].ly = ends[0].y;
+      const over = ends.length ? (ends[ends.length - 1].ly - (H - m.b)) : 0;
+      if (over > 0) for (const e of ends) e.ly -= over;
+      for (const e of ends) {
+        const name = unitName(unitOf(e.sr));
+        svg.append(s("text", { class: "ax end-label", x: m.l + iw + 8, y: e.ly + 4 }, name.length > 9 ? `${name.slice(0, 8)}…` : name));
+        svg.append(s("line", { class: `end-tick ${e.cls}`, x1: e.x + 4, x2: m.l + iw + 5, y1: e.y, y2: e.ly }));
+      }
+    }
+
+    const every = Math.max(1, Math.ceil(26 / band));
+    const axis = s("g", { class: "xaxis" });
+    let lastX = -1e9;
+    points.forEach((p, i) => {
+      const edge = i === 0 || i === n - 1;
+      if (!edge && n > 12 && p.season.season % every !== 0) return;
+      if (x(i) - lastX < 24 && i !== n - 1) return;
+      lastX = x(i);
+      axis.append(s("text", { class: "ax", x: x(i), y: base + 18, "text-anchor": "middle" }, p.season.season));
+    });
+    axis.append(s("text", { class: "ax", x: m.l - 8, y: base + 18, "text-anchor": "end" }, "시즌"));
+    svg.append(axis);
+
+    svg.append(s("line", { class: "cross", x1: 0, x2: 0, y1: m.t, y2: base, visibility: "hidden" }));
+    const hit = s("rect", { class: "hit", x: m.l, y: 0, width: iw, height: H });
+    svg.append(hit);
+    const index = (clientX) => {
+      const box = svg.getBoundingClientRect();
+      return Math.max(0, Math.min(n - 1, Math.floor((clientX - box.left - m.l) / band)));
+    };
+    hit.addEventListener("pointermove", (e) => setHover(index(e.clientX), { x: e.clientX, y: e.clientY }));
+    hit.addEventListener("pointerdown", (e) => setHover(index(e.clientX), { x: e.clientX, y: e.clientY }));
+    hit.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") setHover(-1); });
+    geometry = { svg, x, y };
+    host.replaceChildren(svg);
+    if (hover >= 0) setHover(hover);
+  }
+
+  host.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      setHover(Math.max(0, Math.min(points.length - 1, (hover < 0 ? points.length : hover) + (e.key === "ArrowRight" ? 1 : -1))));
     } else if (e.key === "Escape") setHover(-1);
   });
   host.addEventListener("blur", () => setHover(-1));

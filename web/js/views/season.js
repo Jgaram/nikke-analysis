@@ -1,22 +1,30 @@
-// 시즌별 티어: one Solo Raid season, every unit by its lift that season - or, with a weakness
-// chosen, every season of that weakness side by side (모아 보기).
+// 티어표 · 시즌 티어: one Solo Raid season, every unit by its lift that season. The seasons of
+// one weakness side by side are 티어 변화 · 약점별 시즌 (trend.js).
 
-import { assignTier, ELEMENTS } from "../model.js";
+import { assignTier, seasonsAround } from "../model.js";
 import {
   h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, tierBadge, deckSplit, sortableTable, toggle, kst,
 } from "../ui.js";
-import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline } from "./common.js";
+import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs } from "./common.js";
+
+// The season a day falls in: the one open then, else the last one over by then - with a ranking.
+export function seasonAt(app, moment) {
+  const pop = app.population();
+  const around = seasonsAround(app.model, moment);
+  for (const s of [around.current, around.previous]) if (s && pop.tables.has(s.season)) return s.season;
+  return app.latestSeason();
+}
 
 const END_KO = { suspended: "중단", extended: "연장", superseded: "일정 변경", scheduled: "" };
 
 export function seasonView(app) {
   const { model, state } = app;
   const pop = app.population();
-  const number = state.season ?? app.latestSeason();
+  const number = state.season ?? (state.date ? seasonAt(app, app.moment()) : app.latestSeason());
   const info = model.bySeason.get(number);
   const entry = pop.tables.get(number) || null;
   const root = h("div", { class: "view view-season" });
-  root.append(strip(app, number, pop), header(app, info, entry));
+  root.append(kindTabs(app), strip(app, number, pop), header(app, info, entry));
   if (!entry) {
     root.append(h("div", { class: "panel empty" }, "고른 표본(서버)에 이 시즌 랭킹이 없습니다."));
     return root;
@@ -26,18 +34,12 @@ export function seasonView(app) {
   const rows = entry.rows.filter((r) => app.passes(model.units[r.u]));
   const unused = rows.filter((r) => r.rankers === 0).length;
   const shown = state.showUnused ? rows : rows.filter((r) => r.rankers > 0);
-  const compare = state.mode === "compare" && state.weak;
 
   root.append(h("div", { class: "toolbar" },
     filterRow(app),
     h("div", { class: "toolbar-end" },
-      unused && !compare ? toggle(`안 쓴 니케 ${unused}명도`, state.showUnused, (v) => { state.showUnused = v; app.rerender(); }) : null,
-      modeSwitch(app, { compare: Boolean(state.weak) }))));
-
-  if (compare) {
-    root.append(compareTable(app, pop, state.weak));
-    return root;
-  }
+      unused ? toggle(`안 쓴 니케 ${unused}명도`, state.showUnused, (v) => { state.showUnused = v; app.rerender(); }) : null,
+      modeSwitch(app))));
   if (state.mode === "table") {
     root.append(seasonTable(app, entry, shown));
     return root;
@@ -67,7 +69,7 @@ function strip(app, selected, pop) {
     const boss = s.bossKo || s.bossEn || "?";
     return h("a", {
       class: ["schip", s.season === selected && "on", !entry && "off", entry && !entry.final && "live"],
-      href: app.href("season", s.season), "aria-current": s.season === selected ? "true" : null,
+      href: app.seasonHref(s.season), "aria-current": s.season === selected ? "true" : null,
       title: `시즌 ${s.season} · ${boss} · 약점 ${ELEMENT_KO[s.weak] || "?"}${entry && !entry.final ? " · 진행 중" : ""}`,
     }, h("span", { class: "schip-n" }, s.season),
     s.bossImage ? h("img", { class: "schip-boss", src: `icons/bosses/${s.bossImage}.webp`, alt: "", width: 36, height: 36, loading: "lazy", decoding: "async" })
@@ -88,13 +90,13 @@ function strip(app, selected, pop) {
   });
   const step = (d, label) => {
     const target = seasons[index + d];
-    return target ? h("a", { class: "strip-step", href: app.href("season", target.season), "aria-label": label }, d < 0 ? "‹" : "›")
+    return target ? h("a", { class: "strip-step", href: app.seasonHref(target.season), "aria-label": label }, d < 0 ? "‹" : "›")
       : h("span", { class: "strip-step off", "aria-hidden": "true" }, d < 0 ? "‹" : "›");
   };
   const only = weak ? h("button", {
     type: "button", class: "strip-only", title: `${ELEMENT_KO[weak]} 약점 시즌만 보는 중 · 누르면 전체 시즌`,
     "aria-label": `${ELEMENT_KO[weak]} 약점 시즌만 보는 중, 누르면 전체 시즌`,
-    onclick: () => app.go({ weak: null, mode: app.state.mode === "compare" ? "tiers" : app.state.mode }, { replace: true }),
+    onclick: () => app.go({ weak: null }, { replace: true }),
   }, elementIcon(weak, 15, { title: "" }), h("span", { class: "strip-only-n" }, `${seasons.length}`), h("span", { "aria-hidden": "true" }, "×"))
     : null;
   const label = weak ? `${ELEMENT_KO[weak]} 약점 시즌 고르기` : "시즌 고르기";
@@ -147,77 +149,19 @@ function header(app, info, entry) {
 }
 
 // The boss's weakness; pressing it keeps the strip to the seasons of that weakness (and back).
+// Beside it, the way to those seasons side by side (티어 변화 · 약점별 시즌).
 function weakFact(app, weak) {
   const inner = [h("span", { class: "fact-k" }, "약점"), elementIcon(weak, 18), h("b", null, ELEMENT_KO[weak] || "?")];
   if (!ELEMENT_KO[weak]) return h("span", { class: "fact" }, inner);
   const on = app.state.weak === weak;
-  return h("button", {
-    type: "button", class: "fact fact-btn", "aria-pressed": String(on),
-    title: on ? "전체 시즌 보기" : `${ELEMENT_KO[weak]} 약점 시즌만 모아 보기`,
-    onclick: () => app.go(on ? { weak: null, mode: app.state.mode === "compare" ? "tiers" : app.state.mode } : { weak },
-      { replace: true }),
-  }, inner, h("span", { class: "fact-more" }, on ? "모아 보는 중" : "시즌만 보기"));
-}
-
-// 모아 보기: every season whose boss was weak to ``weak``, side by side, newest first - each unit's
-// lift in each - with the unit's standing in that weakness now: the slot of its overall tier for
-// it (the recent-weighted mean over those seasons), whatever the unit's own element.
-function compareTable(app, pop, weak) {
-  const { model, state } = app;
-  const cuts = state.params.cuts;
-  const ko = ELEMENT_KO[weak];
-  const seasons = model.seasons.filter((s) => s.weak === weak && pop.tables.has(s.season)).reverse();
-  const bySeason = new Map(seasons.map((s) => [s.season, new Map(pop.tables.get(s.season).rows.map((r) => [r.u, r]))]));
-  const used = new Set();
-  for (const rows of bySeason.values()) for (const r of rows.values()) if (r.rankers > 0) used.add(r.u);
-  const view = app.viewAt(app.moment());
-  const e = ELEMENTS.indexOf(weak);
-  const units = [...used].filter((u) => app.passes(model.units[u])).map((u) => {
-    const slot = view.standing.slots.get(u)?.[e] || null;
-    let fielded = 0;
-    for (const rows of bySeason.values()) if (rows.get(u)?.rankers > 0) fielded++;
-    return { u, slot, fielded };
-  });
-  const sort = state.sort.compare || { key: "slot", dir: "desc" };
-  const columns = [
-    { key: "unit", label: "니케", head: true, sort: (r) => model.units[r.u].ko || model.units[r.u].en, firstDir: "asc",
-      cell: (r) => unitInline(app, r.u) },
-    { key: "slot", label: `${ko} 약점 종합`,
-      title: `지금 기준, ${ko} 약점 시즌들의 기여도를 최근일수록 크게 친 평균 — 종합 티어를 이루는 다섯 칸 중 하나. `
-        + "니케의 속성이 아니라 보스 약점 기준이라 다른 속성 서포터도 든다",
-      sort: (r) => r.slot?.lift, cell: (r) => {
-        if (!r.slot) return h("span", { class: "muted" }, "–");
-        if (!r.slot.seasons) return h("span", { class: "muted", title: "애장품 뒤로는 이 약점 시즌을 아직 못 겪어 채운 값" }, `(${num(r.slot.lift)})`);
-        return tierBadge(assignTier(r.slot.lift, cuts), r.slot.lift);
-      } },
-    { key: "fielded", label: "쓰인", num: true, title: `상위 랭커가 쓴 ${ko} 약점 시즌 수`, sort: (r) => r.fielded,
-      cell: (r) => h("span", null, int(r.fielded), h("span", { class: "muted" }, `/${seasons.length}`)) },
-    ...seasons.map((s) => ({
-      key: `s${s.season}`, class: "cmp-season",
-      title: `시즌 ${s.season} · ${s.bossKo || s.bossEn || "?"}${pop.tables.get(s.season).final ? "" : " · 진행 중"}`,
-      label: h("span", { class: "cmp-head" },
-        s.bossImage ? h("img", { src: `icons/bosses/${s.bossImage}.webp`, alt: "", width: 28, height: 28, loading: "lazy" }) : null,
-        h("span", null, `S${s.season}`)),
-      sort: (r) => bySeason.get(s.season).get(r.u)?.lift,
-      cell: (r) => {
-        const row = bySeason.get(s.season).get(r.u);
-        if (!row) return h("span", { class: "muted", title: "그 시즌엔 아직 없던 니케" }, "");
-        if (!row.rankers) return h("span", { class: "muted", title: "안 씀" }, "·");
-        return h("span", { class: "cmp-cell" }, tierBadge(assignTier(row.lift, cuts), row.lift),
-          row.treasure ? h("span", { class: "heart-text", title: "애장품을 끼고 치른 시즌" }, "♥") : null);
-      },
-    })),
-  ];
-  return h("div", { class: "panel table-panel compare-panel" },
-    sortableTable(columns, units, {
-      sortKey: sort.key, sortDir: sort.dir, caption: `${ko} 약점 시즌 모아 보기`,
-      onSort: (key, dir) => { state.sort.compare = { key, dir }; app.rerender(); },
-    }),
-    h("p", { class: "note" },
-      `${ko} 약점 시즌 ${seasons.length}개를 최근 시즌부터 나란히. 칸 = 그 시즌 기여도와 시즌 티어 · · = 안 씀 · 빈칸 = 그땐 없던 니케 · `,
-      h("span", { class: "heart-text" }, "♥"), " = 애장품을 끼고 치른 시즌. ",
-      `${ko} 약점 종합 = 종합 티어를 이루는 칸 하나(지금 기준, 최근 시즌일수록 크게). 니케 속성이 아니라 보스 약점 기준이라 `
-        + "다른 속성 서포터도 든다. 괄호 = 애장품 뒤로는 아직 못 겪어 채운 값. 열 이름을 누르면 정렬."));
+  return h("span", { class: "fact-pair" },
+    h("button", {
+      type: "button", class: "fact fact-btn", "aria-pressed": String(on),
+      title: on ? "전체 시즌 보기" : `위 시즌 줄에 ${ELEMENT_KO[weak]} 약점 시즌만 남기기`,
+      onclick: () => app.go({ weak: on ? null : weak }, { replace: true }),
+    }, inner, h("span", { class: "fact-more" }, on ? "시즌 줄: 이 약점만" : "시즌 줄 거르기")),
+    h("a", { class: "fact fact-link", href: app.weakHref(weak), title: `${ELEMENT_KO[weak]} 약점 시즌들을 그래프와 표로 나란히` },
+      "이 약점 시즌 비교 ›"));
 }
 
 function seasonTable(app, entry, rows) {

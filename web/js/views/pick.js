@@ -1,8 +1,8 @@
-// 니케 추이 before a unit is chosen: every unit to pick one from, the best overall
+// 티어 변화 · 니케 한 명, before a unit is chosen: every unit to pick one from, the best overall
 // tier first, filling the grid from the top left.
 
 import { h, hideTip, kst, todayKst } from "../ui.js";
-import { unitCard, filterGroups, standingTip, fold } from "./common.js";
+import { unitCard, filterGroups, standingTip, fold, trendTabs } from "./common.js";
 import { dateBar } from "./date.js";
 
 const FOLD = "pick:bottom";
@@ -81,6 +81,7 @@ export function pickView(app) {
   const t = kst(view.moment);
   const now = !state.date || state.date === todayKst();
   return h("div", { class: "view view-pick" },
+    trendTabs(app),
     dateBar(app),
     h("div", { class: "pick-bar" },
       h("div", { class: "picker" }, h("span", { class: "picker-icon", "aria-hidden": "true" }, "⌕"), input),

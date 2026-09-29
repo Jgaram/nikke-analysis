@@ -1,4 +1,5 @@
-// Pieces the three views share: a unit's card, the tier board, the filter row, tooltips.
+// Pieces the views share: a unit's card, the tier board, the filter row, the switches that
+// lead between views, a unit search, tooltips.
 
 import { ELEMENTS, DAY_MS, assignTier, unitElements, fielded } from "../model.js";
 import {
@@ -16,7 +17,7 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
   const card = h("a", {
-    class: ["card", dim && "dim", retired && "retired"], href: app.href("unit", unit.id), dataset: { tier: tier || "D" },
+    class: ["card", dim && "dim", retired && "retired"], href: app.unitHref(unit.id), dataset: { tier: tier || "D" },
     "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}`,
   },
   h("span", { class: "face" },
@@ -47,7 +48,7 @@ export function unitHead(app, u) {
 
 export function unitInline(app, u, { size = 28, sub = null } = {}) {
   const unit = app.model.units[u];
-  return h("a", { class: "unit-inline", href: app.href("unit", unit.id) },
+  return h("a", { class: "unit-inline", href: app.unitHref(unit.id) },
     face(unit, size),
     h("span", { class: "unit-inline-text" },
       h("span", { class: "unit-inline-name" }, unitName(unit)),
@@ -149,12 +150,98 @@ export function filterRow(app) {
   return h("div", { class: "filters", role: "group", "aria-label": "필터" }, groups, clear);
 }
 
-// Tiers or table; ``compare`` adds 모아 보기 (the season tab with a weakness chosen).
-export function modeSwitch(app, { compare = false } = {}) {
+// Tiers or table.
+export function modeSwitch(app) {
   return segmented([
     { value: "tiers", label: "티어표" }, { value: "table", label: "표" },
-    ...(compare ? [{ value: "compare", label: "모아 보기" }] : []),
   ], app.state.mode, (v) => app.go({ mode: v }, { replace: true }), { class: "mode", label: "보기" });
+}
+
+// 티어표's kinds: the overall tier and each element's on a day, or one season's own.
+export function kindTabs(app) {
+  return h("nav", { class: "kindbar", "aria-label": "티어 종류" }, segmented([
+    { value: "overall", label: "종합 티어", title: "고른 날 기준 종합 티어" },
+    ...ELEMENTS.map((e) => ({ value: e, label: ELEMENT_KO[e], icon: elementIcon(e, 16, { title: "" }), title: `고른 날 기준 ${ELEMENT_KO[e]} 속성 티어` })),
+    { value: "season", label: "시즌 티어", title: "한 시즌의 기여도로 매긴 티어" },
+  ], app.state.view, (v) => app.go({ view: v, weak: null }, { replace: true }), { class: "viewtabs", label: "티어 종류" }));
+}
+
+// 티어 변화's views: one unit, units side by side, the seasons of one weakness.
+export function trendTabs(app) {
+  const n = app.state.compare.filter((u) => u != null).length;
+  return h("nav", { class: "kindbar", "aria-label": "변화 보기" }, segmented([
+    { value: "unit", label: "니케 한 명", title: "한 니케의 시즌별 기여도·티어·범용도" },
+    { value: "compare", label: n ? `니케 비교 ${n}` : "니케 비교", title: "여러 니케의 종합 티어를 한 그래프에" },
+    { value: "weak", label: "약점별 시즌", title: "한 보스 약점의 시즌들을 나란히" },
+  ], app.state.trend, (v) => app.go({ trend: v, weak: v === "weak" ? app.state.weak : null }), { class: "viewtabs", label: "변화 보기" }));
+}
+
+// A search box over the units that have played: typing lists the best matches (Korean or
+// English), the arrows move, Enter or a press picks - ``choose(u)``. Empty, it lists
+// ``order``'s first ten. ``skip`` leaves units out of the list.
+export function unitSearch(app, { placeholder, choose, skip = new Set(), order = null }) {
+  const { model } = app;
+  const pop = app.population();
+  const now = app.viewAt(Date.now());
+  const ranked = new Set();
+  for (const s of pop.summary) for (const r of s.rows) ranked.add(r.u);
+  const rank = new Map(now.standing.overall.map((o, i) => [o.u, i]));
+  const candidates = (order || [...ranked].sort((a, b) => (rank.get(a) ?? 1e9) - (rank.get(b) ?? 1e9)))
+    .filter((u) => !skip.has(u));
+  const id = `unit-options-${Math.random().toString(36).slice(2, 8)}`;
+  const list = h("ul", { class: "picker-list", id, role: "listbox", hidden: true });
+  const input = h("input", {
+    type: "search", class: "picker-input", placeholder, "aria-label": "니케 찾기", autocomplete: "off", spellcheck: false,
+    role: "combobox", "aria-expanded": "false", "aria-controls": id, "aria-autocomplete": "list",
+  });
+  let active = 0;
+  let shown = [];
+  const pick = (u) => { list.hidden = true; choose(u); };
+  const paint = () => {
+    list.replaceChildren(...shown.map((u, i) => {
+      const unit = model.units[u];
+      const o = now.standing.overallByUnit.get(u);
+      return h("li", {
+        role: "option", id: `${id}-${i}`, class: ["picker-opt", i === active && "on"], "aria-selected": String(i === active),
+        onpointerdown: (e) => { e.preventDefault(); pick(u); },
+      }, face(unit, 32), h("span", { class: "picker-name" }, unitName(unit), h("span", { class: "muted" }, unit.en)),
+      elementIcon(unit.element, 15), o ? tierBadge(o.tier, null) : null);
+    }));
+    list.hidden = !shown.length;
+    input.setAttribute("aria-expanded", String(!list.hidden));
+    input.setAttribute("aria-activedescendant", shown.length ? `${id}-${active}` : "");
+  };
+  const search = () => {
+    const q = fold(input.value.trim());
+    active = 0;
+    if (!q) { shown = candidates.slice(0, 10); paint(); return; }
+    const scored = [];
+    for (const u of candidates) {
+      const unit = model.units[u];
+      const at = Math.min(...[fold(unit.ko).indexOf(q), fold(unit.en).indexOf(q)].map((i) => (i < 0 ? 1e9 : i)));
+      if (at < 1e9) scored.push([at, u]);
+    }
+    scored.sort((a, b) => a[0] - b[0]);
+    shown = scored.slice(0, 12).map(([, u]) => u);
+    paint();
+  };
+  input.addEventListener("input", search);
+  input.addEventListener("focus", search);
+  input.addEventListener("blur", () => { setTimeout(() => { list.hidden = true; input.setAttribute("aria-expanded", "false"); }, 120); });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (!shown.length) return;
+      active = (active + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
+      paint();
+    } else if (e.key === "Enter" && shown.length) {
+      e.preventDefault();
+      pick(shown[active]);
+    } else if (e.key === "Escape") {
+      list.hidden = true;
+    }
+  });
+  return h("div", { class: "picker" }, h("span", { class: "picker-icon", "aria-hidden": "true" }, "⌕"), input, list);
 }
 
 // ---------------------------------------------------------------------------

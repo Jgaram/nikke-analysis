@@ -366,7 +366,7 @@ PMI(i,j) = log₂( P(i,j) / (P(i)·P(j)) )      (덱 단위, 함께 쓴 덱이 s
 ### 수명 — 언제부터 쓰였고 아직 쓰이나 (티어에는 안 들어감)
 
 궤적의 `debut_season` 은 한 명이라도 쓴 시즌이라 한 명이 5덱에 넣어도 데뷔다. 수명은 **상위
-랭커가 실제로 쓰는지**로 본다(`analyze.tiers.lifespans`, 사이트의 날짜별 티어 · 니케 추이, `nikke tier --unit`).
+랭커가 실제로 쓰는지**로 본다(`analyze.tiers.lifespans`, 사이트의 티어표 · 티어 변화, `nikke tier --unit`).
 
 - **쓰인 시즌** = 그 시즌의 시즌 티어가 `lifespan.min_tier`(기본 D, 기여도 0.03) 이상인 시즌. D 는 대개
   상위 랭커 열 명에 한 명 남짓이 쓴 시즌이다(예전 기준 "사용률 10% 이상"과 시즌 98%가 같게 갈린다).
@@ -414,7 +414,7 @@ PMI(i,j) = log₂( P(i,j) / (P(i)·P(j)) )      (덱 단위, 함께 쓴 덱이 s
 
 ### 범용도와 경로 — 범용인가, 자기 속성으로 좁아지나 (티어에는 안 들어감)
 
-`analyze.tiers.generality` · `careers`. 사이트 니케 추이 탭의 "범용도"(경로는 그 설명에), `nikke tier --unit` 의 두 줄.
+`analyze.tiers.generality` · `careers`. 사이트 티어 변화 탭 니케 화면의 "범용도"(경로는 그 설명에), `nikke tier --unit` 의 두 줄.
 근거와 시즌 1–41 의 결과는 [lifecycle.md](lifecycle.md) 2·3절.
 
 - **범용도** = min(1, 2X / (O + X)). O 는 자기 속성 칸(속성 티어의 값, 우월 코드가 둘이면 높은 쪽), X 는 겪은 다른 속성

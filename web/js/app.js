@@ -1,24 +1,37 @@
-// The page: state in the URL, the computation cached per parameter set, three views.
+// The page: state in the URL, the computation cached per parameter set, two tabs -
+// 티어표 (where every unit stands: on a day, or in one season) and 변화 (how it moved:
+// one unit, units side by side, the seasons of one weakness).
 
 import * as M from "./model.js";
-import { h, initTip, hideTip, day, noonKst, todayKst, unitName } from "./ui.js";
+import { h, initTip, hideTip, day, noonKst, todayKst, unitName, ELEMENT_KO } from "./ui.js";
 import { buildParams, encodeParams, decodeParams, changedParams, renderParamsFoot } from "./params.js";
 import { seasonView } from "./views/season.js";
 import { dateView } from "./views/date.js";
 import { unitView } from "./views/unit.js";
 import { pickView } from "./views/pick.js";
+import { compareView, weakView, COMPARE_MAX } from "./views/trend.js";
 
-const TABS = ["season", "date", "unit"];
-const VIEWS = { season: seasonView, date: dateView, unit: (app) => (app.state.unit == null ? pickView(app) : unitView(app)) };
+const TABS = ["tier", "trend"];
+const TRENDS = ["unit", "compare", "weak"];
+const VIEWS = {
+  tier: (app) => (app.state.view === "season" ? seasonView(app) : dateView(app)),
+  trend: (app) => ({
+    unit: () => (app.state.unit == null ? pickView(app) : unitView(app)),
+    compare: () => compareView(app),
+    weak: () => weakView(app),
+  })[app.state.trend](),
+};
 
 const state = {
-  tab: "season",
-  season: null,
-  weak: null, // season tab: only the seasons whose boss is weak to this element; null = every season
-  date: null, // "YYYY-MM-DD"; null = now
-  view: "overall", // date tab: overall or an element
-  mode: "tiers", // tiers | table
-  unit: null, // unit index; null on the unit tab = the list to pick one from
+  tab: "tier",
+  view: "overall", // 티어표: overall, an element, or season
+  season: null, // 티어표 · season: the season; null = the one of the chosen day
+  weak: null, // the season strip's weakness, the unit chart's, or the weakness compared
+  date: null, // "YYYY-MM-DD"; null = now - one day for every view
+  mode: "tiers", // 티어표: tiers | table
+  trend: "unit", // 변화: unit (the list, or one unit) | compare | weak
+  unit: null, // unit index; null on 변화 · unit = the list to pick one from
+  compare: [], // the units compared, by colour slot (a removed one leaves its slot empty)
   query: "", // the unit list's search
   params: null,
   filters: { elements: new Set(), bursts: new Set(), classes: new Set(), weapons: new Set(), makers: new Set() },
@@ -92,30 +105,71 @@ app.passes = (unit, more = false) => {
 };
 
 // ---------------------------------------------------------------------------
-// the URL: #/<tab>[/<arg>]?<query>
+// the URL: #/tier?v=..&s=..  ·  #/trend[/<unit id> | /compare | /weak]  (and the old
+// #/season/<n>, #/date, #/unit/<id>, read as the places they became)
 
 app.query = (extra = {}) => {
   const q = new URLSearchParams(encodeParams(state.params, app.defaults));
   for (const [k, v] of Object.entries(extra)) if (v != null && v !== "") q.set(k, v);
-  const text = q.toString();
+  const text = q.toString().replace(/%2C/gi, ","); // lists read better with their commas
   return text ? `?${text}` : "";
 };
 
-app.href = (tab, arg = null, extra = {}) => {
-  const keep = {};
-  if (tab === "date" || tab === "unit") keep.d = state.date;
-  if (tab === "date") keep.v = state.view !== "overall" ? state.view : null;
-  // The weakness filter stays within its tab: the season strip's, or the unit chart's.
-  if ((tab === "season" || tab === "unit") && tab === state.tab) keep.wk = state.weak;
-  if (tab !== "unit" && state.mode === "table") keep.m = "table";
-  if (tab === "season" && state.mode === "compare" && state.weak) keep.m = "compare";
-  return `#/${tab}${arg != null ? `/${arg}` : ""}${app.query({ ...keep, ...extra })}`;
+// Which kind of place a state is: the within-place choices (the weakness) do not travel between kinds.
+const placeOf = (st) => (st.tab === "tier" ? (st.view === "season" ? "tier-season" : "tier") : `trend-${st.trend}`);
+
+const compareText = (list) => {
+  const ids = list.map((u) => (u == null ? "" : app.model.units[u].id));
+  while (ids.length && !ids[ids.length - 1]) ids.pop();
+  return ids.join(",");
+};
+
+function hashOf(st) {
+  const extra = { d: st.date, c: compareText(st.compare) };
+  let path;
+  if (st.tab === "tier") {
+    path = "#/tier";
+    if (st.view !== "overall") extra.v = st.view;
+    if (st.view === "season") { extra.s = st.season; extra.wk = st.weak; }
+    if (st.mode === "table") extra.m = "table";
+  } else {
+    const arg = st.trend === "unit" ? (st.unit != null ? app.model.units[st.unit].id : null) : st.trend;
+    path = `#/trend${arg != null ? `/${arg}` : ""}`;
+    if (st.trend !== "compare" && !(st.trend === "unit" && st.unit == null)) extra.wk = st.weak;
+  }
+  return `${path}${app.query(extra)}`;
+}
+
+// A link to the state ``patch`` makes. Moving to another kind of place drops the weakness
+// unless the patch names one.
+app.link = (patch = {}) => {
+  const next = { ...state, ...patch };
+  if (!("weak" in patch) && placeOf(next) !== placeOf(state)) next.weak = null;
+  return hashOf(next);
+};
+app.seasonHref = (season) => app.link({ tab: "tier", view: "season", season });
+app.unitHref = (id) => app.link({ tab: "trend", trend: "unit", unit: app.unitIndex(id) });
+app.weakHref = (weak) => app.link({ tab: "trend", trend: "weak", weak });
+app.tierHref = (view) => app.link({ tab: "tier", view });
+
+// The compare list (``base``) with ``u`` added in the first free slot (or as it was, when it
+// is in or full), or taken out leaving its slot empty.
+app.withCompared = (u, base = state.compare) => {
+  const list = [...base];
+  if (list.includes(u)) return list;
+  const free = list.findIndex((x) => x == null);
+  if (free >= 0) list[free] = u;
+  else if (list.length < COMPARE_MAX) list.push(u);
+  return list;
+};
+app.withoutCompared = (u, base = state.compare) => {
+  const list = base.map((x) => (x === u ? null : x));
+  while (list.length && list[list.length - 1] == null) list.pop();
+  return list;
 };
 
 function currentHash() {
-  const arg = state.tab === "season" ? state.season : state.tab === "unit" && state.unit != null
-    ? app.model.units[state.unit].id : null;
-  return app.href(state.tab, arg);
+  return hashOf(state);
 }
 
 function readHash() {
@@ -123,20 +177,29 @@ function readHash() {
   const [path, query = ""] = raw.split("?");
   const [tab, arg] = path.split("/");
   const q = new URLSearchParams(query);
-  state.tab = TABS.includes(tab) ? tab : "season";
   state.params = decodeParams(q, app.defaults, app.model);
   state.date = /^\d{4}-\d{2}-\d{2}$/.test(q.get("d") || "") ? q.get("d") : null;
-  state.view = M.ELEMENTS.includes(q.get("v")) ? q.get("v") : "overall";
   state.weak = M.ELEMENTS.includes(q.get("wk")) ? q.get("wk") : null;
-  state.mode = q.get("m") === "table" ? "table" : q.get("m") === "compare" && state.weak ? "compare" : "tiers";
-  if (state.tab === "season") {
-    const n = Number(arg);
-    state.season = app.model.seasons.some((s) => s.season === n) ? n : null;
+  state.mode = q.get("m") === "table" ? "table" : "tiers";
+  const seasonOf = (n) => (app.model.seasons.some((s) => s.season === Number(n)) ? Number(n) : null);
+  state.compare = (q.get("c") || "").split(",").slice(0, COMPARE_MAX)
+    .map((id) => (id ? app.unitIndex(id) ?? null : null))
+    .map((u, i, all) => (u != null && all.indexOf(u) !== i ? null : u));
+  while (state.compare.length && state.compare[state.compare.length - 1] == null) state.compare.pop();
+  state.unit = null;
+  if (tab === "trend" || tab === "unit") {
+    state.tab = "trend";
+    state.trend = TRENDS.includes(arg) && arg !== "unit" ? arg : "unit";
+    if (state.trend === "unit" && arg != null && arg !== "unit") state.unit = app.unitIndex(decodeURIComponent(arg)) ?? null;
+  } else {
+    state.tab = "tier";
+    const v = q.get("v");
+    state.view = tab === "season" ? "season" : v === "season" || M.ELEMENTS.includes(v) ? v : "overall";
+    state.season = seasonOf(tab === "season" ? arg : q.get("s"));
+    // the old date tab's weakness filter did not exist; the old season tab's did
+    if (state.view !== "season") state.weak = null;
   }
-  if (state.tab === "unit") {
-    const u = arg != null ? app.unitIndex(decodeURIComponent(arg)) : undefined;
-    state.unit = u ?? null;
-  }
+  if (!TABS.includes(state.tab)) state.tab = "tier";
 }
 
 // Navigation and view changes: a history entry per place, a replaced one per tweak.
@@ -172,9 +235,17 @@ function onNavigate() {
   const fresh = history.state == null;
   if (fresh) history.replaceState(SHOWN, "");
   readHash();
+  canonical();
   buildParams(app, document.getElementById("params-body"));
   render();
   if (fresh) window.scrollTo(0, 0);
+}
+
+// An old address (#/season/40, #/date, #/unit/330) or a bare one becomes the place's own.
+function canonical() {
+  const hash = currentHash();
+  if (location.hash !== hash) history.replaceState(history.state ?? SHOWN, "", hash);
+  shownHash = location.hash;
 }
 
 app.resetParams = () => app.setParams(app.defaults);
@@ -200,7 +271,9 @@ function render() {
     const on = a.dataset.tab === state.tab;
     a.setAttribute("aria-current", on ? "page" : "false");
     // the unit tab opens on its list, to pick a unit from
-    a.href = app.href(a.dataset.tab, a.dataset.tab === "season" ? state.season : null);
+    // a tab goes back to where it was left; pressed while on it, to its start (the unit list)
+    a.href = a.dataset.tab === "tier" ? app.link({ tab: "tier" })
+      : app.link({ tab: "trend", unit: on && state.trend === "unit" ? null : state.unit });
   }
   renderParamsBadge();
   const started = performance.now();
@@ -214,8 +287,11 @@ function render() {
   main.replaceChildren(content);
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
-  const unit = state.tab === "unit" && state.unit != null ? `${unitName(app.model.units[state.unit])} · ` : "";
-  document.title = `${unit}${{ season: "시즌별 티어", date: "날짜별 티어", unit: "니케 추이" }[state.tab]} · 니케 솔로 레이드 티어`;
+  const place = state.tab === "tier"
+    ? (state.view === "season" ? "시즌 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 속성 티어`)
+    : state.trend === "compare" ? "니케 비교" : state.trend === "weak" ? "약점별 시즌"
+      : state.unit != null ? `${unitName(app.model.units[state.unit])} · 티어 변화` : "티어 변화";
+  document.title = `${place} · 니케 솔로 레이드 티어`;
 }
 
 function renderParamsBadge() {
@@ -271,8 +347,8 @@ async function boot() {
   const collected = Math.max(...app.model.seasons.map((s) => s.collected ?? -Infinity));
   document.getElementById("asof").textContent = `랭킹 ${day(collected)} 수집분까지`;
   readHash();
-  shownHash = location.hash;
   if (history.state == null) history.replaceState(SHOWN, "");
+  canonical();
   buildParams(app, document.getElementById("params-body"));
   window.addEventListener("popstate", onNavigate);
   window.addEventListener("hashchange", onNavigate);

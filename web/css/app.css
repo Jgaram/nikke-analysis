@@ -34,6 +34,7 @@
   --accent-2: #e36927;
   --accent-soft: rgba(52, 150, 239, .15);
   --glow: rgba(52, 150, 239, .5);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
   --gen-0: rgba(52, 150, 239, .07); --gen-1: rgba(52, 150, 239, .17); --gen-2: rgba(52, 150, 239, .32);
   --grid: #1d2536;
   --axis: #34405a;
@@ -66,6 +67,7 @@
   --accent-2: #eb6834;
   --accent-soft: rgba(42, 120, 214, .11);
   --glow: rgba(42, 120, 214, .35);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
   --gen-0: rgba(42, 120, 214, .06); --gen-1: rgba(42, 120, 214, .15); --gen-2: rgba(42, 120, 214, .28);
   --grid: #e4e8ef;
   --axis: #c3cad8;
@@ -871,3 +873,63 @@ svg.traj { display: block; overflow: visible; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }
+
+/* ------------------------------------------------------------------------ 티어표 kinds · 변화 views */
+
+.kindbar { display: flex; }
+.kindbar .seg { max-width: 100%; }
+.fact-pair { display: inline-flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.fact-link { text-decoration: none; font-size: 12px; font-weight: 700; color: var(--accent); padding: 2px 8px; margin: -2px 0; border-radius: 8px; border: 1px solid var(--line-2); }
+.fact-link:hover { border-color: var(--accent); background: var(--accent-soft); }
+a.tile-link { color: inherit; text-decoration: none; transition: border-color .15s; }
+a.tile-link:hover { border-color: var(--accent); }
+a.tile-link .tile-label::after { content: "›"; margin-left: auto; color: var(--ink-3); font-size: 14px; }
+a.mb { color: inherit; text-decoration: none; border-radius: 6px; }
+a.mb:hover { background: var(--surface-3); }
+.compare-add.on { border-color: var(--accent); color: var(--accent); }
+.compare-add.off { opacity: .6; cursor: default; }
+.btn.small { height: 28px; padding: 0 10px; font-size: 12px; }
+
+/* series colours, fixed per slot */
+.sw.line.ser { height: 3px; }
+.sw.ser.s1, .gauge-legend .s1 { background: var(--s1); }
+.sw.ser.s2 { background: var(--s2); }
+.sw.ser.s3 { background: var(--s3); }
+.sw.ser.s4 { background: var(--s4); }
+.sw.ser.s5 { background: var(--s5); }
+.traj .line.ser.s1, .traj .end-tick.s1 { stroke: var(--s1); }
+.traj .line.ser.s2, .traj .end-tick.s2 { stroke: var(--s2); }
+.traj .line.ser.s3, .traj .end-tick.s3 { stroke: var(--s3); }
+.traj .line.ser.s4, .traj .end-tick.s4 { stroke: var(--s4); }
+.traj .line.ser.s5, .traj .end-tick.s5 { stroke: var(--s5); }
+.traj .dot.ser.s1, .traj .hover-dot.ser.s1 { fill: var(--s1); }
+.traj .dot.ser.s2, .traj .hover-dot.ser.s2 { fill: var(--s2); }
+.traj .dot.ser.s3, .traj .hover-dot.ser.s3 { fill: var(--s3); }
+.traj .dot.ser.s4, .traj .hover-dot.ser.s4 { fill: var(--s4); }
+.traj .dot.ser.s5, .traj .hover-dot.ser.s5 { fill: var(--s5); }
+.traj .end-tick { stroke-width: 1; stroke-opacity: .6; }
+.traj .ax.end-label { fill: var(--ink-2); font-weight: 600; font-size: 11.5px; }
+.traj .treasure-mark.small { font-size: 11px; }
+.multi .ax.tier { opacity: .8; }
+.tip-ser { display: flex; align-items: center; gap: 6px; color: var(--ink-2) !important; }
+.ser-head { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.ser-head .face-img { width: 22px; height: 22px; border-radius: 5px; }
+
+.cmp-chooser .panel-head { padding-bottom: 8px; }
+.cmp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 18px 14px; }
+.cmp-row .picker { flex: 1 1 240px; }
+.cmp-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 4px 0 10px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 13px; font-weight: 600; }
+.cmp-chip .sw.line { width: 14px; }
+.cmp-chip-name { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; }
+.cmp-chip-name:hover { color: var(--accent); }
+.cmp-chip-name .face-img { width: 24px; height: 24px; border-radius: 6px; }
+.cmp-chip-x { width: 24px; height: 24px; border-radius: 7px; border: 0; background: none; color: var(--ink-3); cursor: pointer; font-size: 16px; line-height: 1; }
+.cmp-chip-x:hover { color: var(--ink); background: var(--surface-3); }
+.cmp-chooser .note { padding: 0 18px 14px; margin: 0; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pick-btn { width: 28px; height: 24px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink-3); cursor: pointer; display: inline-grid; place-items: center; font-weight: 700; }
+.pick-btn:hover { border-color: var(--accent); color: var(--ink); }
+.pick-btn.on { border-color: var(--line-2); background: var(--surface-3); }
+.pick-btn .sw.line { width: 14px; }
+.grid tr.picked-row > * { background: var(--accent-soft); }
+a.cmp-head { color: inherit; text-decoration: none; }
+a.cmp-head:hover span { color: var(--accent); }

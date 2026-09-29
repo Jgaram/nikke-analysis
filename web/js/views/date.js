@@ -1,12 +1,11 @@
-// 날짜별 티어: where every unit stood on a day - overall, or in one element - and
+// 티어표 · 종합 / 속성: where every unit stood on a day - overall, or in one element - and
 // how long each has been in use.
 
-import { ELEMENTS } from "../model.js";
 import {
-  h, elementIcon, ELEMENT_KO, day, shortDay, todayKst, tierBadge, sortableTable, segmented, kst,
+  h, elementIcon, ELEMENT_KO, day, shortDay, todayKst, tierBadge, sortableTable, kst,
 } from "../ui.js";
 import {
-  unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText,
+  unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs,
 } from "./common.js";
 
 const OVERALL_KO = {
@@ -39,7 +38,7 @@ export function dateView(app) {
   const moment = app.moment();
   const view = app.viewAt(moment);
   const root = h("div", { class: "view view-date" });
-  root.append(dateBar(app), context(app, view), viewTabs(app));
+  root.append(kindTabs(app), dateBar(app), context(app, view));
   if (!view.standing.overall.length) {
     root.append(h("div", { class: "panel empty" }, "이 날짜까지 끝난 시즌이 없습니다. 첫 시즌은 2023-05-18 에 끝났습니다."));
     return root;
@@ -80,7 +79,7 @@ export function dateBar(app) {
 
 function seasonChip(app, label, s, extra) {
   if (!s) return null;
-  return h("a", { class: "around", href: app.href("season", s.season) },
+  return h("a", { class: "around", href: app.seasonHref(s.season) },
     h("span", { class: "fact-k" }, label), h("b", null, `S${s.season}`), s.bossKo || s.bossEn || "?",
     elementIcon(s.weak, 15), extra ? h("span", { class: "muted" }, extra) : null);
 }
@@ -110,13 +109,6 @@ function context(app, view) {
       seasonChip(app, "진행 중", around.current, note),
       seasonChip(app, "직전", around.previous),
       seasonChip(app, "다음", around.next)));
-}
-
-function viewTabs(app) {
-  return segmented([
-    { value: "overall", label: "종합 티어" },
-    ...ELEMENTS.map((e) => ({ value: e, label: ELEMENT_KO[e], icon: elementIcon(e, 16, { title: "" }) })),
-  ], app.state.view, (v) => app.go({ view: v }, { replace: true }), { class: "viewtabs", label: "티어 종류" });
 }
 
 // ---------------------------------------------------------------------------

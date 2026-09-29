@@ -1,11 +1,11 @@
-// 니케 추이: one unit - where it stands now (or on the chosen day), and season by season.
+// 티어 변화 · 니케 한 명: one unit - where it stands now (or on the chosen day), and season by season.
 
 import { assignTier, unitSeasons, ELEMENTS } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented, infoButton,
 } from "../ui.js";
-import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, fold, careerText, GENERALITY_KO } from "./common.js";
+import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, careerText, GENERALITY_KO, trendTabs, unitSearch } from "./common.js";
 import { dateBar } from "./date.js";
 import { trajectoryChart, generalityChart } from "../chart.js";
 
@@ -24,7 +24,7 @@ export function unitView(app) {
   const at = state.date && state.date !== todayKst() ? moment : null;
 
   const root = h("div", { class: "view view-unit" });
-  root.append(picker(app, u));
+  root.append(trendTabs(app), picker(app, u));
   root.append(dateBar(app));
   root.append(profile(app, u, prof, moment));
   if (!all.length) {
@@ -68,78 +68,28 @@ function weakSwitch(app, records, own) {
 // ---------------------------------------------------------------------------
 
 function picker(app, current) {
-  const { model } = app;
-  const pop = app.population();
-  const ranked = new Set();
-  for (const s of pop.summary) for (const r of s.rows) ranked.add(r.u);
-  const now = app.viewAt(Date.now());
-  const order = new Map(now.standing.overall.map((o, i) => [o.u, i]));
-  const candidates = [...ranked].sort((a, b) => (order.get(a) ?? 1e9) - (order.get(b) ?? 1e9));
-
-  const list = h("ul", { class: "picker-list", id: "unit-options", role: "listbox", hidden: true });
-  const input = h("input", {
-    type: "search", class: "picker-input", placeholder: `${unitName(model.units[current])} · 다른 니케 찾기 (한글·영문)`,
-    "aria-label": "니케 찾기", autocomplete: "off", spellcheck: false, role: "combobox", "aria-expanded": "false",
-    "aria-controls": "unit-options", "aria-autocomplete": "list",
-  });
-  let active = 0;
-  let shown = [];
-  const choose = (u) => { list.hidden = true; app.go({ unit: u }); };
-  const paint = () => {
-    list.replaceChildren(...shown.map((u, i) => {
-      const unit = model.units[u];
-      const o = now.standing.overallByUnit.get(u);
-      return h("li", {
-        role: "option", id: `unit-opt-${i}`, class: ["picker-opt", i === active && "on"], "aria-selected": String(i === active),
-        onpointerdown: (e) => { e.preventDefault(); choose(u); },
-      }, face(unit, 32), h("span", { class: "picker-name" }, unitName(unit), h("span", { class: "muted" }, unit.en)),
-      elementIcon(unit.element, 15), o ? tierBadge(o.tier, null) : null);
-    }));
-    list.hidden = !shown.length;
-    input.setAttribute("aria-expanded", String(!list.hidden));
-    input.setAttribute("aria-activedescendant", shown.length ? `unit-opt-${active}` : "");
-  };
-  const search = () => {
-    const q = fold(input.value.trim());
-    active = 0;
-    if (!q) { shown = candidates.slice(0, 10); paint(); return; }
-    const scored = [];
-    for (const u of candidates) {
-      const unit = model.units[u];
-      const ko = fold(unit.ko), en = fold(unit.en);
-      const at = Math.min(...[ko.indexOf(q), en.indexOf(q)].map((i) => (i < 0 ? 1e9 : i)));
-      if (at < 1e9) scored.push([at, u]);
-    }
-    scored.sort((a, b) => a[0] - b[0]);
-    shown = scored.slice(0, 12).map(([, u]) => u);
-    paint();
-  };
-  input.addEventListener("input", search);
-  input.addEventListener("focus", search);
-  input.addEventListener("blur", () => { setTimeout(() => { list.hidden = true; input.setAttribute("aria-expanded", "false"); }, 120); });
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      if (!shown.length) return;
-      active = (active + (e.key === "ArrowDown" ? 1 : shown.length - 1)) % shown.length;
-      paint();
-    } else if (e.key === "Enter" && shown.length) {
-      e.preventDefault();
-      choose(shown[active]);
-    } else if (e.key === "Escape") {
-      list.hidden = true;
-    }
-  });
+  const { model, state } = app;
+  const listed = state.compare.includes(current);
+  const list = app.withCompared(current);
+  const full = !listed && !list.includes(current);
   return h("div", { class: "unit-top" },
-    h("a", { class: "btn ghost back", href: app.href("unit") },
+    h("a", { class: "btn ghost back", href: app.link({ unit: null }) },
       h("span", { class: "back-arrow", "aria-hidden": "true" }, "‹"), h("span", { class: "back-k" }, "니케 "), "목록"),
-    h("div", { class: "picker" }, h("span", { class: "picker-icon", "aria-hidden": "true" }, "⌕"), input, list));
+    unitSearch(app, {
+      placeholder: `${unitName(model.units[current])} · 다른 니케 찾기 (한글·영문)`, choose: (u) => app.go({ unit: u }),
+    }),
+    full ? h("span", { class: "btn ghost compare-add off", title: "비교는 5명까지 — 비교 화면에서 한 명을 빼세요" }, "비교 5명 가득")
+      : h("a", {
+        class: ["btn", "compare-add", listed && "on"], href: app.link({ trend: "compare", compare: list }),
+        title: listed ? "비교 중 — 비교 화면으로" : "이 니케를 비교에 넣고 비교 화면으로",
+      }, listed ? "비교 중 ›" : "+ 비교에 추가"));
 }
 
 // ---------------------------------------------------------------------------
 
 function tile(label, tier, value, sub, extra = {}) {
-  return h("div", { class: ["tile", extra.class], dataset: { tier: tier || "none" } },
+  return h(extra.href ? "a" : "div", { class: ["tile", extra.class, extra.href && "tile-link"], dataset: { tier: tier || "none" },
+    href: extra.href, title: extra.linkTitle },
     h("div", { class: "tile-label" }, label),
     h("div", { class: "tile-value" },
       tier ? h("span", { class: "tile-tier" }, tier) : h("span", { class: "tile-tier none" }, "–"),
@@ -154,9 +104,9 @@ function slotChart(app, slots, overallMode) {
   return h("div", { class: "tile slots-tile" },
     h("div", { class: "tile-label" }, "종합을 이루는 다섯 칸", h("span", { class: "muted" }, " · 보스 약점별")),
     h("div", { class: "mini-bars", role: "img", "aria-label": slots.map((s) => `${ELEMENT_KO[s.element]} ${num(s.lift)}${s.seasons ? "" : "(채운 값)"}`).join(", ") },
-      slots.map((sl) => h("div", { class: ["mb", !sl.seasons && "filled", sl.own && "own"], title: sl.seasons
+      slots.map((sl) => h("a", { class: ["mb", !sl.seasons && "filled", sl.own && "own"], href: app.weakHref(sl.element), title: `${sl.seasons
         ? `${ELEMENT_KO[sl.element]} 약점 시즌 ${sl.seasons}번의 기여도 가중 평균 ${num(sl.lift)}`
-        : `${ELEMENT_KO[sl.element]} 약점 시즌을 아직 못 겪어 채운 값 ${num(sl.lift)}` },
+        : `${ELEMENT_KO[sl.element]} 약점 시즌을 아직 못 겪어 채운 값 ${num(sl.lift)}`} · 누르면 이 약점의 시즌 비교로` },
       h("span", { class: "mb-val" }, sl.seasons ? num(sl.lift) : `(${num(sl.lift)})`),
       h("span", { class: "mb-track" }, h("span", { class: "mb-fill", dataset: { tier: assignTier(sl.lift, cuts) },
         style: { height: `${Math.max(2, (sl.lift / top) * 100)}%` } })),
@@ -235,10 +185,10 @@ function profile(app, u, prof, moment) {
     r.seasons ? r.tier : null, r.seasons ? r.lift : null,
     r.seasons ? `${ELEMENT_KO[r.element]} 니케 ${r.units}명 중 ${r.rank}위 · 약점 시즌 ${r.seasons}번`
       : `미관측 — ${prof.treasured ? "애장품" : "출시"} 뒤 ${ELEMENT_KO[r.element]} 약점 시즌이 아직 없음`,
-    { class: "tile-element" }));
+    { class: "tile-element", href: app.tierHref(r.element), linkTitle: `같은 날의 ${ELEMENT_KO[r.element]} 속성 티어표로` }));
   const tiles = o ? [
     tile("종합 티어", o.tier, o.overall, `${prof.units}명 중 ${o.rank}위${o.provisional ? ` · ${provisionalReason(o, prof.slots, state.params)}` : ""}`,
-      { mark: o.provisional ? "*" : null, class: "tile-overall" }),
+      { mark: o.provisional ? "*" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 날의 종합 티어표로" }),
     ...elementTiles,
     lifeTile(app, u, prof.view),
     careerTile(app, u, prof.view),
@@ -278,7 +228,7 @@ function seasonTable(app, u, records) {
   const sort = state.sort.unit || { key: "season", dir: "desc" };
   const firstTreasure = records.find((r) => r.row.treasure)?.season.season;
   const columns = [
-    { key: "season", label: "시즌", num: true, head: true, sort: (r) => r.season.season, cell: (r) => h("a", { href: app.href("season", r.season.season), class: "link" }, `S${r.season.season}`) },
+    { key: "season", label: "시즌", num: true, head: true, sort: (r) => r.season.season, cell: (r) => h("a", { href: app.seasonHref(r.season.season), class: "link" }, `S${r.season.season}`) },
     { key: "start", label: "시작", sort: (r) => r.season.start, cell: (r) => h("span", { class: "muted" }, day(r.season.start)) },
     { key: "boss", label: "보스 · 약점", sort: (r) => r.season.weak, cell: (r) => h("span", { class: "boss-cell" },
       h("span", { class: "boss-name" }, r.season.info.bossKo || r.season.info.bossEn || "?"),

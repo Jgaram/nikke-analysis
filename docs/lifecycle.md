@@ -10,7 +10,7 @@
 
 1·2·3번의 결과는 이제 표와 사이트에 들어가 있다. 수명의 "쓰인 시즌"은 시즌 티어로 세고(`lifespan.min_tier`),
 비교표(`metrics_overall_tiers.csv`)에 범용도(`generality` · `generality_band`)와 경로(`path`, 그 근거
-`other_used` · `last_other` · `other_since` · `own_after`)가 붙고, 사이트 니케 추이 탭과 `nikke tier --unit` 에
+`other_used` · `last_other` · `other_since` · `own_after`)가 붙고, 사이트 티어 변화 탭과 `nikke tier --unit` 에
 나온다. 정의는 [metrics.md 10절](metrics.md#10-궤적). 이 문서는 그렇게 정한 근거와, 표에 넣지 않은 나머지
 (예전과 요즘, 은퇴 위험)다.
 

@@ -160,7 +160,7 @@ function overallBody(app, picked) {
   return {
     chart: chartPanel("종합 티어 변화", `선의 값 = 그 시즌이 끝났을 때의 종합 티어 · 배경 띠 = 종합 컷 · ♥ = 애장품부터 다시 매김 · ${LEGEND}`, chart),
     spot: chart,
-    rest: [h("section", { class: "panel table-panel" },
+    rest: [h("section", { class: "panel table-panel compare-panel" },
       h("div", { class: "panel-head" }, h("h3", null, "시즌별 종합 티어"), h("span", { class: "muted small" }, `${rows.length}시즌`)),
       sortableTable(columns, rows, {
         sortKey: sort.key, sortDir: sort.dir, caption: "고른 니케의 시즌별 종합 티어",
@@ -201,14 +201,15 @@ function weakBody(app, weak, picked, toggle) {
   const newest = [...seasons].reverse();
   const sort = state.sort.compare || { key: "slot", dir: "desc" };
   const columns = [
+    // the unit stays in view while the seasons scroll sideways (on a phone, its face only)
+    { key: "unit", label: "니케", head: true, sort: (r) => model.units[r.u].ko || model.units[r.u].en, firstDir: "asc",
+      cell: (r) => unitInline(app, r.u) },
     { key: "pick", label: "비교", title: "그래프에 넣고 빼기", sort: (r) => (on.has(r.u) ? 0 : 1), firstDir: "asc",
       cell: (r) => h("button", {
         type: "button", class: ["pick-btn", on.has(r.u) && "on"], "aria-pressed": String(on.has(r.u)),
         "aria-label": `${unitName(model.units[r.u])} ${on.has(r.u) ? "그래프에서 빼기" : "그래프에 넣기"}`,
         onclick: () => toggle(r.u),
       }, on.has(r.u) ? "✓" : "+") },
-    { key: "unit", label: "니케", head: true, sort: (r) => model.units[r.u].ko || model.units[r.u].en, firstDir: "asc",
-      cell: (r) => unitInline(app, r.u) },
     { key: "slot", label: `${ko} 약점 종합`,
       title: `고른 날 기준, ${ko} 약점 시즌들의 기여도를 최근일수록 크게 친 평균 — 종합 티어를 이루는 다섯 칸 중 하나. `
         + "니케의 속성이 아니라 보스 약점 기준이라 다른 속성 니케도 든다",
@@ -249,6 +250,6 @@ function weakBody(app, weak, picked, toggle) {
         `${ko} 약점 시즌 ${seasons.length}개를 최근 시즌부터 나란히. 칸 = 그 시즌 기여도와 시즌 티어 · · = 안 씀 · 빈칸 = 그땐 없던 니케 · `,
         h("span", { class: "heart-text" }, "♥"), " = 애장품을 끼고 치른 시즌. ",
         `${ko} 약점 종합 = 종합 티어를 이루는 칸 하나(고른 날 기준, 최근 시즌일수록 크게). 니케 속성이 아니라 보스 약점 기준이라 `
-          + "다른 속성 니케도 든다. 괄호 = 애장품 뒤로는 아직 못 겪어 채운 값. 첫 열의 + 로 그래프에 넣고 뺀다."))],
+          + "다른 속성 니케도 든다. 괄호 = 애장품 뒤로는 아직 못 겪어 채운 값. 비교 열의 + 로 그래프에 넣고 뺀다."))],
   };
 }

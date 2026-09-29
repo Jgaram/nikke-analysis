@@ -13,6 +13,11 @@ const MARGIN = { l: 40, r: 34, t: 24, b: 44 };
 // 1.4 -> "1.4", 1.45 -> "1.45"
 const tick = (v) => num(v, Math.abs(Math.round(v * 10) - v * 10) > 1e-9 ? 2 : 1);
 
+// A series line over a halo in the panel's colour, so it stays clear of the bars and cut lines it crosses.
+function seriesLine(parent, cls, d) {
+  parent.append(s("path", { class: "halo", d }), s("path", { class: `line ${cls}`, d }));
+}
+
 function barPath(x0, base, w, height, r) {
   if (height <= 0.5) return "";
   const rr = Math.min(r, w / 2, height);
@@ -185,7 +190,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
     };
     const overall = segments((rec) => rec.hist?.overall);
     for (const part of overall) {
-      svg.append(s("path", { class: "line ink", d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
+      seriesLine(svg, "ink", part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join(""));
     }
     const last = overall.length ? overall[overall.length - 1][overall[overall.length - 1].length - 1] : null;
     if (last) svg.append(s("circle", { class: "dot ink", cx: x(last[0]), cy: y(last[1]), r: 4 }));
@@ -205,7 +210,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
         const to = next ? next[0] : sideEnd;
         let d = `M${x(i)},${y(v)}H${x(to)}`;
         if (next) d += `V${y(next[1])}`;
-        g.append(s("path", { class: `line ${cls}`, d }));
+        seriesLine(g, cls, d);
       });
       for (const [i, v] of updates) g.append(s("circle", { class: `dot ${cls}`, cx: x(i), cy: y(v), r: 4 }));
       svg.append(g);
@@ -391,7 +396,7 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
     });
     if (cur.length) parts.push(cur);
     for (const part of parts) {
-      if (part.length > 1) svg.append(s("path", { class: "line ink", d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
+      if (part.length > 1) seriesLine(svg, "ink", part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join(""));
       else svg.append(s("circle", { class: "dot ink", cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
     }
     const lastPart = parts[parts.length - 1];

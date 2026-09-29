@@ -53,7 +53,7 @@ export function unitHead(app, u) {
 
 export function unitInline(app, u, { size = 28, sub = null } = {}) {
   const unit = app.model.units[u];
-  return h("a", { class: "unit-inline", href: app.unitHref(unit.id) },
+  return h("a", { class: "unit-inline", href: app.unitHref(unit.id), title: unitName(unit) },
     face(unit, size),
     h("span", { class: "unit-inline-text" },
       h("span", { class: "unit-inline-name" }, unitName(unit)),
@@ -168,8 +168,9 @@ export function modeSwitch(app) {
 export function kindTabs(app) {
   return h("nav", { class: "kindbar", "aria-label": "티어 종류" }, segmented([
     { value: "overall", label: "종합 티어", title: "고른 날 기준 종합 티어" },
-    ...ELEMENTS.map((e) => ({ value: e, label: ELEMENT_KO[e], icon: elementIcon(e, 16, { title: "" }),
-      title: `보스 약점이 ${ELEMENT_KO[e]}인 시즌 기준 — 니케 속성과 무관하게 모든 니케 (고른 날 기준)` })),
+    // a weakness tier is the boss's weakness, not the units' element: the label says so
+    ...ELEMENTS.map((e) => ({ value: e, label: `${ELEMENT_KO[e]} 약점`, icon: elementIcon(e, 16, { title: "" }),
+      title: `보스 약점이 ${ELEMENT_KO[e]}인 솔로 레이드 시즌 기준 — 니케 속성과 무관하게 모든 니케 (고른 날 기준)` })),
     { value: "season", label: "시즌별 티어", title: "한 시즌의 기여도로 매긴 티어" },
   ], app.state.view, (v) => app.go({ view: v, weak: null }, { replace: true }), { class: "viewtabs", label: "티어 종류" }));
 }

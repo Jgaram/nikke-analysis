@@ -1,9 +1,9 @@
 // 티어표 · 종합 / 약점: where every unit stood on a day - overall, or when the boss is weak
 // to one element (every unit, whatever its own element) - and how long each has been in use.
 
-import { ELEMENTS, assignTier } from "../model.js";
+import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
 import {
-  h, elementIcon, ELEMENT_KO, day, shortDay, todayKst, tierBadge, sortableTable, kst,
+  h, elementIcon, ELEMENT_KO, day, shortDay, todayKst, noonKst, tierBadge, sortableTable, kst,
 } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs,
@@ -16,20 +16,40 @@ const OVERALL_KO = {
 };
 const FIRST_DAY = "2023-05-18"; // the first season's end
 
-// Every half anniversary of the launch up to ``today`` - 1주년, 1.5주년, 2주년, ... - as
-// {label, date}. A new one shows up on its day. 0.5주년 (2023-05-04) came before the first
-// season ended, with nothing to show, so the list starts at the first one after FIRST_DAY.
-export function anniversaries(launch, today) {
+const DAY_MS = 86400000;
+const RAID_AFTER_DAYS = 21; // an anniversary's raid opens within three weeks of the day, if not on it
+
+// Every half anniversary of the launch - 0.5주년, 1주년, 1.5주년, ... - as {label, date, season},
+// dated the day its Solo Raid was over so that raid counts: the raid open on the anniversary,
+// else the first to open in the three weeks after it. The date is the first day whose noon
+// (the moment a day is read at) is past the raid's end. An anniversary shows up once its raid
+// is over by ``today``; one with no raid in those three weeks keeps its own day, once they
+// have passed. None comes before the first season's end.
+export function anniversaries(launch, seasons, today) {
   const t = kst(launch);
   const [y, m, d] = [Number(t.y), Number(t.m), Number(t.d)];
+  const dated = seasons.filter((s) => s.start != null).sort((a, b) => a.start - b.start);
   const out = [];
   for (let half = 1; half <= 200; half++) {
     const months = m - 1 + 6 * half;
     const year = y + Math.floor(months / 12), month = (months % 12) + 1;
     const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
-    const date = `${year}-${String(month).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
-    if (date > today) break;
-    if (date >= FIRST_DAY) out.push({ label: half % 2 ? `${(half - 1) / 2}.5주년` : `${half / 2}주년`, date });
+    const on = `${year}-${String(month).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+    if (on > today) break;
+    const noon = noonKst(on);
+    const raid = dated.find((s) => s.start <= noon && (s.end == null || s.end >= noon))
+      || dated.find((s) => s.start > noon && s.start <= noon + RAID_AFTER_DAYS * DAY_MS) || null;
+    let date;
+    if (raid) {
+      if (raid.end == null) continue; // still on, or its end not known yet
+      date = day(raid.end);
+      if (noonKst(date) < raid.end) date = day(raid.end + DAY_MS);
+    } else {
+      if (day(noon + RAID_AFTER_DAYS * DAY_MS) > today) continue; // its raid may still open
+      date = on;
+    }
+    if (date > today || date < FIRST_DAY) continue;
+    out.push({ label: half % 2 ? `${(half - 1) / 2}.5주년` : `${half / 2}주년`, date, season: raid ? raid.season : null });
   }
   return out;
 }
@@ -40,6 +60,7 @@ export function dateView(app) {
   const view = app.viewAt(moment);
   const root = h("div", { class: "view view-date" });
   root.append(kindTabs(app), dateBar(app), context(app, view));
+  if (state.view !== "overall") root.append(weakBosses(app, view, state.view));
   if (!view.standing.overall.length) {
     root.append(h("div", { class: "panel empty" }, "이 날짜까지 끝난 시즌이 없습니다. 첫 시즌은 2023-05-18 에 끝났습니다."));
     return root;
@@ -54,7 +75,7 @@ export function dateView(app) {
 export function dateBar(app) {
   const today = todayKst();
   const value = app.state.date || today;
-  const presets = anniversaries(app.model.launch, today);
+  const presets = anniversaries(app.model.launch, app.model.seasons, today);
   const set = (date) => app.go({ date: date === today ? null : date }, { replace: true });
   const finals = app.population().summary.filter((s) => s.final);
   return h("div", { class: "datebar" },
@@ -66,7 +87,12 @@ export function dateBar(app) {
       })),
     h("div", { class: "presets" },
       h("button", { type: "button", class: ["preset", !app.state.date && "on"], onclick: () => set(today) }, "오늘"),
-      presets.map((p) => h("button", { type: "button", class: ["preset", app.state.date === p.date && "on"], onclick: () => set(p.date) }, p.label)),
+      presets.map((p) => {
+        const s = p.season != null ? app.model.bySeason.get(p.season) : null;
+        const title = s ? `${p.label} 솔로 레이드(시즌 ${s.season} ${s.bossKo || s.bossEn || ""})가 끝난 ${p.date} 기준 — 그 레이드까지 반영`
+          : `${p.label} (${p.date})`;
+        return h("button", { type: "button", class: ["preset", app.state.date === p.date && "on"], title, onclick: () => set(p.date) }, p.label);
+      }),
       h("select", {
         class: "preset-select", "aria-label": "시즌이 끝난 날로",
         onchange: (e) => { if (e.target.value) set(e.target.value); },
@@ -129,7 +155,7 @@ function overallBody(app, view) {
   const rows = view.standing.overall.filter((o) => app.passes(model.units[o.u]));
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
-    `종합 티어 = ${OVERALL_KO[state.params.overall]}. 약점은 니케의 속성이 아니라 보스 기준이다 — 서포터는 받쳐 주는 덱의 속성을 따라가므로. `,
+    `종합 티어 = ${OVERALL_KO[state.params.overall]}. 약점은 니케의 속성이 아니라 보스 기준이다 — 다른 속성의 니케도 그 약점 덱에 쓰이므로. `,
     "* = 잠정 (겪은 보스 약점이 적거나 자기 속성 시즌을 아직 못 겪음) · ",
     h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, overallTable(app, view, rows), explain);
@@ -183,6 +209,47 @@ function weakRows(app, view, element) {
     r.tier = assignTier(r.slot.lift, cuts);
   });
   return { rows, seen, unseen: rows.filter((r) => !r.slot.seasons) };
+}
+
+// What a weakness tier stands on: the Solo Raid bosses weak to that element, newest first, each
+// with its share of the recency weighting at the chosen day - and the next such boss, if it is
+// on the calendar. The tier is the boss's weakness, not the units' element.
+function weakBosses(app, view, element) {
+  const ko = ELEMENT_KO[element];
+  const params = app.state.params;
+  const counted = view.standing.counted.filter((c) => c.weak === element);
+  const weights = counted.map((c) => seasonWeight(c, view.moment, params));
+  const total = weights.reduce((a, b) => a + b, 0) || 1;
+  const next = app.model.seasons.find((s) => s.weak === element && s.start != null && s.start > view.moment
+    && !counted.some((c) => c.season === s.season)) || null;
+  const card = (s, { share = null, live = false, upcoming = false } = {}) => {
+    const boss = s.bossKo || s.bossEn || "?";
+    return h("a", {
+      class: ["wb", live && "live", upcoming && "upcoming"], href: app.seasonHref(s.season),
+      title: `시즌 ${s.season} · ${boss} · ${day(s.start)}${upcoming ? " 시작 예정 — 아직 반영 안 됨" : share != null ? ` · 이 티어의 ${Math.round(share * 100)}%` : ""}`,
+    },
+    s.bossImage ? h("img", { class: "wb-img", src: `icons/bosses/${s.bossImage}.webp`, alt: "", width: 44, height: 44, loading: "lazy", decoding: "async" })
+      : h("span", { class: "wb-img none", "aria-hidden": "true" }),
+    h("span", { class: "wb-text" },
+      h("span", { class: "wb-top" }, h("b", null, `S${s.season}`), live ? h("span", { class: "pill live" }, "진행 중") : null,
+        upcoming ? h("span", { class: "tag" }, "다음") : null),
+      h("span", { class: "wb-name" }, boss),
+      share != null ? h("span", { class: "wb-share", "aria-label": `반영 비중 ${Math.round(share * 100)}%` },
+        h("i", { style: { width: `${Math.max(4, share * 100)}%` } }), h("small", null, `${Math.round(share * 100)}%`))
+        : h("span", { class: "wb-when muted" }, upcoming ? `${shortDay(s.start)} 시작` : shortDay(s.start))));
+  };
+  const cards = counted.map((c, i) => ({ c, share: weights[i] / total })).reverse()
+    .map(({ c, share }) => card(app.model.bySeason.get(c.season), { share, live: c.live }));
+  return h("section", { class: "panel weak-intro" },
+    h("div", { class: "wi-head" },
+      h("span", { class: "wi-icon" }, elementIcon(element, 26, { title: "" })),
+      h("div", { class: "wi-text" },
+        h("h3", null, `보스 약점이 ${ko}인 솔로 레이드 ${counted.length}시즌으로 매긴 티어`),
+        h("p", null, `${ko} 니케의 티어가 아닙니다. 아래 보스들을 상대로 상위 랭커가 쓴 니케를, 속성과 상관없이 모두 매깁니다. `
+          + `최근 시즌일수록 크게 칩니다(막대 = 이 티어에서 그 시즌의 비중, 반감기 ${params.halfLifeDays}일).`))),
+    counted.length || next
+      ? h("div", { class: "wb-list" }, next ? card(next, { upcoming: true }) : null, cards)
+      : h("p", { class: "note wi-empty" }, `이 날짜까지 보스 약점이 ${ko}인 시즌이 없습니다.`));
 }
 
 function elementBody(app, view, element) {

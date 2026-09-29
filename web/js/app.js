@@ -292,19 +292,29 @@ function renderParamsBadge() {
 // ---------------------------------------------------------------------------
 // theme
 
+// The device's setting until the toggle is pressed; then the pick, remembered.
 function initTheme() {
   const button = document.getElementById("theme");
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const system = matchMedia("(prefers-color-scheme: light)");
+  const stored = () => { try { return localStorage.getItem("theme"); } catch { return null; } };
   const apply = (theme) => {
     document.documentElement.dataset.theme = theme;
     button.setAttribute("aria-label", theme === "dark" ? "라이트 모드로" : "다크 모드로");
     button.title = button.getAttribute("aria-label");
+    meta?.setAttribute("content", theme === "dark" ? "#080b12" : "#eef1f6");
   };
-  apply(document.documentElement.dataset.theme || "dark");
+  apply(document.documentElement.dataset.theme || (system.matches ? "light" : "dark"));
   button.addEventListener("click", () => {
     const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
     apply(next);
     try { localStorage.setItem("theme", next); } catch { /* private mode: the toggle just is not remembered */ }
-    render();
+    if (app.model) render();
+  });
+  system.addEventListener?.("change", () => {
+    if (stored() === "light" || stored() === "dark") return;
+    apply(system.matches ? "light" : "dark");
+    if (app.model) render();
   });
 }
 

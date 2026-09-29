@@ -125,6 +125,13 @@ function decay(ageDays, halfLifeDays) {
   return Math.pow(0.5, Math.max(ageDays, 0) / halfLifeDays);
 }
 
+// How much a counted season (countedSeasons) weighs in a view at ``moment``: halved every
+// halfLifeDays since it ended (a live one, not yet).
+export function seasonWeight(c, moment, params) {
+  const at = c.end != null && c.end <= moment ? c.end : moment;
+  return decay((moment - at) / DAY_MS, params.halfLifeDays);
+}
+
 function nanMean(values) {
   let sum = 0, n = 0;
   for (const v of values) if (!Number.isNaN(v)) { sum += v; n++; }
@@ -293,8 +300,7 @@ export function standings(model, population, moment, params, treasured = null) {
   const picked = [];
   for (const c of counted) {
     if (!ELEMENTS.includes(c.weak)) continue;
-    const at = c.end != null && c.end <= moment ? c.end : moment;
-    const w = decay((moment - at) / DAY_MS, params.halfLifeDays);
+    const w = seasonWeight(c, moment, params);
     for (const r of population.tables.get(c.season).rows) picked.push({ r, e: ELEMENTS.indexOf(c.weak), w });
   }
   if (treasured == null) treasured = new Set(picked.filter((x) => x.r.treasure).map((x) => x.r.u));

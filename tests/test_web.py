@@ -125,22 +125,35 @@ def test_the_build_is_deterministic(world_dir, tmp_path):
 
 
 @pytest.mark.skipif(NODE is None, reason="node is not installed")
-def test_the_date_tab_offers_every_half_anniversary_so_far():
-    """The date tab's shortcuts: every half anniversary up to today, from the first after the
-    first season's end (0.5주년 came before it), a new one on its day."""
+def test_the_date_tab_dates_each_anniversary_after_its_raid():
+    """The date tab's anniversary shortcuts: each is the day its Solo Raid was over - the raid
+    open on the day, else the first to open within three weeks - so that raid counts. One shows
+    up once its raid is over; one with no raid keeps its own day once the three weeks passed."""
+    seasons = [(1, "2023-05-11T12:00+09:00", "2023-05-18T04:59:59+09:00"),
+               (7, "2023-11-09T12:00+09:00", "2023-11-16T04:59:59+09:00"),
+               (13, "2024-05-02T12:00+09:00", "2024-05-09T04:59:59+09:00"),
+               (19, "2024-10-31T12:00+09:00", "2024-11-17T05:00:00+09:00"),
+               (25, "2025-05-08T12:00+09:00", "2025-05-15T04:59:59+09:00"),
+               (31, "2025-11-13T12:00+09:00", "2025-11-20T04:59:59+09:00"),
+               (36, "2026-04-30T12:00+09:00", "2026-05-07T04:59:59+09:00"),
+               (42, "2026-11-05T12:00+09:00", None)]
+    listed = [{"season": n, "start": web._ms(a), "end": web._ms(b)} for n, a, b in seasons]
     script = ("const { anniversaries } = await import(process.argv[1]);"
-              "const [launch, ...days] = JSON.parse(process.argv[2]);"
-              "console.log(JSON.stringify(days.map((d) => anniversaries(launch, d))));")
-    days = ["2023-11-03", "2023-11-04", "2026-09-29", "2026-11-04"]
+              "const [launch, seasons, ...days] = JSON.parse(process.argv[2]);"
+              "console.log(JSON.stringify(days.map((d) => anniversaries(launch, seasons, d))));")
+    days = ["2023-05-17", "2023-11-15", "2023-11-16", "2026-09-29", "2026-11-30"]
     done = subprocess.run([NODE, "--input-type=module", "-e", script, (REPO / "web/js/views/date.js").as_uri(),
-                           json.dumps([web._ms(web.LAUNCH), *days])], capture_output=True, text=True, check=True,
-                          timeout=60)
-    before, first, now, later = json.loads(done.stdout)
-    assert before == [] and first == [{"label": "1주년", "date": "2023-11-04"}]
-    assert [(p["label"], p["date"]) for p in now] == [
-        ("1주년", "2023-11-04"), ("1.5주년", "2024-05-04"), ("2주년", "2024-11-04"), ("2.5주년", "2025-05-04"),
-        ("3주년", "2025-11-04"), ("3.5주년", "2026-05-04")]
-    assert later[-1] == {"label": "4주년", "date": "2026-11-04"}
+                           json.dumps([web._ms(web.LAUNCH), listed, *days])], capture_output=True, text=True,
+                          check=True, timeout=60)
+    before, waiting, first, now, later = json.loads(done.stdout)
+    assert before == []
+    assert [p["label"] for p in waiting] == ["0.5주년"]  # 1주년's raid (S7) is still on
+    assert first[-1] == {"label": "1주년", "date": "2023-11-16", "season": 7}
+    assert [(p["label"], p["date"], p["season"]) for p in now] == [
+        ("0.5주년", "2023-05-18", 1), ("1주년", "2023-11-16", 7), ("1.5주년", "2024-05-09", 13),
+        ("2주년", "2024-11-17", 19), ("2.5주년", "2025-05-15", 25), ("3주년", "2025-11-20", 31),
+        ("3.5주년", "2026-05-07", 36)]
+    assert later[-1]["label"] == "3.5주년"  # 4주년's raid (S42) has no end yet
 
 
 def test_a_missing_ranking_table_is_a_clear_error(world_dir, tmp_path):

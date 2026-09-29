@@ -135,14 +135,9 @@ function hero(app, view, element) {
 
   const first = counted.length ? counted[0].season : null, last = counted.length ? counted[counted.length - 1].season : null;
   const servers = params.servers.length === model.servers.length ? `${model.servers.length}개 서버` : params.servers.join("·");
-  // 종합 stands on every boss: the Solo Raid's own emblem (its hatch, from the first seasons' notices)
-  return h("section", { class: ["hero", "hero-stand", !element && "has-boss"] },
+  return h("section", { class: ["hero", "hero-stand"] },
     element ? h("div", { class: "hero-num hero-el" }, h("small", null, "WEAK"), elementIcon(element, 60, { title: "" }))
       : h("div", { class: "hero-num" }, h("small", null, "SEASON"), h("b", { class: first !== last ? "range" : null }, first === last ? first ?? "–" : `${first}–${last}`)),
-    element ? null : h("img", {
-      class: "hero-boss hero-emblem", src: "img/soloraid.webp", alt: "", width: 256, height: 256, decoding: "async",
-      onerror: (e) => e.target.remove(),
-    }),
     h("div", { class: "hero-main" },
       h("div", { class: "hero-top" }, status),
       h("h2", { class: "hero-title" }, element ? `${ELEMENT_KO[element]} 약점 티어` : "종합 티어",

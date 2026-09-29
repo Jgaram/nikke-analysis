@@ -1,6 +1,6 @@
 // The parameter drawer, and the parameters in the URL (only what differs from config/tiers.yaml).
 
-import { OVERALL_MODES, GENERALITY_MAX, assignTier } from "./model.js";
+import { OVERALL_MODES, GENERALITY_MAX } from "./model.js";
 import { h, segmented, toggle, num } from "./ui.js";
 import { retiredText } from "./views/common.js";
 
@@ -113,40 +113,13 @@ export function changedParams(p, d) {
   return out;
 }
 
-// A cut as written: 1.4, 0.03, 0.28.
-const cutNum = (v) => String(Number(v.toFixed(3)));
-
-// What the overall cuts mean for a unit that carries one element and sits out the rest - with
-// the slots' mean, a fifth of its element lift.
-function overallCutText(p) {
-  const why = "종합은 다섯 칸을 합친 값이라 한 속성만 맡는 니케는 속성 기여도보다 훨씬 낮습니다. 그래서 컷이 따로이고 낮습니다.";
-  const tail = " 순위는 그대로이고 티어 이름만 바뀝니다.";
-  if (p.overall !== "mean") return why + tail;
-  const [top, lift] = p.cuts[0];
-  const fifth = lift / 5;
-  return why + ` 평균이면 한 속성에서만 ${top}(${cutNum(lift)})인 특화 니케가 종합 ${cutNum(fifth)} = `
-    + `${assignTier(fifth, p.overallCuts)}.` + tail;
-}
-
 // The page's "숫자 읽는 법", where it quotes the parameters in force.
 export function renderHowto(p) {
   const put = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   put("howto-weight", p.rankWeighting === "uniform" ? "순위와 상관없이 똑같이 쳐서" : "순위가 높을수록 조금 크게 쳐서");
   put("howto-recent", p.halfLifeDays > 0 ? `최근일수록 크게 친(${p.halfLifeDays}일 지난 시즌은 절반)` : "시즌마다 똑같이 친");
-  const [top, lift] = p.cuts[0];
-  put("howto-overall", p.overall === "mean"
-    ? `(한 속성에서만 ${top} ${cutNum(lift)}인 니케는 종합 ${cutNum(lift / 5)}, ${assignTier(lift / 5, p.overallCuts)})` : "");
   put("howto-used", `${p.minTier} 이상`);
   put("howto-retired", retiredText(p));
-}
-
-// What a used season is, with the season tier and cut in force.
-function usedText(p, d) {
-  const lift = p.cuts.find(([label]) => label === p.minTier)[1];
-  const atDefault = p.minTier === d.minTier && lift === d.cuts.find(([label]) => label === d.minTier)[1];
-  return `그 시즌의 시즌 티어가 이 티어 이상이면 그 니케가 쓰인 시즌입니다. ${p.minTier} = 기여도 ${cutNum(lift)} 이상`
-    + (atDefault ? " — 대개 상위 랭커 열 명에 한 명 남짓이 씀" : "")
-    + ". 속성·종합 티어는 지난 시즌을 기억해서 은퇴를 늦게 알아채므로 시즌 티어로 봅니다.";
 }
 
 // ---------------------------------------------------------------------------
@@ -217,14 +190,6 @@ export function buildParams(app, body) {
   };
   const labels = cutLabels(d);
   const floor = d.cuts[d.cuts.length - 1][0];
-  // Hints that quote the cuts in force: refreshed when a cut is edited (the drawer is not rebuilt then).
-  const overallHint = h("span");
-  const usedHint = h("span");
-  const refreshHints = () => {
-    overallHint.textContent = overallCutText(app.state.params);
-    usedHint.textContent = usedText(app.state.params, d);
-  };
-  refreshHints();
   // One row of cut inputs for ``name`` (the season/element cuts, or the overall's).
   const cutRow = (name, what) => {
     const row = h("div", { class: "cuts" });
@@ -240,10 +205,7 @@ export function buildParams(app, body) {
             const values = read();
             const ok = values.every((v) => Number.isFinite(v)) && descending(values);
             cutError.hidden = ok;
-            if (ok) {
-              app.setParams({ [name]: [...labels.map((l, k) => [l, values[k]]), ...p[name].slice(labels.length)] });
-              refreshHints();
-            }
+            if (ok) app.setParams({ [name]: [...labels.map((l, k) => [l, values[k]]), ...p[name].slice(labels.length)] });
           },
         })));
     });
@@ -253,22 +215,24 @@ export function buildParams(app, body) {
   body.replaceChildren(
     h("section", { class: "psec" },
       h("h3", null, "표본", h("small", null, "기여도를 셀 랭커")),
-      field("서버", servers, "여섯 서버는 보스·패치가 같아 기본은 전부 합칩니다. 시즌 5·6은 GLOBAL·JP·NA·SEA 뿐입니다."),
+      field("서버", servers, "서버들은 보스·패치가 같아 기본은 전부 합칩니다. 랭킹이 없는 서버가 있는 시즌도 있습니다."),
       field("서버마다 상위", range({
         min: 1, max: 50, step: 1, value: p.topN, label: "서버마다 상위 몇 위까지", format: (v) => `${v}위`,
         onInput: (v) => later({ topN: v }), onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ topN: v }); },
-      }), "enikk 는 서버마다 50위까지 줍니다."),
+      }), "enikk 가 주는 순위까지 고를 수 있습니다."),
       field("순위 가중", segmented([
         { value: "dcg", label: "상위일수록 크게" }, { value: "uniform", label: "모두 같게" },
       ], p.rankWeighting, (v) => { app.setParams({ rankWeighting: v }); buildParams(app, body); }, { label: "순위 가중" }),
-      "상위일수록 크게 = 1 / log₂(순위 + 1): 1위 1.00 · 10위 0.29 · 50위 0.18")),
+      "상위일수록 크게 = 1 / log₂(순위 + 1). 모두 같게 = 순위와 상관없이 1.")),
     h("section", { class: "psec" },
       h("h3", null, "티어 컷", h("small", null, "기여도 기준")),
       field("시즌·속성 티어", cutRow("cuts", "기여도")),
-      field("종합 티어", cutRow("overallCuts", "종합 값"), overallHint),
+      field("종합 티어", cutRow("overallCuts", "종합 값"),
+        "종합은 다섯 칸을 합친 값이라 한 속성만 맡는 니케는 속성 기여도보다 훨씬 낮습니다. 그래서 컷이 따로이고 낮습니다. "
+        + "순위는 그대로이고 티어 이름만 바뀝니다."),
       cutError,
       h("p", { class: "hint" }, "기여도 1.0 = 한 사람이 쓰는 25명(5덱 × 5명)이 대미지를 똑같이 나눴을 때의 몫. "
-        + `1.5 = 그 1.5배, 0 = 아무도 안 씀. 그 아래는 ${floor}(티어표에서 접어 둠).`)),
+        + `0 = 아무도 안 씀. 그 아래는 ${floor}(티어표에서 접어 둠).`)),
     h("section", { class: "psec" },
       h("h3", null, "속성·종합 티어", h("small", null, "여러 시즌을 하나로")),
       field("최근성 반감기", range({
@@ -293,7 +257,8 @@ export function buildParams(app, body) {
       h("h3", null, "수명", h("small", null, "언제부터 쓰였고 아직 쓰이나 · 시즌 티어로")),
       field("쓰인 시즌", segmented(tierChoices(d).map((label) => ({ value: label, label: `${label} 이상` })), p.minTier,
         (v) => { app.setParams({ minTier: v }); buildParams(app, body); }, { label: "쓰인 시즌으로 칠 시즌 티어" }),
-      usedHint),
+      "그 시즌의 시즌 티어가 이 티어 이상이면 그 니케가 쓰인 시즌입니다(컷은 위 시즌·속성 티어). 속성·종합 티어는 "
+        + "지난 시즌을 기억해서 은퇴를 늦게 알아채므로 시즌 티어로 봅니다."),
       field("은퇴 공백", range({
         min: 0, max: upTo(730, d.retireAfterDays, p.retireAfterDays), step: 5, value: p.retireAfterDays,
         label: "은퇴로 볼 공백 (일)",
@@ -304,7 +269,7 @@ export function buildParams(app, body) {
         .map((n) => ({ value: n, label: n ? `${n}번` : "안 봄" })),
         p.retireAfterOwnSeasons, (v) => { app.setParams({ retireAfterOwnSeasons: v }); buildParams(app, body); },
         { label: "은퇴로 볼 놓친 자기 속성 시즌 수" }),
-      "그 공백 동안 자기 속성이 약점인 시즌이 이만큼 지나가도록 안 쓰여야 은퇴. 같은 약점이 1년 만에 돌아오기도 해서, "
+      "그 공백 동안 자기 속성이 약점인 시즌이 이만큼 지나가도록 안 쓰여야 은퇴. 같은 약점이 오래 걸려 돌아오기도 해서, "
         + "자기 속성 시즌이 아직 안 온 속성 특화 니케는 공백이 길어도 현역으로 둡니다. 안 봄 = 공백만으로.")),
     h("section", { class: "psec" },
       h("h3", null, "범용도", h("small", null, "범용인가, 자기 속성으로 좁아지나 · 티어와 별개")),

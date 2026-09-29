@@ -402,18 +402,25 @@ class Timeline:
         )
 
 
-_ANNIVERSARY_RE = re.compile(r"^(\d{1,2})\s*주년$")
+_ANNIVERSARY_RE = re.compile(r"^(\d{1,2})(?:\.([05]))?\s*주년$")
+
+
+def anniversary(years: int, half: bool = False) -> date:
+    """The day of the launch's ``years``-th anniversary, or half a year after it
+    (``half``): 2주년 = 2024-11-04, 2.5주년 = 2025-05-04."""
+    months = LAUNCH.month - 1 + 12 * years + (6 if half else 0)
+    return LAUNCH.replace(year=LAUNCH.year + months // 12, month=months % 12 + 1)
 
 
 def resolve_moment(value: datetime | str) -> datetime:
-    """A datetime, an ISO date/time, or "2주년" (the Nth launch anniversary, noon KST)."""
+    """A datetime, an ISO date/time, or "2주년" / "2.5주년" (the Nth launch
+    anniversary, or half a year after it; noon KST)."""
     if isinstance(value, datetime):
         return value if value.tzinfo else value.replace(tzinfo=KST)
     text = value.strip()
-    anniversary = _ANNIVERSARY_RE.match(text)
-    if anniversary:
-        day = LAUNCH.replace(year=LAUNCH.year + int(anniversary.group(1)))
-        return datetime.combine(day, time(12, 0), KST)
+    match = _ANNIVERSARY_RE.match(text)
+    if match:
+        return datetime.combine(anniversary(int(match.group(1)), match.group(2) == "5"), time(12, 0), KST)
     return parse_moment(text)
 
 

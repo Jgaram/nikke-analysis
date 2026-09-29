@@ -16,6 +16,24 @@ const OVERALL_KO = {
 };
 const FIRST_DAY = "2023-05-18"; // the first season's end
 
+// Every half anniversary of the launch up to ``today`` - 1주년, 1.5주년, 2주년, ... - as
+// {label, date}. A new one shows up on its day. 0.5주년 (2023-05-04) came before the first
+// season ended, with nothing to show, so the list starts at the first one after FIRST_DAY.
+export function anniversaries(launch, today) {
+  const t = kst(launch);
+  const [y, m, d] = [Number(t.y), Number(t.m), Number(t.d)];
+  const out = [];
+  for (let half = 1; half <= 200; half++) {
+    const months = m - 1 + 6 * half;
+    const year = y + Math.floor(months / 12), month = (months % 12) + 1;
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate();
+    const date = `${year}-${String(month).padStart(2, "0")}-${String(Math.min(d, last)).padStart(2, "0")}`;
+    if (date > today) break;
+    if (date >= FIRST_DAY) out.push({ label: half % 2 ? `${(half - 1) / 2}.5주년` : `${half / 2}주년`, date });
+  }
+  return out;
+}
+
 export function dateView(app) {
   const { state } = app;
   const moment = app.moment();
@@ -34,13 +52,7 @@ export function dateView(app) {
 function dateBar(app) {
   const today = todayKst();
   const value = app.state.date || today;
-  const launch = new Date(app.model.launch);
-  const presets = [];
-  for (let n = 1; n < 10; n++) {
-    const d = `${launch.getUTCFullYear() + n}-11-04`;
-    if (d > today) break;
-    presets.push({ label: `${n}주년`, date: d });
-  }
+  const presets = anniversaries(app.model.launch, today);
   const set = (date) => app.go({ date: date === today ? null : date }, { replace: true });
   const finals = app.population().summary.filter((s) => s.final);
   return h("div", { class: "datebar" },

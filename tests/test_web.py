@@ -121,6 +121,25 @@ def test_the_build_is_deterministic(world_dir, tmp_path):
         assert (tmp_path / "a" / "data" / name).read_bytes() == (tmp_path / "b" / "data" / name).read_bytes()
 
 
+@pytest.mark.skipif(NODE is None, reason="node is not installed")
+def test_the_date_tab_offers_every_half_anniversary_so_far():
+    """The date tab's shortcuts: every half anniversary up to today, from the first after the
+    first season's end (0.5주년 came before it), a new one on its day."""
+    script = ("const { anniversaries } = await import(process.argv[1]);"
+              "const [launch, ...days] = JSON.parse(process.argv[2]);"
+              "console.log(JSON.stringify(days.map((d) => anniversaries(launch, d))));")
+    days = ["2023-11-03", "2023-11-04", "2026-09-29", "2026-11-04"]
+    done = subprocess.run([NODE, "--input-type=module", "-e", script, (REPO / "web/js/views/date.js").as_uri(),
+                           json.dumps([web._ms(web.LAUNCH), *days])], capture_output=True, text=True, check=True,
+                          timeout=60)
+    before, first, now, later = json.loads(done.stdout)
+    assert before == [] and first == [{"label": "1주년", "date": "2023-11-04"}]
+    assert [(p["label"], p["date"]) for p in now] == [
+        ("1주년", "2023-11-04"), ("1.5주년", "2024-05-04"), ("2주년", "2024-11-04"), ("2.5주년", "2025-05-04"),
+        ("3주년", "2025-11-04"), ("3.5주년", "2026-05-04")]
+    assert later[-1] == {"label": "4주년", "date": "2026-11-04"}
+
+
 def test_a_missing_ranking_table_is_a_clear_error(world_dir, tmp_path):
     directory, _ = world_dir
     bare = tmp_path / "processed"

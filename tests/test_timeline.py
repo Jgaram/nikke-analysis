@@ -89,6 +89,12 @@ def test_the_second_anniversary(timeline):
     assert view.latest_update["title"] == "10월 31일 업데이트 공지"
 
 
+def test_half_anniversaries():
+    assert resolve_moment("2.5주년") == datetime(2025, 5, 4, 12, 0, tzinfo=KST)
+    assert resolve_moment("0.5주년") == datetime(2023, 5, 4, 12, 0, tzinfo=KST)
+    assert resolve_moment("3.0주년") == resolve_moment("3주년") == datetime(2025, 11, 4, 12, 0, tzinfo=KST)
+
+
 def test_season_status_follows_the_periods(timeline):
     behemoth = timeline.season(19)
     assert behemoth.status_at(resolve_moment("2024-10-30")) == "upcoming"

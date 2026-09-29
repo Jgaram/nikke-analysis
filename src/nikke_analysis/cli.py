@@ -1,7 +1,7 @@
 """Command line entry point.
 
     nikke asof 2024-11-04            what was live then: Solo Raid season, unit pool, banners
-    nikke asof 2주년                 the same, for the Nth launch anniversary
+    nikke asof 2주년                 the same, for the Nth launch anniversary (2.5주년: half a year on)
     nikke seasons                    every Solo Raid season with its real dates
     nikke tier                       tiers now: last season, the live one, every unit's overall tier
     nikke tier 2주년                 the same, as the data stood then
@@ -492,13 +492,14 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("asof", help="what was live at a moment (KST)")
-    p.add_argument("moment", help="2024-11-04, 2024-11-04T15:00, or 2주년")
+    p.add_argument("moment", help="2024-11-04, 2024-11-04T15:00, 2주년 or 2.5주년")
     p.add_argument("--json", action="store_true", help="machine-readable output")
     p.add_argument("--units", action="store_true", help="list every unit in the pool")
     p.set_defaults(func=cmd_asof)
 
     p = sub.add_parser("tier", help="tiers at a moment (default: now), one element's tiers, or one unit's history")
-    p.add_argument("moment", nargs="?", default=None, help="2024-11-04, 2024-11-04T15:00 or 2주년 (default: now)")
+    p.add_argument("moment", nargs="?", default=None,
+                   help="2024-11-04, 2024-11-04T15:00, 2주년 or 2.5주년 (default: now)")
     which = p.add_mutually_exclusive_group()
     which.add_argument("--element", default=None, metavar="NAME",
                        help="the units of one element by their tier in it: 작열, 수냉, 풍압, 철갑, 전격 "
@@ -512,7 +513,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("raid", help="one Solo Raid season's usage: units by rankers, with the deck split")
     p.add_argument("target", nargs="?", default=None,
-                   help="season number, a moment (2024-11-04, 2주년), or a unit name (default: newest season)")
+                   help="season number, a moment (2024-11-04, 2주년, 2.5주년), or a unit name (default: newest season)")
     p.add_argument("unit", nargs="?", default=None, help="one unit, by Korean or English name or id")
     _server_options(p)
     p.add_argument("--top", type=int, default=None, help="only ranks 1..N of each server")

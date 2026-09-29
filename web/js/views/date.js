@@ -195,7 +195,7 @@ function seasonCards(app, view, element) {
         : h("span", { class: "wb-img none", "aria-hidden": "true" }),
       h("span", { class: "wb-text" },
         h("span", { class: "wb-top" }, h("b", null, `S${s.season}`), element ? null : elementIcon(s.weak, 13, { title: `약점 ${ELEMENT_KO[s.weak] || "?"}` }),
-          live ? h("span", { class: "pill live" }, "진행 중") : null, h("span", { class: "wb-when muted" }, shortDay(s.start))),
+          live ? h("span", { class: "pill live" }, "진행 중") : h("span", { class: "wb-when muted" }, shortDay(s.start))),
         h("span", { class: "wb-name" }, boss),
         h("span", { class: "wb-share", "aria-label": `비중 ${pct}%` },
           h("i", { style: { width: `${Math.max(3, (share / top) * 70)}%` } }), h("small", null, `${pct}%`))));

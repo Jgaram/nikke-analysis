@@ -1,30 +1,23 @@
-// 티어표 · 시즌 티어: one Solo Raid season, every unit by its lift that season. The seasons of
-// one weakness side by side are 티어 변화 · 약점별 시즌 (trend.js).
+// 티어표 · 레이드별: one Solo Raid season, every unit by its lift that season. The seasons of
+// one weakness side by side are 티어 변화 · 니케 비교 with that weakness (trend.js).
 
-import { assignTier, seasonsAround } from "../model.js";
+import { assignTier } from "../model.js";
 import {
   h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, tierBadge, deckSplit, sortableTable, toggle, kst,
 } from "../ui.js";
 import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs } from "./common.js";
-
-// The season a day falls in: the one open then, else the last one over by then - with a ranking.
-export function seasonAt(app, moment) {
-  const pop = app.population();
-  const around = seasonsAround(app.model, moment);
-  for (const s of [around.current, around.previous]) if (s && pop.tables.has(s.season)) return s.season;
-  return app.latestSeason();
-}
+import { timeStrip } from "./when.js";
 
 const END_KO = { suspended: "중단", extended: "연장", superseded: "일정 변경", scheduled: "" };
 
 export function seasonView(app) {
   const { model, state } = app;
   const pop = app.population();
-  const number = state.season ?? (state.date ? seasonAt(app, app.moment()) : app.latestSeason());
+  const number = state.season ?? app.latestSeason();
   const info = model.bySeason.get(number);
   const entry = pop.tables.get(number) || null;
   const root = h("div", { class: "view view-season" });
-  root.append(kindTabs(app), strip(app, number, pop), header(app, info, entry));
+  root.append(kindTabs(app), timeStrip(app), header(app, info, entry));
   if (!entry) {
     root.append(h("div", { class: "panel empty" }, "고른 표본(서버)에 이 시즌 랭킹이 없습니다."));
     return root;
@@ -56,53 +49,6 @@ export function seasonView(app) {
       h("span", { class: "heart-text" }, "♥"), " = 애장품을 끼고 치른 시즌. 얼굴을 누르면 그 니케의 티어 변화로."),
   }));
   return root;
-}
-
-// The season strip. With a weakness chosen (``state.weak``) it holds that weakness's seasons only,
-// and the steps go from one of them to the next.
-function strip(app, selected, pop) {
-  const weak = app.state.weak;
-  const seasons = weak ? app.model.seasons.filter((s) => s.weak === weak || s.season === selected) : app.model.seasons;
-  const index = seasons.findIndex((s) => s.season === selected);
-  const list = h("div", { class: "strip-list" }, seasons.map((s) => {
-    const entry = pop.tables.get(s.season);
-    const boss = s.bossKo || s.bossEn || "?";
-    return h("a", {
-      class: ["schip", s.season === selected && "on", !entry && "off", entry && !entry.final && "live"],
-      href: app.seasonHref(s.season), "aria-current": s.season === selected ? "true" : null,
-      title: `시즌 ${s.season} · ${boss} · 약점 ${ELEMENT_KO[s.weak] || "?"}${entry && !entry.final ? " · 진행 중" : ""}`,
-    }, h("span", { class: "schip-n" }, s.season),
-    s.bossImage ? h("img", { class: "schip-boss", src: `icons/bosses/${s.bossImage}.webp`, alt: "", width: 36, height: 36, loading: "lazy", decoding: "async" })
-      : h("span", { class: "schip-boss none", "aria-hidden": "true" }),
-    elementIcon(s.weak, 14, { title: "" }));
-  }));
-  // The chosen season goes to the middle: the strip slides there from where the one on
-  // screen was, or starts there when the season tab is just opened.
-  const before = document.querySelector(".view-season .strip-list")?.scrollLeft;
-  requestAnimationFrame(() => {
-    const on = list.querySelector(".schip.on");
-    if (!on) return;
-    const left = on.offsetLeft - (list.clientWidth - on.offsetWidth) / 2;
-    if (before == null) { list.scrollLeft = left; return; }
-    list.scrollLeft = before;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    list.scrollTo({ left, behavior: still ? "auto" : "smooth" });
-  });
-  const step = (d, label) => {
-    const target = seasons[index + d];
-    return target ? h("a", { class: "strip-step", href: app.seasonHref(target.season), "aria-label": label }, d < 0 ? "‹" : "›")
-      : h("span", { class: "strip-step off", "aria-hidden": "true" }, d < 0 ? "‹" : "›");
-  };
-  const only = weak ? h("button", {
-    type: "button", class: "strip-only", title: `${ELEMENT_KO[weak]} 약점 시즌만 보는 중 · 누르면 전체 시즌`,
-    "aria-label": `${ELEMENT_KO[weak]} 약점 시즌만 보는 중, 누르면 전체 시즌`,
-    onclick: () => app.go({ weak: null }, { replace: true }),
-  }, elementIcon(weak, 15, { title: "" }), h("span", { class: "strip-only-n" }, `${seasons.length}`), h("span", { "aria-hidden": "true" }, "×"))
-    : null;
-  const label = weak ? `${ELEMENT_KO[weak]} 약점 시즌 고르기` : "시즌 고르기";
-  return h("nav", { class: ["strip", weak && "filtered"], "aria-label": label },
-    only, step(-1, weak ? `이전 ${ELEMENT_KO[weak]} 약점 시즌` : "이전 시즌"), list,
-    step(1, weak ? `다음 ${ELEMENT_KO[weak]} 약점 시즌` : "다음 시즌"));
 }
 
 function period([start, end, reason], first) {
@@ -148,18 +94,14 @@ function header(app, info, entry) {
       h("b", null, t), h("span", null, counts[t] || 0)))) : null);
 }
 
-// The boss's weakness; pressing it keeps the strip to the seasons of that weakness (and back).
-// Beside it, the way to those seasons side by side (티어 변화 · 약점별 시즌).
+// The boss's weakness: pressing it goes to that weakness's tier as of this season; beside it,
+// the way to those seasons side by side (티어 변화 · 니케 비교 with that weakness).
 function weakFact(app, weak) {
   const inner = [h("span", { class: "fact-k" }, "약점"), elementIcon(weak, 18), h("b", null, ELEMENT_KO[weak] || "?")];
   if (!ELEMENT_KO[weak]) return h("span", { class: "fact" }, inner);
-  const on = app.state.weak === weak;
   return h("span", { class: "fact-pair" },
-    h("button", {
-      type: "button", class: "fact fact-btn", "aria-pressed": String(on),
-      title: on ? "전체 시즌 보기" : `위 시즌 줄에 ${ELEMENT_KO[weak]} 약점 시즌만 남기기`,
-      onclick: () => app.go({ weak: on ? null : weak }, { replace: true }),
-    }, inner, h("span", { class: "fact-more" }, on ? "시즌 줄: 이 약점만" : "시즌 줄 거르기")),
+    h("a", { class: "fact fact-btn", href: app.tierHref(weak), title: `이 시즌까지의 ${ELEMENT_KO[weak]} 약점 티어로` },
+      inner, h("span", { class: "fact-more" }, "약점 티어 ›")),
     h("a", { class: "fact fact-link", href: app.weakHref(weak), title: `${ELEMENT_KO[weak]} 약점 시즌들을 그래프와 표로 나란히` },
       "이 약점 시즌 비교 ›"));
 }

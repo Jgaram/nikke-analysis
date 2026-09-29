@@ -2,21 +2,18 @@
 // 티어 변화 · 니케 한 명 before a unit is chosen (a card goes to the unit), and the
 // comparison's picker (a card puts the unit in or out of the list).
 
-import { h, hideTip, kst, todayKst } from "../ui.js";
+import { h, hideTip } from "../ui.js";
 import { unitCard, filterGroups, standingTip, fold, trendTabs } from "./common.js";
-import { dateBar } from "./date.js";
+import { timeStrip, whenLabel } from "./when.js";
 
 export function pickView(app) {
-  const { state } = app;
   const view = app.viewAt(app.moment());
-  const t = kst(view.moment);
-  const now = !state.date || state.date === todayKst();
   return h("div", { class: "view view-pick" },
     trendTabs(app),
-    dateBar(app),
+    timeStrip(app, { compact: true }),
     unitPicker(app, {
       heading: "니케 고르기",
-      sub: `종합 티어 순 · ${t.y}-${t.m}-${t.d}${now ? " 지금" : " 정오"} 기준`,
+      sub: `종합 티어 순 · ${whenLabel(app, view.moment)} 기준`,
       enter: (u) => app.go({ unit: u }),
       note: "얼굴을 누르면 그 니케의 티어 변화로.",
     }));

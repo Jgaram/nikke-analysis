@@ -7,10 +7,10 @@
 
 import { assignTier, ELEMENTS } from "../model.js";
 import {
-  h, num, int, face, elementIcon, ELEMENT_KO, tierBadge, sortableTable, segmented, unitName, todayKst, day,
+  h, num, int, face, elementIcon, ELEMENT_KO, tierBadge, sortableTable, segmented, unitName, day,
 } from "../ui.js";
 import { trendTabs, unitInline } from "./common.js";
-import { dateBar } from "./date.js";
+import { timeStrip } from "./when.js";
 import { unitPicker } from "./pick.js";
 import { seriesChart } from "../chart.js";
 
@@ -18,8 +18,8 @@ export const COMPARE_MAX = 20;
 const PICKER = "cmp:picker"; // state.expanded: the picker open while units are compared
 const START = 10; // "start with the best N"
 
-// The chosen day, marked on the chart (today marks nothing).
-const dayOf = (app) => (app.state.date && app.state.date !== todayKst() ? app.moment() : null);
+// The chosen season's moment, marked on the chart (now marks nothing).
+const dayOf = (app) => app.pinned();
 
 export function compareView(app) {
   const { model, state } = app;
@@ -36,7 +36,7 @@ export function compareView(app) {
     : view.standing.overall.map((o) => o.u)).slice(0, START);
 
   const count = (el) => model.seasons.filter((s) => s.weak === el && pop.tables.has(s.season)).length;
-  const root = h("div", { class: "view view-trend" }, trendTabs(app), dateBar(app),
+  const root = h("div", { class: "view view-trend" }, trendTabs(app), timeStrip(app, { compact: true }),
     h("div", { class: "toolbar" }, segmented([
       { value: null, label: "전체", title: "모든 시즌 · 종합 티어" },
       ...ELEMENTS.map((el) => ({
@@ -211,8 +211,7 @@ function weakBody(app, weak, picked, toggle) {
         onclick: () => toggle(r.u),
       }, on.has(r.u) ? "✓" : "+") },
     { key: "slot", label: `${ko} 약점 종합`,
-      title: `고른 날 기준, ${ko} 약점 시즌들의 기여도를 최근일수록 크게 친 평균 — 종합 티어를 이루는 다섯 칸 중 하나. `
-        + "니케의 속성이 아니라 보스 약점 기준이라 다른 속성 니케도 든다",
+      title: `고른 시즌 기준, ${ko} 약점 시즌들의 기여도를 최근일수록 크게 친 평균 — 종합 티어를 이루는 다섯 칸 중 하나`,
       sort: (r) => r.slot?.lift, cell: (r) => {
         if (!r.slot) return h("span", { class: "muted" }, "–");
         if (!r.slot.seasons) return h("span", { class: "muted", title: "애장품 뒤로는 이 약점 시즌을 아직 못 겪어 채운 값" }, `(${num(r.slot.lift)})`);
@@ -249,7 +248,7 @@ function weakBody(app, weak, picked, toggle) {
       h("p", { class: "note" },
         `${ko} 약점 시즌 ${seasons.length}개를 최근 시즌부터 나란히. 칸 = 그 시즌 기여도와 시즌 티어 · · = 안 씀 · 빈칸 = 그땐 없던 니케 · `,
         h("span", { class: "heart-text" }, "♥"), " = 애장품을 끼고 치른 시즌. ",
-        `${ko} 약점 종합 = 종합 티어를 이루는 칸 하나(고른 날 기준, 최근 시즌일수록 크게). 니케 속성이 아니라 보스 약점 기준이라 `
-          + "다른 속성 니케도 든다. 괄호 = 애장품 뒤로는 아직 못 겪어 채운 값. 비교 열의 + 로 그래프에 넣고 뺀다."))],
+        `${ko} 약점 종합 = 종합 티어를 이루는 칸 하나(고른 시즌 기준, 최근 시즌일수록 크게). `
+          + "괄호 = 애장품 뒤로는 아직 못 겪어 채운 값. 비교 열의 + 로 그래프에 넣고 뺀다."))],
   };
 }

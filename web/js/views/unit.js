@@ -3,10 +3,10 @@
 import { assignTier, unitSeasons, ELEMENTS, GENERALITY_MAX } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
-  WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented, infoButton,
+  WEAPON_KO, MAKER_KO, day, tierBadge, deckSplit, sortableTable, unitName, segmented, infoButton,
 } from "../ui.js";
 import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, careerText, GENERALITY_KO, trendTabs, unitSearch } from "./common.js";
-import { dateBar } from "./date.js";
+import { timeStrip, whenLabel } from "./when.js";
 import { trajectoryChart, generalityChart } from "../chart.js";
 
 export function unitView(app) {
@@ -20,12 +20,12 @@ export function unitView(app) {
   const prof = app.profile(u, moment);
   const own = prof.members.map((m) => m.element);
 
-  // the chosen day, marked on the charts (today marks nothing)
-  const at = state.date && state.date !== todayKst() ? moment : null;
+  // the chosen season's moment, marked on the charts (now marks nothing)
+  const at = app.pinned();
 
   const root = h("div", { class: "view view-unit" });
   root.append(trendTabs(app), picker(app, u));
-  root.append(dateBar(app));
+  root.append(timeStrip(app, { compact: true }));
   root.append(profile(app, u, prof, moment));
   if (!all.length) {
     root.append(h("div", { class: "panel empty" }, "아직 치른 시즌이 없습니다. 출시 뒤 첫 시즌이 열리면 여기에 나옵니다."));
@@ -178,31 +178,29 @@ function careerTile(app, u, view) {
 function profile(app, u, prof, moment) {
   const { model, state } = app;
   const unit = model.units[u];
-  const t = kst(moment);
-  const now = !state.date || state.date === todayKst();
   const o = prof.overall;
   const elementTiles = prof.elements.map((r) => tile(
     h("span", null, "속성 티어 · ", elementIcon(r.element, 14), ELEMENT_KO[r.element], r.source === "skill" ? h("span", { class: "muted" }, " (스킬)") : null),
     r.seasons ? r.tier : null, r.seasons ? r.lift : null,
     r.seasons ? `${ELEMENT_KO[r.element]} 니케 ${r.units}명 중 ${r.rank}위 · 약점 시즌 ${r.seasons}번`
       : `미관측 — ${prof.treasured ? "애장품" : "출시"} 뒤 ${ELEMENT_KO[r.element]} 약점 시즌이 아직 없음`,
-    { class: "tile-element", href: app.tierHref(r.element), linkTitle: `같은 날의 ${ELEMENT_KO[r.element]} 속성 티어표로` }));
+    { class: "tile-element", href: app.tierHref(r.element), linkTitle: `같은 시점의 ${ELEMENT_KO[r.element]} 약점 티어표로` }));
   const tiles = o ? [
     tile("종합 티어", o.tier, o.overall, `${prof.units}명 중 ${o.rank}위${o.provisional ? ` · ${provisionalReason(o, prof.slots, state.params)}` : ""}`,
-      { mark: o.provisional ? "*" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 날의 종합 티어표로" }),
+      { mark: o.provisional ? "*" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 시점의 종합 티어표로" }),
     ...elementTiles,
     lifeTile(app, u, prof.view),
     careerTile(app, u, prof.view),
     prof.slots ? slotChart(app, prof.slots, state.params.overall) : null,
   ] : [h("div", { class: "tile tile-none" }, prof.treasured
     ? "애장품을 낀 시즌 기록이 아직 없어 티어가 없습니다 (애장품 전 기록은 아래 차트·표)."
-    : "이 날짜까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), careerTile(app, u, prof.view)];
+    : "이때까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), careerTile(app, u, prof.view)];
   const added = unit.extra.map((e) => ELEMENT_KO[e]);
   const byTreasure = unit.treasureElements.map((e) => ELEMENT_KO[e]);
   return h("section", { class: "profile" },
     h("div", { class: "pf-face" }, face(unit, 104, { loading: "eager" }), elementIcon(unit.element, 26, { class: "pf-el" })),
     h("div", { class: "pf-main" },
-      h("div", { class: "pf-when muted small" }, `${t.y}-${t.m}-${t.d}${now ? " 지금" : " 정오"} 기준`,
+      h("div", { class: "pf-when muted small" }, `${whenLabel(app, moment)} 기준`,
         prof.treasured ? " · 애장품을 낀 시즌만으로" : "",
         prof.view.live.length ? ` · 진행 중 시즌 ${prof.view.live.join("·")} 잠정 반영` : ""),
       h("h2", { class: "pf-name" }, unitName(unit), unit.en && unit.ko ? h("span", { class: "pf-en" }, unit.en) : null),

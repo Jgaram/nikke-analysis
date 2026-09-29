@@ -27,7 +27,7 @@ function barPath(x0, base, w, height, r) {
 
 // records: [{season (summary entry), row, hist}] in season order; own: the elements the unit counts as.
 // The chosen day on a season axis: a dashed line after the last season begun by then, the
-// seasons after it washed out. ``at`` null (today) draws nothing.
+// seasons after it washed out. ``at`` null (now) draws nothing.
 function dayMarker(svg, records, at, { m, band, top, bottom }) {
   if (at == null) return;
   const k = records.filter((r) => r.season.start != null && r.season.start <= at).length;
@@ -36,7 +36,7 @@ function dayMarker(svg, records, at, { m, band, top, bottom }) {
   svg.append(s("rect", { class: "after-day", x, y: top, width: band * (records.length - k), height: bottom - top }));
   svg.append(s("line", { class: "day-line", x1: x, x2: x, y1: top - 6, y2: bottom }));
   const t = kst(at);
-  svg.append(s("text", { class: "ax day-mark", x: x + 4, y: top + 10 }, `기준일 ${t.m}-${t.d}`));
+  svg.append(s("text", { class: "ax day-mark", x: x + 4, y: top + 10 }, `기준 ${t.m}-${t.d}`));
 }
 
 export function trajectoryChart(app, u, records, { own, treasureAt = null, at = null }) {

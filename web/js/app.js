@@ -1,6 +1,7 @@
 // The page: state in the URL, the computation cached per parameter set, two tabs -
-// 티어표 (where every unit stands: on a day, or in one season) and 변화 (how it moved:
-// one unit, or units side by side - over every season, or one weakness's).
+// 티어표 (where every unit stands: over every season, one weakness's, or one season alone)
+// and 변화 (how it moved: one unit, or units side by side - over every season, or one
+// weakness's). Both read at one moment: the chosen season, once it was over, or now.
 
 import * as M from "./model.js";
 import { h, initTip, hideTip, day, noonKst, todayKst, unitName, ELEMENT_KO } from "./ui.js";
@@ -14,7 +15,7 @@ import { compareView, COMPARE_MAX } from "./views/trend.js";
 const TABS = ["tier", "trend"];
 const TRENDS = ["unit", "compare"];
 const VIEWS = {
-  tier: (app) => (app.state.view === "season" ? seasonView(app) : dateView(app)),
+  tier: (app) => (app.state.view === "raid" ? seasonView(app) : dateView(app)),
   trend: (app) => ({
     unit: () => (app.state.unit == null ? pickView(app) : unitView(app)),
     compare: () => compareView(app),
@@ -23,10 +24,9 @@ const VIEWS = {
 
 const state = {
   tab: "tier",
-  view: "overall", // 티어표: overall, an element, or season
-  season: null, // 티어표 · season: the season; null = the one of the chosen day
-  weak: null, // the season strip's weakness, the unit chart's, or the comparison's
-  date: null, // "YYYY-MM-DD"; null = now - one day for every view
+  view: "overall", // 티어표: overall, an element (the boss's weakness), or raid
+  season: null, // the season every view reads at, as it stood once over; null = now (the newest)
+  weak: null, // the unit chart's weakness, or the comparison's
   mode: "tiers", // 티어표: tiers | table
   trend: "unit", // 변화: unit (the list, or one unit) | compare
   unit: null, // unit index; null on 변화 · unit = the list to pick one from
@@ -81,8 +81,25 @@ app.viewAt = (moment) => {
 
 app.profile = (u, moment) => M.unitProfile(app.model, app.population(), moment, state.params, u);
 
-// The moment the date tab (and a unit's standing) is read at: now, or noon KST of the chosen day.
-app.moment = () => (state.date && state.date !== todayKst() ? noonKst(state.date) : Date.now());
+// The moment every view is read at: now, or the chosen season as the tier history has it -
+// its end once its ranking is final, else the end of the day its ranking was collected.
+app.moment = () => {
+  const entry = state.season != null ? app.population().tables.get(state.season) : null;
+  if (!entry) return Date.now();
+  return entry.final ? entry.end : entry.collectedUntil;
+};
+
+// The chosen moment, when one is chosen (the charts mark it); null = now.
+app.pinned = () => (state.season != null ? app.moment() : null);
+
+// The season open at ``moment``, else the last one over by then - with a ranking; null when
+// that is the newest (read now). What an old address's day (?d=2024-11-04) became.
+function seasonAt(moment) {
+  const pop = app.population();
+  const around = M.seasonsAround(app.model, moment);
+  const hit = [around.current, around.previous].find((s) => s && pop.tables.has(s.season));
+  return hit && hit.season !== app.latestSeason() ? hit.season : null;
+}
 
 app.latestSeason = () => {
   const ranked = app.population().summary;
@@ -104,8 +121,8 @@ app.passes = (unit, more = false) => {
 };
 
 // ---------------------------------------------------------------------------
-// the URL: #/tier?v=..&s=..  ·  #/trend[/<unit id> | /compare]  (and the old #/season/<n>,
-// #/date, #/unit/<id>, #/trend/weak, read as the places they became)
+// the URL: #/tier?v=..&s=..  ·  #/trend[/<unit id> | /compare]?s=..  (and the old #/season/<n>,
+// #/date, #/unit/<id>, #/trend/weak, v=season and d=<day>, read as the places they became)
 
 app.query = (extra = {}) => {
   const q = new URLSearchParams(encodeParams(state.params, app.defaults));
@@ -115,17 +132,16 @@ app.query = (extra = {}) => {
 };
 
 // Which kind of place a state is: the within-place choices (the weakness) do not travel between kinds.
-const placeOf = (st) => (st.tab === "tier" ? (st.view === "season" ? "tier-season" : "tier") : `trend-${st.trend}`);
+const placeOf = (st) => (st.tab === "tier" ? "tier" : `trend-${st.trend}`);
 
 const compareText = (list) => list.map((u) => app.model.units[u].id).join(",");
 
 function hashOf(st) {
-  const extra = { d: st.date, c: compareText(st.compare) };
+  const extra = { s: st.season, c: compareText(st.compare) };
   let path;
   if (st.tab === "tier") {
     path = "#/tier";
     if (st.view !== "overall") extra.v = st.view;
-    if (st.view === "season") { extra.s = st.season; extra.wk = st.weak; }
     if (st.mode === "table") extra.m = "table";
   } else {
     const arg = st.trend === "unit" ? (st.unit != null ? app.model.units[st.unit].id : null) : st.trend;
@@ -142,7 +158,7 @@ app.link = (patch = {}) => {
   if (!("weak" in patch) && placeOf(next) !== placeOf(state)) next.weak = null;
   return hashOf(next);
 };
-app.seasonHref = (season) => app.link({ tab: "tier", view: "season", season });
+app.seasonHref = (season) => app.link({ tab: "tier", view: "raid", season: season === app.latestSeason() ? null : season });
 app.unitHref = (id) => app.link({ tab: "trend", trend: "unit", unit: app.unitIndex(id) });
 app.weakHref = (weak) => app.link({ tab: "trend", trend: "compare", weak });
 app.tierHref = (view) => app.link({ tab: "tier", view });
@@ -162,10 +178,12 @@ function readHash() {
   const [tab, arg] = path.split("/");
   const q = new URLSearchParams(query);
   state.params = decodeParams(q, app.defaults, app.model);
-  state.date = /^\d{4}-\d{2}-\d{2}$/.test(q.get("d") || "") ? q.get("d") : null;
   state.weak = M.ELEMENTS.includes(q.get("wk")) ? q.get("wk") : null;
   state.mode = q.get("m") === "table" ? "table" : "tiers";
-  const seasonOf = (n) => (app.model.seasons.some((s) => s.season === Number(n)) ? Number(n) : null);
+  const seasonOf = (n) => (n != null && app.model.seasons.some((s) => s.season === Number(n)) ? Number(n) : null);
+  const day = q.get("d") || "";
+  state.season = seasonOf(tab === "season" ? arg : q.get("s"))
+    ?? (/^\d{4}-\d{2}-\d{2}$/.test(day) && day < todayKst() ? seasonAt(noonKst(day)) : null);
   state.compare = [...new Set((q.get("c") || "").split(",").map((id) => (id ? app.unitIndex(id) : null))
     .filter((u) => u != null))].slice(0, COMPARE_MAX);
   state.unit = null;
@@ -177,10 +195,8 @@ function readHash() {
   } else {
     state.tab = "tier";
     const v = q.get("v");
-    state.view = tab === "season" ? "season" : v === "season" || M.ELEMENTS.includes(v) ? v : "overall";
-    state.season = seasonOf(tab === "season" ? arg : q.get("s"));
-    // the old date tab's weakness filter did not exist; the old season tab's did
-    if (state.view !== "season") state.weak = null;
+    state.view = tab === "season" || v === "season" || v === "raid" ? "raid" : M.ELEMENTS.includes(v) ? v : "overall";
+    state.weak = null; // the old season tab's strip filter is gone: its weakness has its own tier
   }
   if (!TABS.includes(state.tab)) state.tab = "tier";
 }
@@ -271,7 +287,7 @@ function render() {
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
   const place = state.tab === "tier"
-    ? (state.view === "season" ? "시즌별 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 약점 티어`)
+    ? (state.view === "raid" ? "레이드별 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 약점 티어`)
     : state.trend === "compare" ? (state.weak ? `니케 비교 · ${ELEMENT_KO[state.weak]} 약점` : "니케 비교")
       : state.unit != null ? `${unitName(app.model.units[state.unit])} · 티어 변화` : "티어 변화";
   document.title = `${place} · 니케 솔로 레이드 티어`;

@@ -162,17 +162,16 @@ export function modeSwitch(app) {
   ], app.state.mode, (v) => app.go({ mode: v }, { replace: true }), { class: "mode", label: "보기" });
 }
 
-// 티어표's kinds: the overall tier and each element's on a day, or one season's own.
-// An element here is the boss's weakness, not the units' element: every unit, by how it does
-// when the boss is weak to it.
+// 티어표's kinds, over the seasons up to the chosen one: all of them, those whose boss was
+// weak to one element, or the chosen season alone.
 export function kindTabs(app) {
   return h("nav", { class: "kindbar", "aria-label": "티어 종류" }, segmented([
-    { value: "overall", label: "종합 티어", title: "고른 날 기준 종합 티어" },
-    // a weakness tier is the boss's weakness, not the units' element: the label says so
-    ...ELEMENTS.map((e) => ({ value: e, label: `${ELEMENT_KO[e]} 약점`, icon: elementIcon(e, 16, { title: "" }),
-      title: `보스 약점이 ${ELEMENT_KO[e]}인 솔로 레이드 시즌 기준 — 니케 속성과 무관하게 모든 니케 (고른 날 기준)` })),
-    { value: "season", label: "시즌별 티어", title: "한 시즌의 기여도로 매긴 티어" },
-  ], app.state.view, (v) => app.go({ view: v, weak: null }, { replace: true }), { class: "viewtabs", label: "티어 종류" }));
+    { value: "overall", label: "종합", title: "모든 시즌" },
+    // "약점" drops on a phone, where the icon says it
+    ...ELEMENTS.map((e) => ({ value: e, label: [ELEMENT_KO[e], h("span", { class: "kind-sub" }, " 약점")], icon: elementIcon(e, 16, { title: "" }),
+      title: `보스 약점이 ${ELEMENT_KO[e]}인 시즌` })),
+    { value: "raid", label: "레이드별", title: "고른 시즌 하나" },
+  ], app.state.view, (v) => app.go({ view: v }, { replace: true }), { class: "viewtabs", label: "티어 종류" }));
 }
 
 // 티어 변화's views: one unit, or units side by side.

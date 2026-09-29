@@ -320,41 +320,59 @@ sup { font-size: 11px; margin-left: 1px; }
 .pill.live { background: color-mix(in srgb, var(--accent-2) 14%, transparent); border-color: color-mix(in srgb, var(--accent-2) 45%, transparent); }
 .tag { font-size: 10.5px; font-weight: 700; color: var(--ink-2); background: var(--surface-3); border: 1px solid var(--line-2); border-radius: 5px; padding: 0 5px; line-height: 16px; }
 
-/* ------------------------------------------------------------------------ season strip */
+/* ------------------------------------------------------------------------ the time axis */
 
+/* Every season left to right; the chosen one lit. Flags over a chip: a half anniversary, or
+   the year a chip starts (with a divider before it). The day a season ended under its boss. */
 .strip { display: flex; align-items: stretch; gap: 6px; }
 .strip-list {
-  position: relative; display: flex; gap: 4px; overflow-x: auto; padding: 4px 2px 8px; flex: 1; min-width: 0;
+  position: relative; display: flex; gap: 4px; overflow-x: auto; padding: 19px 2px 8px; flex: 1; min-width: 0;
   scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
   mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
 }
 .schip {
-  position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 46px; padding: 6px 0 5px;
+  position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 48px; padding: 5px 0 4px;
   border-radius: 9px; text-decoration: none; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
-  transition: border-color .15s, transform .15s, background .15s;
+  transition: border-color .15s, transform .15s, background .15s, opacity .15s;
 }
-.schip:hover { border-color: var(--line-2); color: var(--ink); transform: translateY(-1px); }
+a.schip:hover { border-color: var(--line-2); color: var(--ink); transform: translateY(-1px); }
+.schip-top { display: flex; align-items: center; gap: 2px; }
 .schip-n { font: 700 13px/1 var(--display); letter-spacing: .02em; }
+.schip-d { font: 600 11px/1 var(--display); letter-spacing: .02em; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .schip.on { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent), 0 0 18px -6px var(--glow); }
+.schip.on .schip-d { color: var(--ink); }
 .schip.off { opacity: .45; }
-/* Number, boss, weakness, top to bottom. */
+.schip.faded > :not(.flags) { opacity: .4; transition: opacity .15s; }
+.schip.faded .schip-boss { filter: grayscale(1); }
+a.schip.faded:hover > :not(.flags) { opacity: .85; }
 .schip-boss { width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgb(0 0 0 / .3)); transition: transform .15s; }
 .schip-boss.none { display: block; }
-.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
+a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .schip.live::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
+.schip.new-year { margin-left: 9px; }
+.schip.new-year:first-child { margin-left: 0; }
+.schip.new-year:not(:first-child)::before { content: ""; position: absolute; left: -7px; top: -17px; bottom: 2px; width: 1px; background: var(--line-2); }
+.flags { position: absolute; left: 0; right: 0; bottom: calc(100% + 3px); height: 14px; pointer-events: none; }
+.flag { position: absolute; bottom: 0; white-space: nowrap; font: 700 11px/14px var(--display); letter-spacing: .03em; }
+.flag.year { left: -4px; color: var(--ink-3); }
+.schip.new-year:first-child .flag.year { left: 2px; }
+.flag.ann { left: 50%; transform: translateX(-50%); padding: 0 5px; border-radius: 5px; color: var(--on-SS); background: var(--t-SS); }
+.schip.new-year .flag.ann { left: auto; right: -2px; transform: none; }
 .strip-step {
-  flex: none; display: grid; place-items: center; width: 32px; border-radius: 9px; text-decoration: none; font-size: 20px; color: var(--ink-2);
-  background: var(--surface); border: 1px solid var(--line); margin-bottom: 4px;
+  flex: none; display: grid; place-items: center; width: 32px; margin-top: 19px; margin-bottom: 8px; border-radius: 9px; text-decoration: none; font-size: 20px; color: var(--ink-2);
+  background: var(--surface); border: 1px solid var(--line);
 }
 .strip-step:hover { color: var(--ink); border-color: var(--accent); }
 .strip-step.off { opacity: .3; }
-/* The weakness the strip is kept to: its icon, how many seasons, and a way out. */
-.strip-only {
-  flex: none; display: flex; align-items: center; gap: 4px; padding: 0 9px; margin-bottom: 4px; border-radius: 9px; cursor: pointer;
-  font: 700 13px/1 var(--display); color: var(--ink); background: var(--accent-soft); border: 1px solid var(--accent);
-}
-.strip-only:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+/* The trend views: the same axis, smaller. */
+.strip.compact .schip { width: 42px; padding: 4px 0 3px; }
+.strip.compact .schip-boss { width: 28px; height: 28px; }
+.strip.compact .schip-n { font-size: 12px; }
+.strip.compact .schip-d { font-size: 10px; }
+/* What the view stands at, under the axis. */
+.when { margin: -6px 0 0; font-size: 13px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.when b { font-weight: 700; }
 
 /* 모아 보기: one weakness's seasons side by side. */
 .cmp-head { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
@@ -408,7 +426,7 @@ sup { font-size: 11px; margin-left: 1px; }
 .fact { display: inline-flex; align-items: center; gap: 6px; }
 .fact-k { font-size: 11px; font-weight: 700; color: var(--ink-3); letter-spacing: .04em; margin-right: 2px; }
 .fact-btn {
-  font: inherit; color: inherit; cursor: pointer; padding: 2px 8px 2px 6px; margin: -2px -8px -2px -6px;
+  font: inherit; color: inherit; cursor: pointer; text-decoration: none; padding: 2px 8px 2px 6px; margin: -2px -8px -2px -6px;
   border-radius: 8px; background: none; border: 1px solid transparent;
 }
 .fact-btn:hover, .fact-btn[aria-pressed="true"] { border-color: var(--line-2); background: var(--surface-2); }
@@ -582,46 +600,12 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .boss-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; }
 .own-mark { color: var(--accent); font-size: 11px; }
 
-/* ------------------------------------------------------------------------ date view */
-
-.datebar { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; }
-.date-field { display: inline-flex; align-items: center; gap: 8px; }
-.date-field input {
-  height: 38px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface);
-  font-weight: 700; font-variant-numeric: tabular-nums;
-}
-.date-field input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
-.presets { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.preset {
-  height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--surface-2);
-  font-size: 13px; font-weight: 600; cursor: pointer; color: var(--ink-2);
-}
-.preset:hover { color: var(--ink); border-color: var(--accent); }
-.preset.on { color: var(--ink); border-color: var(--accent); background: var(--accent-soft); }
-.preset-select { height: 32px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--surface-2); padding: 0 8px; font-size: 13px; color: var(--ink-2); max-width: 100%; }
-.context {
-  display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: var(--radius);
-  background: var(--surface); border: 1px solid var(--line);
-}
-.context-when { font-size: 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-.context-when b { font: 700 18px/1 var(--display); letter-spacing: .03em; }
-.context-around { display: flex; flex-wrap: wrap; gap: 8px; }
-.around {
-  display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 9px; font-size: 13px; text-decoration: none;
-  background: var(--surface-2); border: 1px solid var(--line);
-}
-.around b { font: 700 14px/1 var(--display); letter-spacing: .03em; }
-.around .fact-k { white-space: nowrap; }
-.around:hover { border-color: var(--accent); }
+/* ------------------------------------------------------------------------ 종합 / 약점 */
 
 /* a weakness tier's bosses: what the tier stands on, newest first */
 .weak-intro { padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 12px; }
-.wi-head { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; align-items: center; }
-.wi-head .wi-icon { grid-row: span 2; align-self: start; }
-.wi-icon { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line-2); }
-.wi-text { display: contents; }
-.wi-text h3 { margin: 0; font-size: 15px; line-height: 1.35; }
-.wi-text p { margin: 0; font-size: 12.5px; line-height: 1.6; color: var(--ink-2); }
+.wi-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.wi-head h3 { margin: 0; font-size: 15px; line-height: 1.35; }
 .wi-empty { margin: 0; }
 .wb-list {
   display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; scrollbar-color: var(--line-2) transparent;
@@ -633,8 +617,6 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
   text-decoration: none; color: inherit; background: var(--surface-2); border: 1px solid var(--line); transition: border-color .15s;
 }
 .wb:hover { border-color: var(--accent); }
-.wb.upcoming { border-style: dashed; background: transparent; }
-.wb.upcoming .wb-img { opacity: .6; }
 .wb-img { flex: none; width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 2px 4px rgb(0 0 0 / .3)); }
 .wb-img.none { display: block; }
 .wb-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
@@ -820,7 +802,6 @@ svg.traj { display: block; overflow: visible; }
 .gen .zone { fill-opacity: 1; }
 .gen .zone-label { font-size: 11px; font-weight: 700; fill: var(--ink-2); }
 .chart-host.short { min-height: 190px; }
-.view-unit .datebar, .view-pick .datebar { margin: 2px 0 4px; }
 
 /* ------------------------------------------------------------------------ drawer */
 
@@ -923,13 +904,12 @@ svg.traj { display: block; overflow: visible; }
   .filters::-webkit-scrollbar { display: none; }
   .fgroup { flex: none; }
   .toolbar-end { width: 100%; justify-content: space-between; }
-  .viewtabs { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
+  .viewtabs { display: grid; grid-template-columns: repeat(4, 1fr); width: 100%; }
   .viewtabs .seg-btn { justify-content: center; padding: 0 6px; }
+  .kind-sub { display: none; }
   .fchip { min-width: 30px; padding: 0 6px; }
   .grid th, .grid td { padding: 7px 9px; }
   /* sideways tables on a phone: the kept column is the face alone (its name on hover and to readers) */
-  .wi-head .wi-icon { grid-row: auto; align-self: center; width: 36px; height: 36px; }
-  .wi-text p { grid-column: 1 / -1; }
   .weak-intro { padding: 12px 12px 10px; }
   .wb { width: 160px; }
   .compare-panel .unit-inline-text, .compare-panel .unit-inline-el, .compare-panel .ser-head > span { display: none; }

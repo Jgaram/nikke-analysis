@@ -8,6 +8,8 @@
 //               -> per season and unit: usage, deck split, lift (기여도)
 //   tiers       cuts, recency, prior, how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
+//   lifespans   what counts as used, how long idle means retired
+//               -> since when each unit was in use, and whether it still is
 //
 // No DOM here: the same module runs under Node for the tests.
 
@@ -32,6 +34,8 @@ export function defaultParams(model) {
     overall: d.overall,
     minElementsObserved: d.minElementsObserved,
     includeLive: d.includeLive,
+    minUsage: d.minUsage,
+    retireAfterDays: d.retireAfterDays,
   });
 }
 
@@ -48,6 +52,10 @@ export function populationKey(p) {
 
 export function tierKey(p) {
   return JSON.stringify([p.cuts, p.halfLifeDays, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive]);
+}
+
+export function lifeKey(p) {
+  return JSON.stringify([p.minUsage, p.retireAfterDays]);
 }
 
 // ---------------------------------------------------------------------------
@@ -244,7 +252,7 @@ export function countedSeasons(summary, moment, params) {
   for (const s of summary) {
     const over = s.final && s.end != null && s.end <= moment;
     const live = params.includeLive && !s.final && s.collectedOn != null && s.collectedOn <= moment;
-    if (over || live) out.push({ season: s.season, end: s.end, weak: s.weak, live: !over });
+    if (over || live) out.push({ season: s.season, start: s.start, end: s.end, weak: s.weak, live: !over });
   }
   return out;
 }
@@ -370,6 +378,49 @@ export function standings(model, population, moment, params, treasured = null) {
 }
 
 // ---------------------------------------------------------------------------
+// lifespans: when each unit was in use (analyze/tiers.py lifespans)
+
+// Per unit out by ``moment``: the seasons that used it (usage >= minUsage), the first
+// and last, and whether it has been idle for retireAfterDays since the end of the last
+// one. A gap that long between two seasons that used it is a return, and the run in
+// use since the latest starts at ``runFrom``. The live season counts as ending at ``moment``.
+export function lifespans(model, population, moment, params) {
+  const window = params.retireAfterDays * DAY_MS;
+  const out = new Map();
+  for (const c of countedSeasons(population.summary, moment, params)) {
+    const at = c.end != null && c.end <= moment ? c.end : moment;
+    for (const r of population.tables.get(c.season).rows) {
+      let a = out.get(r.u);
+      if (!a) {
+        a = { u: r.u, id: r.id, firstUsed: null, runFrom: null, lastUsed: null, seasonsUsed: 0, seasonsOut: 0,
+          returns: 0, idleDays: NaN, retired: false, runStart: null, lastEnd: null };
+        out.set(r.u, a);
+      }
+      a.seasonsOut++;
+      if (!(r.usageRate >= params.minUsage)) continue;
+      if (a.lastUsed == null) {
+        a.firstUsed = c.season;
+        a.runFrom = c.season;
+        a.runStart = c.start;
+      } else if (c.start != null && c.start - a.lastEnd >= window) {
+        a.returns++;
+        a.runFrom = c.season;
+        a.runStart = c.start;
+      }
+      a.lastUsed = c.season;
+      a.lastEnd = at;
+      a.seasonsUsed++;
+    }
+  }
+  for (const a of out.values()) {
+    if (a.lastUsed == null) continue;
+    a.idleDays = (moment - a.lastEnd) / DAY_MS;
+    a.retired = a.idleDays >= params.retireAfterDays;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
 // where every unit stood once each season was over (analyze/tiers.py tier_history)
 
 export function tierHistory(model, population, params) {
@@ -435,7 +486,8 @@ export function viewAt(model, population, moment, params) {
   const standing = standings(model, population, moment, params, treasuredAt(model, moment));
   const final = standing.counted.filter((c) => !c.live).map((c) => c.season);
   const live = standing.counted.filter((c) => c.live).map((c) => c.season);
-  return { moment, standing, final, live, around: seasonsAround(model, moment) };
+  const life = lifespans(model, population, moment, params);
+  return { moment, standing, final, live, life, around: seasonsAround(model, moment) };
 }
 
 // One unit at ``moment``: its tier in each element it counts as and its overall

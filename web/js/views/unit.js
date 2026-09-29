@@ -5,7 +5,7 @@ import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, ELEMENT_KO, CLASS_KO, day, todayKst,
   tierBadge, deckSplit, sortableTable, unitName, kst,
 } from "../ui.js";
-import { provisionalReason } from "./common.js";
+import { provisionalReason, lifeText, lifeStrip, returnTag } from "./common.js";
 import { trajectoryChart } from "../chart.js";
 
 const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/g, "");
@@ -139,6 +139,19 @@ function slotChart(app, slots, overallMode) {
         : "종합 = 겪어 본 칸 중 가장 큰 값 · ▶ = 자기 속성"));
 }
 
+// Since when top rankers have used the unit, and whether they still do.
+function lifeTile(app, u, view) {
+  const t = lifeText(app, view, u);
+  if (!t.a) return null;
+  const used = t.a.lastUsed != null;
+  return h("div", { class: "tile tile-life", dataset: { tier: "none", state: t.state } },
+    h("div", { class: "tile-label" }, "수명", returnTag(app, t.a)),
+    h("div", { class: "tile-value" }, h("span", { class: ["tile-state", t.state] }, t.label),
+      used ? h("span", { class: "tile-life-main" }, t.main) : null),
+    lifeStrip(app, view, u, { width: 230 }),
+    h("div", { class: "tile-sub" }, used ? `${t.sub} · 출시 뒤 ${t.a.seasonsOut}시즌 중 ${t.a.seasonsUsed}번 쓰임` : t.sub));
+}
+
 function profile(app, u, prof, moment) {
   const { model, state } = app;
   const unit = model.units[u];
@@ -155,10 +168,11 @@ function profile(app, u, prof, moment) {
     tile("종합 티어", o.tier, o.overall, `${prof.units}명 중 ${o.rank}위${o.provisional ? ` · ${provisionalReason(o, prof.slots, state.params)}` : ""}`,
       { mark: o.provisional ? "*" : null, class: "tile-overall" }),
     ...elementTiles,
+    lifeTile(app, u, prof.view),
     prof.slots ? slotChart(app, prof.slots, state.params.overall) : null,
   ] : [h("div", { class: "tile tile-none" }, prof.treasured
     ? "애장품을 낀 시즌 기록이 아직 없어 티어가 없습니다 (애장품 전 기록은 아래 차트·표)."
-    : "이 날짜까지 치른 시즌이 없어 티어가 없습니다.")];
+    : "이 날짜까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view)];
   const added = unit.extra.map((e) => ELEMENT_KO[e]);
   const byTreasure = unit.treasureElements.map((e) => ELEMENT_KO[e]);
   return h("section", { class: "profile" },

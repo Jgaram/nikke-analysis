@@ -243,6 +243,7 @@ class UnitHistory:
     live_seasons: list[int] = field(default_factory=list)  # in progress, counted as far as collected
     treasure_at: datetime | None = None  # when its treasure came out
     treasured: bool = False  # its treasure was out at ``moment``: the profile stands on the seasons with it
+    life: dict[str, Any] | None = None  # its lifespan at ``moment`` (analyze.tiers.lifespans), with the run's days
 
 
 class TierBook:
@@ -398,7 +399,24 @@ class TierBook:
         added = listed_elements(info.get("extra_elements")) + (
             listed_elements(info.get("treasure_elements")) if treasured else [])
         elements = tuple(dict.fromkeys(e for e in [info.get("element")] + added if isinstance(e, str) and e))
-        return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live, treasure_at, treasured)
+        return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live, treasure_at, treasured,
+                           self._life(unit_id, instant))
+
+    def _life(self, unit_id: str, instant: pd.Timestamp) -> dict[str, Any] | None:
+        """The unit's lifespan at ``instant``, with ``run_days``: how long its run in use has
+        lasted - to ``instant`` while in use, to the end of its last season once retired."""
+        life = tiering.lifespans(self.history, self.seasons, instant, self.config)
+        mine = life[life["unit_id"] == unit_id]
+        if mine.empty:
+            return None
+        record = _records(mine)[0]
+        record["run_days"] = None
+        if record["run_from"] is not None:
+            by_season = self.seasons.set_index("season")
+            start = by_season.loc[record["run_from"], "start_at"]
+            end = min(by_season.loc[record["last_used"], "end_at"], instant) if record["retired"] else instant
+            record["run_days"] = (end - start).total_seconds() / 86400.0 if not pd.isna(start) else None
+        return record
 
 
 def _kst():
@@ -625,6 +643,43 @@ def _unit_tiers(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
     return lines + _slot_lines(profile, config)
 
 
+def _duration(days: float | None) -> str:
+    """``3주``, ``7개월``, ``2년 5개월`` - months of 30.44 days, rounded half up as the page does."""
+    if days is None or pd.isna(days):
+        return "-"
+    months = int(days / 30.44 + 0.5)
+    if months < 1:
+        return f"{max(1, int(days / 7 + 0.5))}주"
+    if months < 12:
+        return f"{months}개월"
+    years, rest = divmod(months, 12)
+    return f"{years}년 {rest}개월" if rest else f"{years}년"
+
+
+def _life_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
+    """The unit's lifespan at the moment of the view: in use or retired, since when, how often."""
+    life = history.life
+    if not life:
+        return []
+    usage = f"상위 랭커 {config.min_usage:.0%}"
+    head = f"  {pad('수명', 9)}  "
+    if life["last_used"] is None:
+        return [head + f"쓰인 시즌 없음 — {usage} 넘게 쓴 시즌이 없음 (출시 뒤 {life['seasons_out']}시즌)"]
+    first, last = life["run_from"], life["last_used"]
+    if life["retired"]:
+        run = f"S{last} 한 시즌" if first == last else f"S{first}–S{last} {_duration(life['run_days'])}"
+        text = f"은퇴 · {run} · S{last} 뒤 {_duration(life['idle_days'])}째 안 쓰임"
+    else:
+        ago = f"({_duration(life['idle_days'])} 전)" if life["idle_days"] >= 45 else ""
+        text = f"현역 · S{first}부터 {_duration(life['run_days'])}째 · 마지막 S{last}{ago}"
+    text += f" · 출시 뒤 {life['seasons_out']}시즌 중 {life['seasons_used']}번 쓰임"
+    if life["returns"]:
+        text += f" · 복귀(S{life['first_used']}부터 쓰이다 {_duration(config.retire_after_days)} 넘게 쉼)"
+    return [head + text,
+            f"  {pad('', 9)}  쓰임 = {usage} 이상이 쓴 시즌 · 은퇴 = 마지막으로 쓰인 시즌이 끝나고 "
+            f"{config.retire_after_days:g}일 동안 안 쓰임"]
+
+
 def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) -> str:
     config = config or tiering.TierConfig()
     info = {key: value if value is not None else "" for key, value in history.info.items()}
@@ -643,6 +698,7 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
     if history.sample is not None and history.sample.chosen:
         out.append(f"표본: {history.sample}")
     out += _unit_tiers(history, config)
+    out += _life_lines(history, config)
     out += [
         "",
         f"{rjust('시즌', 4)}  {pad('시작', 10)}  {pad('보스 · 약점', 30)}  {rjust('사용', 5)}  {rjust('덱 몫', 5)}  "

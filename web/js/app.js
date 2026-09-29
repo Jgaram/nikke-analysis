@@ -54,7 +54,7 @@ app.history = () => {
 
 app.viewAt = (moment) => {
   const pop = app.population();
-  const key = `${M.tierKey(state.params)}|${moment}`;
+  const key = `${M.tierKey(state.params)}|${M.lifeKey(state.params)}|${moment}`;
   let view = cache.views.get(key);
   if (!view) {
     view = M.viewAt(app.model, pop, moment, state.params);

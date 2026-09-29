@@ -35,7 +35,7 @@ CONFIGS = {
     "defaults": {},
     "servers-top-uniform": {"exclude_servers": ("S2",), "top_n": 8, "rank_weighting": "uniform"},
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
-                             "min_elements_observed": 2},
+                             "min_elements_observed": 2, "min_usage": 0.3, "retire_after_days": 40.0},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)]},
 }
@@ -139,6 +139,7 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "cuts": [[label, value] for label, value in config.cuts], "halfLifeDays": config.half_life_days,
         "priorStrength": config.prior_strength, "overall": config.overall,
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
+        "minUsage": config.min_usage, "retireAfterDays": config.retire_after_days,
     }
 
 
@@ -201,6 +202,12 @@ def compare(tables: Path, page: dict) -> None:
         _same(overall[column], theirs[column], f"overall table: {column}")
     for column in ("provisional", "treasure"):
         _flags(overall[column], theirs[column], f"overall table: {column}")
+
+    life = overall.merge(pd.DataFrame(page["life"]), on="unit_id", how="left", suffixes=("_py", "_js"))
+    for column in ("first_used", "run_from", "last_used", "seasons_used", "seasons_out", "returns"):
+        _same(life[f"{column}_py"], life[f"{column}_js"], f"overall table: {column}")
+    _close(life["idle_days_py"], life["idle_days_js"], "overall table: idle_days")
+    _flags(life["retired_py"], life["retired_js"], "overall table: retired")
 
     elements = _table(tables / "metrics_element_tiers.csv")
     theirs = pd.DataFrame(page["elements"])

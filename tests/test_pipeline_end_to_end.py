@@ -156,6 +156,21 @@ def test_unit_history_reads_every_season_since_release(processed):
         book.unit("Filler")  # matches many
 
 
+def test_unit_history_says_how_long_the_unit_has_been_in_use(processed):
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    last = pd.Timestamp(world.seasons.set_index("season").loc[world.live_season, "end_at"])
+    fresh = book.unit("Newcomer", (last + pd.Timedelta(days=10)).to_pydatetime())
+    life = fresh.life
+    assert (life["first_used"], life["run_from"], life["last_used"]) == (world.newcomer_season, world.newcomer_season,
+                                                                         world.live_season)
+    assert life["seasons_out"] == world.live_season - world.newcomer_season + 1 and not life["retired"]
+    assert f"현역 · S{world.newcomer_season}부터" in render_unit(fresh, book.config)
+    later = book.unit("Newcomer", (last + pd.Timedelta(days=400)).to_pydatetime())
+    assert later.life["retired"]
+    assert f"은퇴 · S{world.newcomer_season}–S{world.live_season}" in render_unit(later, book.config)
+
+
 def test_a_unit_shows_what_its_overall_is_made_of(processed):
     """The newcomer (Electric) has met Fire, Water and - in progress - Wind, never Electric: its Electric slot
     counts 0, the two others it has not met take the mean of those it has, and the overall is provisional."""

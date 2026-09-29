@@ -51,6 +51,12 @@ The season in progress counts too (``include_live``) once a snapshot of it was
 taken by the moment of the view: its rankings so far stand in for the season,
 and they change with every snapshot until it is over.
 
+Beside the tiers, and not part of them, each unit's **lifespan**: since when
+top rankers have used it, in how many seasons, and whether they still do - a
+unit unused for a year (``retire_after_days``, longer than the half-life on
+purpose: an element can take a year to come round) is retired, and one used
+again after that came back (``lifespans``).
+
 A treasure (애장품) changes a unit for good, so its element and overall tiers are
 reckoned on one side of it only: a view of a moment when the unit had its
 treasure stands on the seasons played with it (the season rows' ``treasure``
@@ -105,6 +111,9 @@ class TierConfig:
     overall: str = "mean"
     min_elements_observed: int = 3
     include_live: bool = True
+    # lifespan
+    min_usage: float = 0.10
+    retire_after_days: float = 365.0
     # diagnostics
     deck_effect_ridge: float = 20.0
     synergy_min_decks: int = 20
@@ -137,6 +146,7 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
     doc: dict[str, Any] = yaml.safe_load(target.read_text(encoding="utf-8")) or {}
     population = doc.get("population") or {}
     element = doc.get("element") or {}
+    lifespan = doc.get("lifespan") or {}
     diagnostics = doc.get("diagnostics") or {}
     defaults = TierConfig()
     cuts = doc.get("cuts")
@@ -151,6 +161,8 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         overall=str(element.get("overall", defaults.overall)),
         min_elements_observed=int(element.get("min_elements_observed", defaults.min_elements_observed)),
         include_live=bool(element.get("include_live", defaults.include_live)),
+        min_usage=float(lifespan.get("min_usage", defaults.min_usage)),
+        retire_after_days=float(lifespan.get("retire_after_days", defaults.retire_after_days)),
         deck_effect_ridge=float(diagnostics.get("deck_effect_ridge", defaults.deck_effect_ridge)),
         synergy_min_decks=int(diagnostics.get("synergy_min_decks", defaults.synergy_min_decks)),
     )
@@ -367,6 +379,68 @@ def standings(
     slots = (estimate.rename_axis(index="unit_id", columns="element").stack().rename("lift").to_frame()
              .join(count.rename_axis(index="unit_id", columns="element").stack().rename("seasons")).reset_index())
     return Standings(overall, elements[ELEMENT_COLUMNS].reset_index(drop=True), slots[SLOT_COLUMNS])
+
+
+# --------------------------------------------------------------------------
+# lifespans: when each unit was in use
+# --------------------------------------------------------------------------
+
+LIFESPAN_COLUMNS = ["unit_id", "first_used", "run_from", "last_used", "seasons_used", "seasons_out", "returns",
+                    "idle_days", "retired"]
+
+
+def lifespans(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: TierConfig | None = None) -> pd.DataFrame:
+    """When each unit was in use, as known at ``moment``, one row per unit out by then.
+
+    A season *used* a unit when at least ``min_usage`` of its rankers fielded it
+    (``usage_rate``). Nothing else goes in - not the lift, not the element - so a
+    specialist is used in its element's seasons and idle in between.
+
+    A unit is ``retired`` once ``retire_after_days`` have gone by since the end
+    of the last season that used it (``idle_days``). The window is kept longer
+    than the recency half-life on purpose: an element comes round every few
+    months and sometimes only after a year, so a specialist idle for half a year
+    is still in use. A unit used again after such a gap came back (``returns``
+    counts the gaps, measured from the end of one season that used it to the
+    start of the next), and its run in use since then starts at ``run_from``.
+    ``first_used`` is its first season in use ever, ``last_used`` the latest,
+    ``seasons_used`` how many used it of the ``seasons_out`` it was out for. A
+    unit no season used has no seasons and is not retired.
+
+    Same seasons as ``standings``: those over by ``moment`` and, with
+    ``include_live``, the one in progress as far as collected - it counts as
+    ending at ``moment``. A treasure does not split a lifespan: same unit.
+    """
+    config = config or TierConfig()
+    moment = _instant(moment)
+    counted = counted_seasons(seasons, moment, config)
+    if counted.empty or table.empty:
+        return pd.DataFrame(columns=LIFESPAN_COLUMNS)
+    counted["start_at"] = counted["season"].map(seasons.set_index("season")["start_at"])
+    counted["at"] = counted["end_at"].where(counted["end_at"] <= moment, moment)
+    rows = (table.loc[table["season"].isin(counted["season"]), ["season", "unit_id", "usage_rate"]]
+            .merge(counted[["season", "start_at", "at"]], on="season").sort_values(["unit_id", "season"]))
+    window = pd.Timedelta(days=config.retire_after_days)
+    out = []
+    for unit_id, group in rows.groupby("unit_id", sort=True):
+        used = group[group["usage_rate"] >= config.min_usage]
+        record: dict[str, Any] = {"unit_id": unit_id, "first_used": pd.NA, "run_from": pd.NA, "last_used": pd.NA,
+                                  "seasons_used": len(used), "seasons_out": len(group), "returns": 0,
+                                  "idle_days": np.nan, "retired": False}
+        if not used.empty:
+            gaps = used["start_at"].iloc[1:].reset_index(drop=True) - used["at"].iloc[:-1].reset_index(drop=True)
+            breaks = (gaps >= window).to_numpy(dtype=bool)
+            since = int(np.flatnonzero(breaks)[-1]) + 1 if breaks.any() else 0
+            idle = (moment - used["at"].iloc[-1]).total_seconds() / 86400.0
+            record.update(first_used=int(used["season"].iloc[0]), run_from=int(used["season"].iloc[since]),
+                          last_used=int(used["season"].iloc[-1]), returns=int(breaks.sum()), idle_days=idle,
+                          retired=idle >= config.retire_after_days)
+        out.append(record)
+    life = pd.DataFrame(out, columns=LIFESPAN_COLUMNS)
+    for column in ("first_used", "run_from", "last_used"):
+        life[column] = life[column].astype("Int64")
+    life["retired"] = life["retired"].astype(bool)
+    return life
 
 
 # --------------------------------------------------------------------------

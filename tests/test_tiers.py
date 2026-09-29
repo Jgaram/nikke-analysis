@@ -105,7 +105,8 @@ def test_config_file_round_trip(tmp_path):
         "population: {top_n: 20, servers: [KR], rank_weighting: uniform}\n"
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
         "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
-        "          include_live: false}\n",
+        "          include_live: false}\n"
+        "lifespan: {min_usage: 0.25, retire_after_days: 200}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
@@ -113,6 +114,7 @@ def test_config_file_round_trip(tmp_path):
     assert config.tier_order == ["S", "A", "B"]
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
+    assert config.min_usage == 0.25 and config.retire_after_days == 200
 
 
 def test_repo_config_loads():
@@ -353,3 +355,62 @@ def test_tier_changes_have_signed_steps(built):
     moved = changes[changes["element_steps"] != 0]
     assert (moved["element"] == moved["season_to"].map(weak)).all()
     assert changes.loc[changes["element"] == "", "element_steps"].eq(0).all()
+
+
+# --------------------------------------------------------------------------
+# lifespans
+
+
+def seasons_monthly(usage, *, live=False):
+    """Hand-made seasons a month apart (a week long each), unit "001" fielded by
+    ``usage[i]`` of the rankers in season i + 1; with ``live`` the last is in progress."""
+    start = pd.Timestamp("2024-01-01T00:00:00Z")
+    seasons, rows = [], []
+    for number, share in enumerate(usage, start=1):
+        begin = start + pd.DateOffset(months=number - 1)
+        end = begin + pd.Timedelta(days=7)
+        last = number == len(usage)
+        seasons.append({"season": number, "weak_element": "Fire", "start_at": begin, "end_at": end,
+                        "final": not (live and last), "collected_on": begin + pd.Timedelta(days=3)})
+        rows.append({"season": number, "unit_id": "001", "usage_rate": share})
+    return pd.DataFrame(rows), pd.DataFrame(seasons)
+
+
+def life_of(usage, moment, *, live=False, **config):
+    table, summary = seasons_monthly(usage, live=live)
+    return tiers.lifespans(table, summary, pd.Timestamp(moment), tiers.TierConfig(**config)).iloc[0]
+
+
+def test_a_lifespan_runs_from_the_first_season_that_used_the_unit_to_the_last():
+    # used in seasons 2-5 (10% or more), out but unused in 1 and 6
+    life = life_of([0.05, 0.4, 0.1, 0.02, 0.9, 0.0], "2024-07-01T00:00:00Z")
+    assert (life["first_used"], life["run_from"], life["last_used"]) == (2, 2, 5)
+    assert (life["seasons_used"], life["seasons_out"], life["returns"]) == (3, 6, 0)
+    assert not life["retired"] and life["idle_days"] == pytest.approx(54.0)  # since 2024-05-08
+
+
+def test_a_year_unused_is_retired_and_a_return_after_it_starts_a_new_run():
+    usage = [0.5] * 3 + [0.0] * 13  # used in January-March 2024, then not
+    assert not life_of(usage, "2025-03-01T00:00:00Z")["retired"]  # under a year since March 8
+    assert life_of(usage, "2025-03-10T00:00:00Z")["retired"]
+    assert not life_of(usage, "2025-03-10T00:00:00Z", retire_after_days=400)["retired"]
+    back = life_of(usage + [0.6], "2025-06-01T00:00:00Z")  # used again in May 2025
+    assert (back["first_used"], back["run_from"], back["last_used"], back["returns"]) == (1, 17, 17, 1)
+    assert not back["retired"]
+
+
+def test_a_gap_shorter_than_the_window_is_not_a_return():
+    life = life_of([0.5] + [0.0] * 6 + [0.5], "2024-09-01T00:00:00Z")  # a half-year gap: a specialist between its seasons
+    assert (life["run_from"], life["returns"]) == (1, 0)
+    assert life_of([0.5] + [0.0] * 6 + [0.5], "2024-09-01T00:00:00Z", retire_after_days=90)["returns"] == 1
+
+
+def test_the_live_season_counts_as_in_use_now():
+    life = life_of([0.0, 0.3], "2024-02-05T00:00:00Z", live=True)
+    assert life["last_used"] == 2 and life["idle_days"] == 0
+    assert pd.isna(life_of([0.0, 0.3], "2024-02-05T00:00:00Z", live=True, include_live=False)["last_used"])
+
+
+def test_a_unit_no_season_used_has_no_lifespan():
+    life = life_of([0.05, 0.0], "2026-01-01T00:00:00Z")
+    assert pd.isna(life["first_used"]) and life["seasons_used"] == 0 and not life["retired"]

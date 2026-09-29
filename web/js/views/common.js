@@ -1,6 +1,6 @@
 // Pieces the three views share: a unit's card, the tier board, the filter row, tooltips.
 
-import { ELEMENTS, assignTier } from "../model.js";
+import { ELEMENTS, DAY_MS, assignTier } from "../model.js";
 import {
   h, num, pct, int, face, elementIcon, classIcon, burstIcon, nameLines, unitName, withTip, tierBadge, deckSplit,
   segmented, ELEMENT_KO, CLASS_KO, BURSTS, shortDay,
@@ -9,12 +9,12 @@ import {
 // ---------------------------------------------------------------------------
 // a unit
 
-export function unitCard(app, u, { value, tier, provisional, heart, dim, tip, extra } = {}) {
+export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, tip, extra } = {}) {
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
   const card = h("a", {
-    class: ["card", dim && "dim"], href: app.href("unit", unit.id), dataset: { tier: tier || "D" },
-    "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}`,
+    class: ["card", dim && "dim", retired && "retired"], href: app.href("unit", unit.id), dataset: { tier: tier || "D" },
+    "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}`,
   },
   h("span", { class: "face" },
     face(unit, 64),
@@ -116,24 +116,119 @@ export function modeSwitch(app) {
 }
 
 // ---------------------------------------------------------------------------
-// the five boss-weakness slots an overall tier is made of
+// a unit's lifespan: since when top rankers used it, how often, and whether they still do
 
-export function slotStrip(slots, cuts, { labels = false } = {}) {
-  return h("span", { class: ["slots", labels && "with-labels"] }, slots.map((sl) => {
-    const filled = !sl.seasons;
-    const tier = assignTier(sl.lift, cuts);
-    return h("span", {
-      class: ["slot", filled && "filled", sl.own && "own"], dataset: { tier },
-      title: `${ELEMENT_KO[sl.element]} 약점 ${filled ? `못 겪어서 채운 값 ${num(sl.lift)}` : `${num(sl.lift)} · 시즌 ${sl.seasons}번`}${sl.own ? " · 자기 속성" : ""}`,
-    },
-    labels ? elementIcon(sl.element, 12, { title: "" }) : null,
-    h("span", null, filled ? `(${num(sl.lift)})` : num(sl.lift)));
-  }));
+export function duration(days) {
+  if (days == null || Number.isNaN(days)) return "–";
+  const months = Math.round(days / 30.44);
+  if (months < 1) return `${Math.max(1, Math.round(days / 7))}주`;
+  if (months < 12) return `${months}개월`;
+  const years = Math.floor(months / 12), rest = months % 12;
+  return rest ? `${years}년 ${rest}개월` : `${years}년`;
 }
 
-export function slotHeader() {
-  return h("span", { class: "slots slots-head", "aria-hidden": "true" },
-    ELEMENTS.map((e) => h("span", { class: "slot" }, elementIcon(e, 13, { title: ELEMENT_KO[e] }))));
+// What the view says of unit ``u``'s lifespan, in words: its state and two lines.
+export function lifeText(app, view, u) {
+  const a = view.life.get(u);
+  if (!a || a.lastUsed == null) {
+    const min = Math.round(app.state.params.minUsage * 100);
+    return { a, state: "never", label: "안 쓰임", main: "쓰인 시즌 없음", sub: `사용 ${min}%를 넘은 시즌이 없음`, length: null };
+  }
+  const counted = view.standing.counted;
+  const latest = counted.length ? counted[counted.length - 1].season : null;
+  if (a.retired) {
+    const length = a.lastEnd - a.runStart;
+    return {
+      a, state: "retired", label: "은퇴", length,
+      main: a.runFrom === a.lastUsed ? `S${a.lastUsed} 한 시즌` : `S${a.runFrom}–S${a.lastUsed} · ${duration(length / DAY_MS)}`,
+      sub: `S${a.lastUsed} 뒤 ${duration(a.idleDays)}째 안 쓰임`,
+    };
+  }
+  const length = view.moment - a.runStart;
+  const recent = a.lastUsed === latest;
+  return {
+    a, state: "active", label: "현역", length, recent,
+    main: `S${a.runFrom}부터 · ${duration(length / DAY_MS)}째`,
+    sub: recent ? "최근 시즌까지 쓰임" : `마지막 S${a.lastUsed} · ${duration(a.idleDays)} 전`,
+  };
+}
+
+export function lifePill(text) {
+  return h("span", { class: ["life-pill", text.state] }, text.label);
+}
+
+export function returnTag(app, a) {
+  if (!a || !a.returns) return null;
+  const gap = duration(app.state.params.retireAfterDays);
+  return h("span", {
+    class: "tag", title: `S${a.firstUsed}부터 쓰이다 ${gap} 넘게 안 쓰인 적이 ${a.returns}번 · 이번에는 S${a.runFrom}부터 다시 쓰임`,
+  }, a.returns > 1 ? `복귀 ${a.returns}번` : "복귀");
+}
+
+// One cell per season the view counts: blank before the unit was out, faint when out
+// and unused, filled when used - the more rankers used it, the stronger.
+export function lifeStrip(app, view, u, { width = 150 } = {}) {
+  const pop = app.population();
+  const min = app.state.params.minUsage;
+  const counted = view.standing.counted;
+  const a = view.life.get(u);
+  const strip = h("span", {
+    class: "life-strip", role: "img",
+    style: { width: `${width}px`, gridTemplateColumns: `repeat(${Math.max(1, counted.length)}, 1fr)` },
+    "aria-label": counted.length
+      ? `시즌 ${counted[0].season}–${counted[counted.length - 1].season} 중 ${a?.seasonsUsed ?? 0}시즌 쓰임` : "시즌 없음",
+  });
+  for (const c of counted) {
+    const r = pop.tables.get(c.season)?.byUnit.get(u);
+    if (!r) strip.append(h("i", { class: "pre" }));
+    else if (!(r.usageRate >= min)) strip.append(h("i", { class: "idle" }));
+    else strip.append(h("i", { class: "used", style: { opacity: String(0.35 + 0.65 * Math.min(1, r.usageRate)) } }));
+  }
+  return strip;
+}
+
+export function lifeHeader(view, label = "시즌별 사용") {
+  const counted = view.standing.counted;
+  return h("span", { class: "life-th" }, label,
+    counted.length ? h("span", { class: "life-axis", "aria-hidden": "true" },
+      h("span", null, `S${counted[0].season}`), h("span", null, `S${counted[counted.length - 1].season}`)) : null);
+}
+
+// The lifespan columns of a date-view table; its rows carry the unit as ``.u``.
+export function lifeColumns(app, view) {
+  const texts = new Map();
+  const of = (row) => {
+    if (!texts.has(row.u)) texts.set(row.u, lifeText(app, view, row.u));
+    return texts.get(row.u);
+  };
+  const { minUsage, retireAfterDays } = app.state.params;
+  return [
+    { key: "strip", label: lifeHeader(view), class: "life-col", firstDir: "asc",
+      title: `시즌 하나가 칸 하나. 칠한 칸 = 상위 랭커 ${Math.round(minUsage * 100)}% 이상이 쓴 시즌(진할수록 많이), `
+        + "옅은 칸 = 나와 있었지만 거의 안 쓴 시즌. 정렬하면 처음 쓰인 시즌 순",
+      sort: (row) => of(row).a?.firstUsed, cell: (row) => lifeStrip(app, view, row.u) },
+    { key: "state", label: "상태", firstDir: "asc",
+      title: `마지막으로 쓰인 시즌이 끝나고 ${retireAfterDays}일 동안 안 쓰이면 은퇴. 정렬하면 최근에 쓰인 순`,
+      sort: (row) => {
+        const t = of(row);
+        return t.state === "never" ? null : (t.state === "retired" ? 1e6 : 0) + t.a.idleDays;
+      },
+      cell: (row) => lifePill(of(row)) },
+    { key: "life", label: "수명", title: "지금 흐름(복귀했으면 복귀한 뒤)이 언제부터 얼마나 이어졌나. 정렬하면 긴 순",
+      sort: (row) => of(row).length,
+      cell: (row) => {
+        const t = of(row);
+        return h("span", { class: "life-cell" },
+          h("span", { class: "life-main" }, t.main, returnTag(app, t.a)),
+          t.recent ? null : h("span", { class: "life-sub" }, t.sub));
+      } },
+    { key: "used", label: "쓰인 시즌", num: true, title: "쓰인 시즌 / 출시 뒤 치른 시즌",
+      sort: (row) => of(row).a?.seasonsUsed,
+      cell: (row) => {
+        const a = of(row).a;
+        return a ? h("span", null, h("b", null, a.seasonsUsed), h("span", { class: "muted" }, ` / ${a.seasonsOut}`)) : "–";
+      } },
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -156,13 +251,13 @@ export function seasonTip(app, row, entry) {
 }
 
 export function standingTip(app, u, view, { element = null } = {}) {
-  const cuts = app.state.params.cuts;
   const o = view.standing.overallByUnit.get(u);
   const mine = view.standing.elements.filter((r) => r.u === u);
   const slots = view.standing.slots.get(u);
   const counts = new Map();
   for (const r of view.standing.elements) counts.set(r.element, (counts.get(r.element) || 0) + 1);
   const unit = app.model.units[u];
+  const life = lifeText(app, view, u);
   return h("div", { class: "tip" },
     unitHead(app, u),
     h("dl", { class: "tip-list" },
@@ -170,9 +265,11 @@ export function standingTip(app, u, view, { element = null } = {}) {
         o.provisional ? h("span", { class: "muted" }, " · 잠정") : null)] : null,
       mine.map((r) => [h("dt", { class: element === r.element ? "hl" : null }, `${ELEMENT_KO[r.element]}${r.source === "skill" ? "(스킬)" : ""}`),
         h("dd", null, r.seasons ? [tierBadge(r.tier, r.lift), ` ${counts.get(r.element)}명 중 ${r.rank}위 · 시즌 ${r.seasons}번`]
-          : h("span", { class: "muted" }, "미관측 — 이 약점 시즌을 아직 못 겪음"))])),
-    slots ? h("div", { class: "tip-slots" }, h("div", { class: "muted small" }, "종합을 이루는 보스 약점별 다섯 칸"),
-      slotHeader(), slotStrip(slots, cuts)) : null,
+          : h("span", { class: "muted" }, "미관측 — 이 약점 시즌을 아직 못 겪음"))]),
+      h("dt", null, "수명"), h("dd", null, lifePill(life), life.main, returnTag(app, life.a)),
+      life.a ? [h("dt", null, "쓰인 시즌"), h("dd", null, `출시 뒤 ${life.a.seasonsOut}시즌 중 ${life.a.seasonsUsed}번`,
+        life.a.firstUsed != null ? h("span", { class: "muted" }, ` · 처음 S${life.a.firstUsed}`) : null)] : null),
+    life.a ? h("div", { class: "tip-life" }, h("div", { class: "muted small" }, life.sub), lifeStrip(app, view, u, { width: 240 })) : null,
     h("div", { class: "tip-notes" },
       o?.treasure ? h("span", { class: "pill heart" }, `♥ 애장품(${shortDay(unit.treasure)}) 뒤 시즌만으로`) : null,
       o?.provisional ? h("span", { class: "pill" }, provisionalReason(o, slots, app.state.params)) : null));

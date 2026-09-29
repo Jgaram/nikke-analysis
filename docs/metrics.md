@@ -346,6 +346,34 @@ PMI(i,j) = log₂( P(i,j) / (P(i)·P(j)) )      (덱 단위, 함께 쓴 덱이 s
 | `seasons_since_peak` | 전성기 이후 몇 시즌 |
 | `retention` | 최신 기여도 / 전성기 기여도 |
 
+### 수명 — 언제부터 쓰였고 아직 쓰이나 (티어에는 안 들어감)
+
+궤적의 `debut_season` 은 한 명이라도 쓴 시즌이라 한 명이 5덱에 넣어도 데뷔다. 수명은 **상위
+랭커가 실제로 쓰는지**로 본다(`analyze.tiers.lifespans`, 사이트의 날짜별 티어 · 니케 추이, `nikke tier --unit`).
+
+- **쓰인 시즌** = 상위 랭커의 `lifespan.min_usage`(기본 10%, 열 명에 한 명) 이상이 쓴 시즌(`usage_rate`).
+  기여도도 속성도 보지 않는다 — 속성 특화 니케는 자기 속성 시즌에만 쓰이고 그 사이에는 쉰다.
+- **은퇴** = 마지막으로 쓰인 시즌이 끝나고 `lifespan.retire_after_days`(기본 365일) 동안 다시 안 쓰임.
+  **복귀** = 그만큼 쉬고 다시 쓰임(`returns`). 수명의 "지금 흐름"(`run_from`)은 마지막 복귀부터다.
+- 기준을 최근성 반감기(180일)보다 길게 잡는 이유: 같은 약점은 몇 달에 한 번, 길면 1년 만에 돌아온다
+  (철갑 약점은 시즌 14 에서 26 까지 1년). 시즌 1–41 에서 반년으로 재면 22명이 은퇴했다가 돌아오고,
+  1년이면 7명이다(엑시아·이사벨·라플라스·A2·바이퍼·팬텀, 애장품으로 돌아온 슈가). 1년 반으로 늘려도
+  3명(라플라스·슈가·이사벨)은 남는다 — 진짜 복귀다.
+- 진행 중 시즌은 속성·종합 티어처럼 수집분으로 잠정 반영하고, 지금 끝나는 시즌으로 친다. 애장품은 수명을
+  나누지 않는다(같은 니케).
+
+| 컬럼 (`metrics_overall_tiers.csv`) | 의미 |
+|---|---|
+| `first_used` | 처음 쓰인 시즌 |
+| `run_from` | 지금 흐름이 시작된 시즌 (복귀가 없으면 `first_used`) |
+| `last_used` | 마지막으로 쓰인 시즌 |
+| `seasons_used` / `seasons_out` | 쓰인 시즌 수 / 출시 뒤 치른 시즌 수 |
+| `returns` | 복귀 횟수 |
+| `idle_days` | 마지막으로 쓰인 시즌이 끝나고 지난 날 (진행 중 시즌이면 0) |
+| `retired` | 은퇴 (`idle_days` ≥ `retire_after_days`) |
+
+쓰인 시즌이 없는 니케는 비어 있고 은퇴도 아니다(사이트에서는 "안 쓰임").
+
 ---
 
 ## 11. 시즌 사용률 — `nikke raid`
@@ -384,7 +412,7 @@ nikke raid 40 --json
 |---|---|---|
 | `metrics_seasons.csv` | 시즌 | 서버 수와 이름(`server_names`), 인원·덱 수(친 덱만), 메인 덱 몫, 수집일, `final` |
 | `metrics_unit_season.csv` | 시즌 × 니케 | 위 1절의 모든 값(기여도 `lift`, 사용률·덱 순위 분포 포함), 시즌 티어, 그 시즌 종료 시점의 종합 티어, 그 시즌 약점이 자기 속성이면 속성 티어 (진행 중 시즌 행은 지금까지) |
-| `metrics_overall_tiers.csv` | 니케 | 종합 비교표: 최신 데이터(진행 중 시즌 수집분 포함) 기준 종합 티어·값·순위(`overall_rank`), 잠정 여부, 스킬로 더해진 속성, 애장품 뒤 시즌만으로 매겼는지(`treasure`) |
+| `metrics_overall_tiers.csv` | 니케 | 종합 비교표: 최신 데이터(진행 중 시즌 수집분 포함) 기준 종합 티어·값·순위(`overall_rank`), 잠정 여부, 스킬로 더해진 속성, 애장품 뒤 시즌만으로 매겼는지(`treasure`), 수명(10절) |
 | `metrics_element_tiers.csv` | 속성 × 니케 | 속성별 비교표: 그 속성 니케들의 속성 티어·값·순위(`element_rank`)·겪은 시즌 수(`element_seasons`), 옆에 종합 티어. 우월 코드가 둘인 니케는 두 속성에 한 줄씩(`source` = `own` / `skill`) |
 | `metrics_tier_changes.csv` | 니케 × 시즌 전환 | 시즌·속성·종합 티어가 바뀐 경우 (`element` = 속성 티어가 바뀐 속성) |
 | `metrics_meta_shift.csv` | 시즌 전환 | 8절 |
@@ -416,7 +444,9 @@ nikke raid 40 --json
 | `element.prior_strength` | 0 | 칸을 그 니케 전체 평균 쪽으로 당기는 세기 |
 | `element.overall` | `mean` | `mean` · `frequency` · `max` |
 | `element.min_elements_observed` | 3 | 겪은 보스 약점이 이보다 적으면 종합이 잠정 (자기 속성을 못 겪어도 잠정) |
-| `element.include_live` | `true` | 진행 중인 시즌도 지금까지 수집분으로 속성·종합 티어에 넣는다(잠정). `false` = 끝난 시즌만 |
+| `element.include_live` | `true` | 진행 중인 시즌도 지금까지 수집분으로 속성·종합 티어와 수명에 넣는다(잠정). `false` = 끝난 시즌만 |
+| `lifespan.min_usage` | 0.10 | 상위 랭커의 이만큼 이상이 쓴 시즌을 쓰인 시즌으로 친다 (수명, 10절) |
+| `lifespan.retire_after_days` | 365 | 마지막으로 쓰인 시즌이 끝나고 이만큼 안 쓰이면 은퇴, 그 뒤 다시 쓰이면 복귀 |
 | `diagnostics.deck_effect_ridge` | 20 | 덱 효과 회귀의 릿지 세기 |
 | `diagnostics.synergy_min_decks` | 20 | 시너지 쌍의 최소 동시 등장 덱 수 |
 

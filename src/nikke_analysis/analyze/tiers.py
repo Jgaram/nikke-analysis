@@ -28,7 +28,11 @@ standing does not depend on which elements happened to come up lately. The
 slots follow the *boss's* weakness, not the unit's own element, because supports
 follow the element of the deck they support: a Water support fielded only in
 Wind-weak seasons earns its overall there, while its element tier (Water) stays
-low.
+low. The overall tier has cuts of its own (``overall_cuts``), the same labels
+set lower: a unit carrying one element and sitting out the rest scores a fifth
+of its element lift, so on the element tier's cuts an element-SS specialist
+would stand at C. The cuts give each overall tier about as many units as the
+element tiers hold; the order within stays the score's.
 
 A slot with no season since the unit's release is filled from its own side
 only. Its own elements and the other elements are two sides, and what a unit
@@ -101,6 +105,18 @@ DEFAULT_CUTS: list[tuple[str, float]] = [
     ("D", 0.03),
     ("F", 0.0),
 ]
+# The overall tier's cuts: the same labels, lower. An overall is the mean of five slots, so a unit
+# that carries one element and sits out the rest scores a fifth of its element lift there; these
+# cuts put about as many units in each overall tier as the element tiers hold (seasons 16-41).
+DEFAULT_OVERALL_CUTS: list[tuple[str, float]] = [
+    ("SS", 0.9),
+    ("S", 0.65),
+    ("A", 0.3),
+    ("B", 0.18),
+    ("C", 0.07),
+    ("D", 0.015),
+    ("F", 0.0),
+]
 OVERALL_MODES = ("mean", "max", "frequency")
 
 
@@ -113,6 +129,9 @@ class TierConfig:
     rank_weighting: str = "dcg"
     # season tier
     cuts: list[tuple[str, float]] = field(default_factory=lambda: list(DEFAULT_CUTS))
+    # overall tier (element tiers take ``cuts``). None: the default overall cuts when ``cuts``
+    # has the default labels, otherwise ``cuts`` itself.
+    overall_cuts: list[tuple[str, float]] | None = None
     # element and overall tiers
     half_life_days: float = 180.0
     prior_strength: float = 0.0
@@ -129,6 +148,14 @@ class TierConfig:
 
     def __post_init__(self) -> None:
         self.cuts = sorted(((str(l), float(v)) for l, v in self.cuts), key=lambda c: c[1], reverse=True)
+        labels = [l for l, _ in self.cuts]
+        if self.overall_cuts is None:
+            same = labels == [l for l, _ in DEFAULT_OVERALL_CUTS]
+            self.overall_cuts = list(DEFAULT_OVERALL_CUTS) if same else list(self.cuts)
+        self.overall_cuts = sorted(((str(l), float(v)) for l, v in self.overall_cuts), key=lambda c: c[1],
+                                   reverse=True)
+        if [l for l, _ in self.overall_cuts] != labels:
+            raise ValueError("overall_cuts must have the same labels, in the same order, as cuts")
         if self.overall not in OVERALL_MODES:
             raise ValueError(f"element.overall must be one of {OVERALL_MODES}, not {self.overall!r}")
 
@@ -147,6 +174,9 @@ class TierConfig:
     def cut(self, label: str) -> float:
         return dict(self.cuts)[label]
 
+    def overall_cut(self, label: str) -> float:
+        return dict(self.overall_cuts)[label]
+
 
 def load_tier_config(path: Path | None = None) -> TierConfig:
     target = path or DEFAULT_TIER_CONFIG
@@ -159,12 +189,14 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
     diagnostics = doc.get("diagnostics") or {}
     defaults = TierConfig()
     cuts = doc.get("cuts")
+    overall_cuts = doc.get("overall_cuts")
     return TierConfig(
         top_n=int(population.get("top_n", defaults.top_n)),
         servers=split(population.get("servers") or ()),
         exclude_servers=split(population.get("exclude_servers") or ()),
         rank_weighting=str(population.get("rank_weighting", defaults.rank_weighting)),
         cuts=[(str(c["label"]), float(c["min_lift"])) for c in cuts] if cuts else list(DEFAULT_CUTS),
+        overall_cuts=[(str(c["label"]), float(c["min_lift"])) for c in overall_cuts] if overall_cuts else None,
         half_life_days=float(element.get("half_life_days", defaults.half_life_days)),
         prior_strength=float(element.get("prior_strength", defaults.prior_strength)),
         overall=str(element.get("overall", defaults.overall)),
@@ -178,14 +210,16 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
     )
 
 
-def assign_tier(value: float, config: TierConfig | None = None) -> str:
+def assign_tier(value: float, config: TierConfig | None = None, *, overall: bool = False) -> str:
+    """The tier of a season or element lift - or, with ``overall``, of an overall score."""
     config = config or TierConfig()
     if value is None or pd.isna(value):
         return ""
-    for label, minimum in config.cuts:
+    cuts = config.overall_cuts if overall else config.cuts
+    for label, minimum in cuts:
         if value >= minimum:
             return label
-    return config.cuts[-1][0]
+    return cuts[-1][0]
 
 
 def tier_rank(label: str, config: TierConfig | None = None) -> int:
@@ -379,7 +413,7 @@ def standings(
         freq = freq.reindex(list(ELEMENTS)).fillna(0.0)
         freq = freq / freq.sum() if freq.sum() > 0 else pd.Series(1.0 / len(ELEMENTS), index=list(ELEMENTS))
         overall["overall"] = estimate.mul(freq, axis=1).sum(axis=1)
-    overall["overall_tier"] = overall["overall"].map(lambda v: assign_tier(v, config))
+    overall["overall_tier"] = overall["overall"].map(lambda v: assign_tier(v, config, overall=True))
     overall["overall_rank"] = overall["overall"].rank(method="min", ascending=False).astype("Int64")
     n_obs = observed.sum(axis=1).astype(int)
     own_unseen = own.any(axis=1) & ~(observed & own).any(axis=1)

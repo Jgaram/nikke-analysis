@@ -1,7 +1,8 @@
 // One unit's record as a chart: its lift each season (bars, its own element's
 // seasons in the accent), its overall tier once each season was over (line),
 // its element tier (a step line that moves in that element's seasons), the tier
-// cuts as bands, and the treasure where it came. One axis: every value is lift.
+// cuts as bands, and the treasure where it came. One axis: every value is lift. The bands
+// are the season/element cuts; the overall line is tiered by the overall's own, lower cuts.
 
 import { assignTier } from "./model.js";
 import { h, s, num, pct, elementIcon, ELEMENT_KO, day, shortDay, showTip, moveTip, hideTip, tierBadge, unitName } from "./ui.js";
@@ -34,7 +35,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null }) {
     h("span", { class: "lg" }, h("i", { class: "sw bar own1" }), own.length > 1 ? `${ELEMENT_KO[own[0]]} 약점 시즌` : "자기 속성 약점 시즌"),
     own.length > 1 ? h("span", { class: "lg" }, h("i", { class: "sw bar own2" }), `${ELEMENT_KO[own[1]]} 약점 시즌`) : null,
     h("span", { class: "lg" }, h("i", { class: "sw bar" }), "다른 시즌 (막대 = 그 시즌 기여도)"),
-    h("span", { class: "lg" }, h("i", { class: "sw line ink" }), "종합 티어"),
+    h("span", { class: "lg" }, h("i", { class: "sw line ink" }), "종합 (배경 띠가 아닌 종합 컷으로 매김)"),
     h("span", { class: "lg" }, h("i", { class: "sw line own1 step" }), own.length > 1 ? `${ELEMENT_KO[own[0]]} 속성 티어` : "속성 티어"),
     own.length > 1 ? h("span", { class: "lg" }, h("i", { class: "sw line own2 step" }), `${ELEMENT_KO[own[1]]} 속성 티어`) : null,
     firstTreasure > 0 ? h("span", { class: "lg" }, h("i", { class: "sw heart" }, "♥"), "애장품") : null,

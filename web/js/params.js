@@ -23,6 +23,7 @@ export function encodeParams(p, d) {
   if (p.topN !== d.topN) q.top = String(p.topN);
   if (p.rankWeighting !== d.rankWeighting) q.w = p.rankWeighting;
   if (!same(p.cuts, d.cuts)) q.cuts = p.cuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
+  if (!same(p.overallCuts, d.overallCuts)) q.ocuts = p.overallCuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
   if (p.halfLifeDays !== d.halfLifeDays) q.hl = String(p.halfLifeDays);
   if (p.priorStrength !== d.priorStrength) q.k = String(p.priorStrength);
   if (p.overall !== d.overall) q.ov = p.overall;
@@ -40,18 +41,19 @@ const number = (text, lo, hi) => {
 };
 
 export function decodeParams(q, d, model) {
-  const p = { ...d, cuts: d.cuts.map((c) => [...c]), servers: [...d.servers] };
+  const p = { ...d, cuts: d.cuts.map((c) => [...c]), overallCuts: d.overallCuts.map((c) => [...c]), servers: [...d.servers] };
   if (q.has("srv")) {
     const kept = q.get("srv").split(",").map((s) => s.trim().toUpperCase()).filter((s) => model.servers.includes(s));
     if (kept.length) p.servers = model.servers.filter((s) => kept.includes(s));
   }
   p.topN = Math.round(number(q.get("top"), 1, 50) ?? d.topN);
   if (["dcg", "uniform"].includes(q.get("w"))) p.rankWeighting = q.get("w");
-  if (q.has("cuts")) {
+  for (const [key, name] of [["cuts", "cuts"], ["ocuts", "overallCuts"]]) {
+    if (!q.has(key)) continue;
     const labels = cutLabels(d);
-    const values = q.get("cuts").split(",").map((v) => number(v, 0, 10));
+    const values = q.get(key).split(",").map((v) => number(v, 0, 10));
     if (values.length === labels.length && values.every((v) => v != null) && descending(values)) {
-      p.cuts = [...labels.map((l, i) => [l, values[i]]), ...d.cuts.slice(labels.length)];
+      p[name] = [...labels.map((l, i) => [l, values[i]]), ...d[name].slice(labels.length)];
     }
   }
   p.halfLifeDays = number(q.get("hl"), 0, 3650) ?? d.halfLifeDays;
@@ -78,6 +80,7 @@ export function changedParams(p, d) {
   if (p.topN !== d.topN) out.push("상위 N위");
   if (p.rankWeighting !== d.rankWeighting) out.push("순위 가중");
   if (!same(p.cuts, d.cuts)) out.push("티어 컷");
+  if (!same(p.overallCuts, d.overallCuts)) out.push("종합 티어 컷");
   if (p.halfLifeDays !== d.halfLifeDays) out.push("반감기");
   if (p.priorStrength !== d.priorStrength) out.push("축소");
   if (p.overall !== d.overall) out.push("종합 방식");
@@ -131,26 +134,30 @@ export function buildParams(app, body) {
     }, h("b", null, s), h("span", null, model.serverNames[s]));
   }));
 
-  const cutInputs = h("div", { class: "cuts" });
   const cutError = h("p", { class: "hint error", hidden: true }, "위 티어일수록 커야 하고 0 이상이어야 합니다.");
-  const readCuts = () => [...cutInputs.querySelectorAll("input")].map((i) => Number(i.value));
   const labels = cutLabels(d);
   const floor = d.cuts[d.cuts.length - 1][0];
-  labels.forEach((label, i) => {
-    cutInputs.append(h("label", { class: "cut", dataset: { tier: label } },
-      h("span", { class: "tb", dataset: { tier: label } }, h("b", null, label)),
-      h("span", { class: "cut-ge", "aria-hidden": "true" }, "≥"),
-      h("input", {
-        type: "number", min: 0, max: 10, step: 0.01, value: p.cuts[i][1], inputMode: "decimal",
-        "aria-label": `${label} 티어 최소 기여도`,
-        onchange: () => {
-          const values = readCuts();
-          const ok = values.every((v) => Number.isFinite(v)) && descending(values);
-          cutError.hidden = ok;
-          if (ok) app.setParams({ cuts: [...labels.map((l, k) => [l, values[k]]), ...p.cuts.slice(labels.length)] });
-        },
-      })));
-  });
+  // One row of cut inputs for ``name`` (the season/element cuts, or the overall's).
+  const cutRow = (name, what) => {
+    const row = h("div", { class: "cuts" });
+    const read = () => [...row.querySelectorAll("input")].map((i) => Number(i.value));
+    labels.forEach((label, i) => {
+      row.append(h("label", { class: "cut", dataset: { tier: label } },
+        h("span", { class: "tb", dataset: { tier: label } }, h("b", null, label)),
+        h("span", { class: "cut-ge", "aria-hidden": "true" }, "≥"),
+        h("input", {
+          type: "number", min: 0, max: 10, step: 0.005, value: p[name][i][1], inputMode: "decimal",
+          "aria-label": `${label} 티어 최소 ${what}`,
+          onchange: () => {
+            const values = read();
+            const ok = values.every((v) => Number.isFinite(v)) && descending(values);
+            cutError.hidden = ok;
+            if (ok) app.setParams({ [name]: [...labels.map((l, k) => [l, values[k]]), ...p[name].slice(labels.length)] });
+          },
+        })));
+    });
+    return row;
+  };
 
   body.replaceChildren(
     h("section", { class: "psec" },
@@ -165,8 +172,12 @@ export function buildParams(app, body) {
       ], p.rankWeighting, (v) => { app.setParams({ rankWeighting: v }); buildParams(app, body); }, { label: "순위 가중" }),
       "상위일수록 크게 = 1 / log₂(순위 + 1): 1위 1.00 · 10위 0.29 · 50위 0.18")),
     h("section", { class: "psec" },
-      h("h3", null, "티어 컷", h("small", null, "기여도 기준 · 시즌·속성·종합 공통")),
-      cutInputs, cutError,
+      h("h3", null, "티어 컷", h("small", null, "기여도 기준")),
+      field("시즌·속성 티어", cutRow("cuts", "기여도")),
+      field("종합 티어", cutRow("overallCuts", "종합 값"),
+        "종합은 다섯 칸의 평균이라 한 속성만 맡는 니케는 속성 기여도의 5분의 1이 됩니다. 그래서 컷이 따로이고 낮습니다 — "
+        + "A 0.3 ≈ 한 속성에서만 SS 인 특화 니케. 순위는 그대로이고 티어 이름만 바뀝니다."),
+      cutError,
       h("p", { class: "hint" }, "기여도 1.0 = 한 사람이 쓰는 25명(5덱 × 5명)이 대미지를 똑같이 나눴을 때의 몫. "
         + `1.5 = 그 1.5배, 0 = 아무도 안 씀. 그 아래는 ${floor}(티어표에서 접어 둠).`)),
     h("section", { class: "psec" },

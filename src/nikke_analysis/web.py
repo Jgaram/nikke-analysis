@@ -159,6 +159,7 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
         "excludeServers": list(config.exclude_servers),
         "rankWeighting": config.rank_weighting,
         "cuts": [[label, value] for label, value in config.cuts],
+        "overallCuts": [[label, value] for label, value in config.overall_cuts],
         "halfLifeDays": config.half_life_days,
         "priorStrength": config.prior_strength,
         "overall": config.overall,

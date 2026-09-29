@@ -39,6 +39,8 @@ CONFIGS = {
                              "retire_after_own_seasons": 0},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
+                               "overall_cuts": [("SS", 1.0), ("S", 0.7), ("A", 0.4), ("B", 0.2), ("C", 0.1),
+                                                ("D", 0.0)],
                                "retire_after_days": 0.0, "retire_after_own_seasons": 2},
 }
 
@@ -157,7 +159,8 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
     kept = [s for s in servers if (not config.servers or s in config.servers) and s not in config.exclude_servers]
     return {
         "servers": kept, "topN": config.top_n, "rankWeighting": config.rank_weighting,
-        "cuts": [[label, value] for label, value in config.cuts], "halfLifeDays": config.half_life_days,
+        "cuts": [[label, value] for label, value in config.cuts],
+        "overallCuts": [[label, value] for label, value in config.overall_cuts], "halfLifeDays": config.half_life_days,
         "priorStrength": config.prior_strength, "overall": config.overall,
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
         "minUsage": config.min_usage, "retireAfterDays": config.retire_after_days,

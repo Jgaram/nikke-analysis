@@ -65,8 +65,9 @@ function cutText(cuts, i) {
 }
 
 // The bottom tier (F: next to no use) starts folded; the others show up to ``collapseAt`` cards.
-export function tierBoard(app, items, { key, card, collapseAt = 36, empty = "없음", note = null }) {
-  const cuts = app.state.params.cuts;
+// ``cuts`` are the ones the items were tiered by: the season/element cuts unless given.
+export function tierBoard(app, items, { key, card, collapseAt = 36, empty = "없음", note = null, cuts = null }) {
+  cuts = cuts || app.state.params.cuts;
   const board = h("div", { class: "board" });
   const toggle = (id, on) => { if (on) app.state.expanded.add(id); else app.state.expanded.delete(id); app.rerender(); };
   cuts.forEach(([label], i) => {

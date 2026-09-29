@@ -120,6 +120,28 @@ def test_config_file_round_trip(tmp_path):
 def test_repo_config_loads():
     config = tiers.load_tier_config()
     assert config.tier_order[0] == "SS" and config.overall in tiers.OVERALL_MODES and config.include_live
+    assert [l for l, _ in config.overall_cuts] == config.tier_order
+    assert all(o < c for (_, o), (_, c) in zip(config.overall_cuts[:-1], config.cuts[:-1]))
+
+
+def test_the_overall_tier_has_cuts_of_its_own():
+    """An element-SS specialist that sits out the rest is SS in its element and, on the lower overall cuts, A."""
+    config = tiers.TierConfig()
+    assert tiers.assign_tier(1.4, config) == "SS"
+    assert tiers.assign_tier(1.4 / 5, config) == "C"
+    assert tiers.assign_tier(0.3, config, overall=True) == "A"
+    standing = tiny({"Fire": 1.5})
+    assert overall_of(standing)["overall"] == pytest.approx(0.3)
+    assert overall_of(standing)["overall_tier"] == "A" and standing.elements.iloc[0]["element_tier"] == "SS"
+
+
+def test_overall_cuts_follow_custom_cuts_unless_given():
+    custom = [("S", 1.0), ("A", 0.5), ("B", 0.0)]
+    assert tiers.TierConfig(cuts=custom).overall_cuts == custom
+    given = tiers.TierConfig(cuts=custom, overall_cuts=[("B", 0.0), ("S", 0.4), ("A", 0.2)])
+    assert given.overall_cuts == [("S", 0.4), ("A", 0.2), ("B", 0.0)]
+    with pytest.raises(ValueError):
+        tiers.TierConfig(cuts=custom, overall_cuts=[("SS", 0.4), ("A", 0.2), ("B", 0.0)])
 
 
 def test_bad_parameters_are_rejected():

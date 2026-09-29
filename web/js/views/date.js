@@ -140,7 +140,7 @@ function overallBody(app, view) {
   if (table) return h("div", { class: "panel table-panel" }, overallTable(app, view, rows), explain);
   const items = rows.map((o) => ({ u: o.u, tier: o.tier, value: o.overall, o }));
   return tierBoard(app, items, {
-    key: `overall-${state.date || "now"}`,
+    key: `overall-${state.date || "now"}`, cuts: state.params.overallCuts,
     card: (it) => unitCard(app, it.u, {
       value: it.value, tier: it.tier, provisional: it.o.provisional, heart: it.o.treasure,
       retired: view.life.get(it.u)?.retired, tip: () => standingTip(app, it.u, view),

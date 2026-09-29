@@ -6,7 +6,8 @@
 //
 //   population  servers, ranks 1..topN, rank weighting
 //               -> per season and unit: usage, deck split, lift (기여도)
-//   tiers       cuts, recency, prior, how the overall is formed, the live season
+//   tiers       cuts (season and element; the overall has its own), recency, prior,
+//               how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
 //   lifespans   what counts as used, how long idle - and through how many seasons of
 //               its own element - means retired
@@ -30,6 +31,7 @@ export function defaultParams(model) {
     topN: d.topN,
     rankWeighting: d.rankWeighting,
     cuts: d.cuts.map(([label, value]) => [label, value]),
+    overallCuts: (d.overallCuts || d.cuts).map(([label, value]) => [label, value]),
     halfLifeDays: d.halfLifeDays,
     priorStrength: d.priorStrength,
     overall: d.overall,
@@ -41,11 +43,13 @@ export function defaultParams(model) {
   });
 }
 
+const sortCuts = (cuts) => cuts.map(([label, value]) => [String(label), Number(value)]).sort((a, b) => b[1] - a[1]);
+
 export function normalizeParams(p) {
-  const cuts = p.cuts.map(([label, value]) => [String(label), Number(value)]);
-  cuts.sort((a, b) => b[1] - a[1]);
+  const cuts = sortCuts(p.cuts);
+  const overallCuts = sortCuts(p.overallCuts || p.cuts);
   if (!OVERALL_MODES.includes(p.overall)) throw new Error(`overall must be one of ${OVERALL_MODES}`);
-  return { ...p, cuts, servers: [...p.servers] };
+  return { ...p, cuts, overallCuts, servers: [...p.servers] };
 }
 
 export function populationKey(p) {
@@ -53,7 +57,7 @@ export function populationKey(p) {
 }
 
 export function tierKey(p) {
-  return JSON.stringify([p.cuts, p.halfLifeDays, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive]);
+  return JSON.stringify([p.cuts, p.overallCuts, p.halfLifeDays, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive]);
 }
 
 export function lifeKey(p) {
@@ -363,7 +367,7 @@ export function standings(model, population, moment, params, treasured = null) {
   }
 
   const ranks = minRanks(overall.map((r) => r.overall));
-  overall.forEach((r, i) => { r.rank = ranks[i]; r.tier = assignTier(r.overall, params.cuts); });
+  overall.forEach((r, i) => { r.rank = ranks[i]; r.tier = assignTier(r.overall, params.overallCuts); });
   overall.sort((a, b) => b.overall - a.overall || cmpId(a.id, b.id));
 
   for (const element of ELEMENTS) {

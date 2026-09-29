@@ -8,7 +8,7 @@ const FOLD = "pick:bottom";
 
 export function pickView(app) {
   const { model, state } = app;
-  const cuts = state.params.cuts;
+  const cuts = state.params.overallCuts;
   const bottom = cuts.length > 1 ? cuts[cuts.length - 1][0] : null;
   const view = app.viewAt(app.moment());
   // Every unit out by the moment: the standing's order, best first, then the ones with no

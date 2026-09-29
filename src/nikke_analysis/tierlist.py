@@ -192,7 +192,8 @@ class TierView:
 
     def _parameters(self) -> dict[str, Any]:
         return {"half_life_days": self.config.half_life_days, "overall": self.config.overall,
-                "include_live": self.config.include_live, "cuts": dict(self.config.cuts)}
+                "include_live": self.config.include_live, "cuts": dict(self.config.cuts),
+                "overall_cuts": dict(self.config.overall_cuts)}
 
     def to_dict(self) -> dict[str, Any]:
         def block(b: SeasonBlock | None) -> dict[str, Any] | None:
@@ -472,8 +473,9 @@ def _span(final: list[int], live: list[int]) -> str:
     return " + ".join(parts)
 
 
-def _cuts(config: tiering.TierConfig) -> str:
-    return " · ".join(f"{label} {cut:g}" for label, cut in config.cuts[:-1])
+def _cuts(config: tiering.TierConfig, *, overall: bool = False) -> str:
+    cuts = config.overall_cuts if overall else config.cuts
+    return " · ".join(f"{label} {cut:g}" for label, cut in cuts[:-1])
 
 
 def _recency(config: tiering.TierConfig) -> str:
@@ -488,7 +490,8 @@ def _header(view: TierView, title: str) -> list[str]:
         f"{view.moment:%Y-%m-%d %H:%M} KST 기준 {title} · {_span(view.final_seasons, view.live_seasons)}",
         f"  표본: {view.sample or f'서버마다 상위 {config.top_n}위'}",
         *LIFT_NOTE,
-        f"  티어 컷: {_cuts(config)} · {_recency(config)}",
+        f"  티어 컷: 시즌·속성 {_cuts(config)} / 종합 {_cuts(config, overall=True)}",
+        f"  {_recency(config)}",
     ]
 
 

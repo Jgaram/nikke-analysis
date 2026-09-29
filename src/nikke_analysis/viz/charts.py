@@ -207,7 +207,8 @@ def _is_true(values: pd.Series) -> pd.Series:
 
 def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons, *, value: str, tier: str,
                ticks: list[list[float]], tick_label: str, labels: list[list] | None = None,
-               starred: list[bool] | None = None, star_label: str = "", note: list | str = ""):
+               starred: list[bool] | None = None, star_label: str = "", note: list | str = "",
+               cuts: list[tuple[str, float]] | None = None):
     """Units as horizontal bars of ``value`` coloured by ``tier``, strongest on
     top, with ticks - the body the tier-list charts share.
 
@@ -215,7 +216,8 @@ def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons,
     (none, one, or one per element). ``labels`` overrides the rows' label parts.
     A row ``starred`` gets a ``*``, explained by ``star_label`` in the legend;
     ``note`` (words and icons) goes on a line under the legend. Returns the
-    figure and axes, framed and saved by the caller.
+    figure and axes, framed and saved by the caller. ``cuts`` are the lines drawn
+    (the season/element cuts by default).
     """
     config = load_tier_config()
     order = config.tier_order
@@ -236,7 +238,7 @@ def _tier_bars(theme: th.Theme, table: pd.DataFrame, names: Names, icons: Icons,
         rows = [parts + (["*"] if star else []) for parts, star in zip(rows, starred)]
     _label_rows(ax, theme, rows, face_pt=21, fontsize=9)
     ax.tick_params(axis="y", length=0)
-    for label, cut in config.cuts[:-1]:
+    for label, cut in (cuts or config.cuts)[:-1]:
         ax.axvline(cut, color=theme.grid, linewidth=1, zorder=1)
         ax.annotate(label, (cut, n - 0.3), textcoords="offset points", xytext=(4, 2), fontsize=9,
                     color=theme.ink_muted, va="bottom", annotation_clip=False)
@@ -328,12 +330,12 @@ def chart_overall_tiers(overall: pd.DataFrame, elements: pd.DataFrame, theme: th
     if overall.empty:
         return None
     config = load_tier_config()
-    table = overall[overall["overall"] >= config.cut("C")]
+    table = overall[overall["overall"] >= config.overall_cut("C")]
     table = table.sort_values(["overall", "unit_id"], ascending=[False, True]).head(limit).iloc[::-1]
     if table.empty:
         return None
     lifts = elements.groupby("unit_id")["element_lift"].agg(list) if not elements.empty else pd.Series(dtype=object)
-    fig, ax = _tier_bars(theme, table, names, icons, value="overall", tier="overall_tier",
+    fig, ax = _tier_bars(theme, table, names, icons, value="overall", tier="overall_tier", cuts=config.overall_cuts,
                          ticks=[lifts.get(u, []) for u in table["unit_id"]],
                          tick_label="속성 티어 점수", starred=list(_is_true(table["provisional"])),
                          star_label=f"* 잠정: 겪은 보스 약점 {config.min_elements_observed}가지 미만이거나 자기 속성 못 겪음",

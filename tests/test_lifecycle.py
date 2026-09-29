@@ -103,12 +103,11 @@ def test_a_generalist_out_of_the_others_waits_for_its_own_season():
 # curves: the shape of a whole career
 
 
-def season_table(lifts: dict[str, list[float | None]], weak: list[str], unit_class: str = "Attacker",
-                 element: str = "Fire") -> pd.DataFrame:
+def season_table(lifts: dict[str, list[float | None]], weak: list[str], element: str = "Fire") -> pd.DataFrame:
     """Rows of units (``element``) at ``lifts[unit][i]`` in season i + 1, weak to ``weak[i]``;
     None = not out yet."""
     return pd.DataFrame([{"season": n, "unit_id": u, "lift": values[n - 1], "element_match": e == element,
-                          "unit_class": unit_class, "weak_element": e}
+                          "weak_element": e}
                          for u, values in lifts.items() for n, e in enumerate(weak, start=1) if values[n - 1] is not None])
 
 
@@ -141,20 +140,15 @@ def test_curves_tell_the_four_shapes_apart():
     assert not shapes.loc["general", "declined"]
 
 
-def test_the_meta_index_sees_attackers_follow_the_weakness():
+def test_the_meta_index_sees_the_units_follow_the_weakness():
     weak = ["Fire", "Water", "Wind", "Iron", "Electric"] * 2
-    elements = ["Fire", "Water", "Wind", "Iron", "Electric"]
 
     def table(general: bool) -> pd.DataFrame:
-        parts = [season_table({e: [1.0 if general or w == e else 0.0 for w in weak]}, weak, element=e)
-                 for e in elements]
-        parts.append(season_table({"support": [1.0] * 10}, weak, unit_class="Supporter"))
-        return pd.concat(parts, ignore_index=True)
+        return pd.concat([season_table({e: [1.0 if general or w == e else 0.0 for w in weak]}, weak, element=e)
+                          for e in weak[:5]], ignore_index=True)
 
     split, same = lifecycle.meta_index(table(False)), lifecycle.meta_index(table(True))
-    assert split["same_attacker"].dropna().tolist() == [0.0] * 6  # from the fifth season: four others before it
-    assert same["same_attacker"].dropna().tolist() == pytest.approx([1.0] * 6)
-    assert split["same_rest"].dropna().tolist() == pytest.approx([1.0] * 6)
-    assert split.loc[10, ["attackers_own", "attackers_other", "attackers_pool"]].tolist() == [1, 0, 1]
-    assert same.loc[10, "attackers_other"] == 4 and same.loc[10, "other_attacker"] == pytest.approx(4 / 6)
-    assert split.loc[10, ["best_own", "best_other"]].tolist() == [1.0, 0.0]
+    assert split["same"].dropna().tolist() == [0.0] * 6  # from the fifth season: four others before it
+    assert same["same"].dropna().tolist() == pytest.approx([1.0] * 6)
+    assert split.loc[10, ["good_own", "good_other", "pool", "own_share"]].tolist() == [1, 0, 1, 1.0]
+    assert same.loc[10, "good_other"] == 4 and same.loc[10, "own_share"] == pytest.approx(1 / 5)

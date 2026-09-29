@@ -9,7 +9,7 @@ answers as of the committed data):
 carry how general (``analyze.tiers.generality``, the columns ``generality``
 and ``generality_band`` of the overall table); the study replays it season by
 season. Which way a career went is the study's own (``careers``): it counts
-which path generalists of each class took.
+which path generalists took.
 
 **How close is retirement?** ``own_outlook``: every time a unit was fielded in a
 season of its own element, whether the next season of that element fielded it
@@ -25,14 +25,13 @@ of the element rotation (``rotations``), without the tiers' memory - unused,
 narrow from the start, general then narrowed to its own element, or general
 all the way down.
 
-**Did the meta stop fielding attackers whatever the weakness?** ``meta_index``
+**Does the meta follow the boss's weakness more than it did?** ``meta_index``
 per season, ``debuts`` per unit's first year.
 
-Where the study splits units in two, the split is the class (``class_group``:
-화력형 or the rest), and it is read as the class only. Whether a unit deals the
-damage or supports needs its damage, which the rankings do not give (they give
-a deck's) - that takes other data, later. ``class_group`` is the one place a
-judgement from it would go.
+The study does not split units by role, nor by class: the class has too many
+exceptions to stand for the role, and the role is not two groups but a matter
+of degree - how much of what a unit adds is its own damage. That needs damage
+per unit, which the rankings do not give (they give a deck's).
 
 Nothing computed only here feeds the tiers, the committed tables or the tier site.
 """
@@ -49,18 +48,6 @@ from .analyze.metrics import ELEMENTS
 
 OUTLOOK_TIERS = ["S 이상", "A", "B", "C", "D 이하"]  # own-season tiers for the outlook: SS and S, ..., D and F together
 USAGE_RULE = 0.10  # the lifespan rule before the season tier: fielded by a tenth of the rankers
-
-
-CLASS_GROUPS = ("화력형", "지원·방어형")
-
-
-def class_group(unit_class: pd.Series) -> pd.Series:
-    """The half of the split each unit falls in: 화력형 (Attacker) or 지원·방어형 (the rest).
-
-    The class only - not whether the unit deals the damage or supports, which
-    needs damage per unit from other data. A judgement from such data would go
-    here."""
-    return (unit_class == "Attacker").map({True: CLASS_GROUPS[0], False: CLASS_GROUPS[1]})
 
 
 def _flags(rows: pd.DataFrame, column: str) -> pd.Series:
@@ -277,9 +264,8 @@ def eras_of(seasons: Any, size: int = 10) -> dict[int, str]:
 def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -> pd.DataFrame:
     """Old and recent Solo Raid, ten seasons at a time.
 
-    Where the damage came from (``own_attacker`` ... ``other_rest``: the
-    share of the season's lift from 화력형 units and from the rest, of the
-    boss's weak element or not - by class, ``class_group``), how general the units in use were
+    Where the damage came from (``own_share``: the share of the season's lift
+    from units of the boss's weak element), how general the units in use were
     (``generalist``: the share of B-or-better, settled, unretired units in the
     generalist band; ``g_median``), and how well a standing held: of
     the units at A or better in a season, how many were A or better again in
@@ -289,14 +275,10 @@ def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -
     era a unit was first fielded in, of the units that ever reached a season
     tier of A and have been around a year since: how many retired within that
     year (``retired_in_year``, of ``debuts``)."""
-    rows = history.assign(own=_flags(history, "element_match"),
-                          attacker=class_group(history["unit_class"]) == CLASS_GROUPS[0])
+    rows = history.assign(own=_flags(history, "element_match"))
     total = rows.groupby("season")["lift"].transform("sum")
     rows["share"] = rows["lift"] / total
-    parts = {"own_attacker": rows["own"] & rows["attacker"], "own_rest": rows["own"] & ~rows["attacker"],
-             "other_attacker": ~rows["own"] & rows["attacker"], "other_rest": ~rows["own"] & ~rows["attacker"]}
-    per_season = pd.DataFrame({name: rows["share"].where(mask, 0.0).groupby(rows["season"]).sum()
-                               for name, mask in parts.items()})
+    per_season = pd.DataFrame({"own_share": rows["share"].where(rows["own"], 0.0).groupby(rows["season"]).sum()})
     era = eras_of(rows["season"]).get
     frame = per_season.groupby(per_season.index.map(era)).mean()
 
@@ -506,7 +488,7 @@ def curves(table: pd.DataFrame, config: tiers.TierConfig | None = None, *, wide:
 
 
 # --------------------------------------------------------------------------
-# the meta: fewer attackers across the rotation
+# the meta: following the boss's weakness
 # --------------------------------------------------------------------------
 
 def _cross_weakness(lifts: pd.DataFrame, weak: pd.Series, back: int = 4) -> pd.Series:
@@ -524,41 +506,31 @@ def _cross_weakness(lifts: pd.DataFrame, weak: pd.Series, back: int = 4) -> pd.S
 
 
 def meta_index(history: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.DataFrame:
-    """Per season, how far the attackers in use depend on the boss's weakness - by class
-    (``class_group``).
+    """Per season, how far the units in use depend on the boss's weakness.
 
-    ``same_attacker`` / ``same_rest``: how alike the season's lifts of the
-    화력형 units (or the rest) are to those of the four seasons before it of
-    another weakness (``_cross_weakness``); ``other_attacker``: the share of
-    the season's lift from 화력형 units not of the weak element;
-    ``attackers_own`` / ``attackers_other``: 화력형 units at a season tier of B
-    or better, of the weak element or not, and ``best_own`` / ``best_other``
-    the highest lift of each; ``attackers_pool``: 화력형 units of the weak
-    element out by then."""
+    ``same``: how alike the season's lifts are to those of the four seasons
+    before it of another weakness (``_cross_weakness``); ``own_share``: the
+    share of the season's lift from units of the weak element; ``good_own`` /
+    ``good_other``: units at a season tier of B or better, of the weak element
+    or not; ``pool``: units of the weak element out by then."""
     config = config or tiers.TierConfig()
-    rows = history.assign(own=_flags(history, "element_match"),
-                          attacker=class_group(history["unit_class"]) == CLASS_GROUPS[0])
+    rows = history.assign(own=_flags(history, "element_match"))
     weak = rows.drop_duplicates("season").set_index("season")["weak_element"]
     total = rows.groupby("season")["lift"].transform("sum")
     frame = pd.DataFrame(index=sorted(rows["season"].unique()))
-    for name, mask in (("same_attacker", rows["attacker"]), ("same_rest", ~rows["attacker"])):
-        lifts = rows[mask].pivot_table(index="unit_id", columns="season", values="lift", fill_value=0)
-        frame[name] = _cross_weakness(lifts, weak)
-    other = rows["attacker"] & ~rows["own"]
-    frame["other_attacker"] = (rows["lift"] / total).where(other, 0.0).groupby(rows["season"]).sum()
+    lifts = rows.pivot_table(index="unit_id", columns="season", values="lift", fill_value=0)
+    frame["same"] = _cross_weakness(lifts, weak)
+    frame["own_share"] = (rows["lift"] / total).where(rows["own"], 0.0).groupby(rows["season"]).sum()
     good = rows["lift"] >= config.cut("B")
-    for name, mask in (("attackers_own", rows["attacker"] & rows["own"] & good), ("attackers_other", other & good),
-                       ("attackers_pool", rows["attacker"] & rows["own"])):
+    for name, mask in (("good_own", rows["own"] & good), ("good_other", ~rows["own"] & good), ("pool", rows["own"])):
         frame[name] = mask.groupby(rows["season"]).sum()
-    for name, mask in (("best_own", rows["attacker"] & rows["own"]), ("best_other", other)):
-        frame[name] = rows["lift"].where(mask).groupby(rows["season"]).max()
     return frame.rename_axis("season")
 
 
 def debuts(history: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.DataFrame:
     """Each unit that reached a season tier of A: how it was used in its first year from its
     first season in use - the mean lift in its own element's seasons (``own``) and in the others
-    (``other``), their ``generality`` - with its class and the season it came in (``first``)."""
+    (``other``), their ``generality`` - and the season it came in (``first``)."""
     config = config or tiers.TierConfig()
     rows = history.assign(own=_flags(history, "element_match"), start=pd.to_datetime(history["start_at"], utc=True),
                           used=tiers.fielded(history, config)).sort_values("season")
@@ -570,7 +542,7 @@ def debuts(history: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.
         year = group[(group["start"] >= began) & (group["start"] < began + pd.Timedelta(days=365))]
         own, other = year.loc[year["own"], "lift"].mean(), year.loc[~year["own"], "lift"].mean()
         out.append({"unit_id": unit_id, "first": int(group.loc[group["used"], "season"].iloc[0]),
-                    "group": class_group(group["unit_class"].iloc[:1]).iloc[0], "own": own, "other": other,
+                    "own": own, "other": other,
                     "generality": 2 * other / (own + other) if own + other > 0 else np.nan,
                     "year_over": bool(began + pd.Timedelta(days=365) <= rows["start"].max())})
     return pd.DataFrame(out)
@@ -592,7 +564,6 @@ def report(book=None) -> str:
     history, seasons, config = book.history, book.seasons, book.config
     names = history.drop_duplicates("unit_id").set_index("unit_id")
     label = names["name_ko"].where(names["name_ko"].fillna("") != "", names["name_en"])
-    klass = class_group(names["unit_class"])
     panel = replay(history, seasons, config, treasured=book.treasured)
     newest = int(panel["season"].max())
     now = moments(seasons)[newest]
@@ -625,27 +596,22 @@ def report(book=None) -> str:
 
     lines.append("3. 범용이던 니케의 길 (다른 속성 시즌에 쓰인 적 있는 니케)")
     paths = careers(history, seasons, now, config, life)
-    general = paths[paths["other_used"] > 0].assign(cls=lambda f: f["unit_id"].map(klass))
-    table = pd.crosstab(general["path"], general["cls"]).reindex([p for p in PATHS if p in set(general["path"])])
-    for path, row in table.iterrows():
+    general = paths[paths["other_used"] > 0]
+    for path in [p for p in PATHS if p in set(general["path"])]:
         members = general[general["path"] == path]
-        lines.append(f"   {PATH_KO[path]:<18} " + " · ".join(f"{c} {n}" for c, n in row.items()) + "  — "
-                     + ", ".join(members["unit_id"].map(label)))
+        lines.append(f"   {PATH_KO[path]:<18} {len(members):>3}명  — " + ", ".join(members["unit_id"].map(label)))
     ended = general[general["path"].isin(["element_only", "retired_element_only", "retired_generalist"])]
     went = ended["path"] != "retired_generalist"
-    for cls, share in went.groupby(ended["cls"]).mean().items():
-        lines.append(f"   범용을 끝낸 {cls}: {_pct(share)}가 속성 전용을 거쳤다 ({int(went[ended['cls'] == cls].sum())}/"
-                     f"{int((ended['cls'] == cls).sum())})")
+    lines.append(f"   범용을 끝낸 니케: {_pct(went.mean())}가 속성 전용을 거쳤다 ({int(went.sum())}/{len(went)})")
     lines.append("")
 
     lines.append("4. 예전과 요즘 (10시즌씩)")
     table = eras(history, panel, config)
-    lines.append("   구간      기여도 몫(클래스별): 약점속성 화력형 · 약점속성 지원·방어형 · 다른속성 화력형 · 다른속성 지원·방어형 | "
+    lines.append("   구간      약점 속성 니케의 기여도 몫 | "
                  "범용 비율 · g 중앙값 | A 유지(다음 같은 약점): 자기 속성 · 다른 속성 | 종합 A 10시즌 뒤 | "
                  "1년 안 은퇴(이 구간에 데뷔, 시즌 A 이상 찍은 니케)")
     for name, r in table.iterrows():
-        lines.append(f"   {name:<8}  {_pct(r.own_attacker):>4} · {_pct(r.own_rest):>4} · {_pct(r.other_attacker):>4} · "
-                     f"{_pct(r.other_rest):>4} | {_pct(r.generalist):>4} · {r.g_median:.2f} | "
+        lines.append(f"   {name:<8}  {_pct(r.own_share):>4} | {_pct(r.generalist):>4} · {r.g_median:.2f} | "
                      f"{_pct(r.keep_own):>4} · {_pct(r.keep_other):>4} | {_pct(r.keep_overall_10):>4} | "
                      f"{_pct(r.retired_in_year)}" + (f" ({r.debuts:.0f}명)" if r.debuts == r.debuts else ""))
     lines.append("")
@@ -682,36 +648,32 @@ def report(book=None) -> str:
     lines.append(f"6. 생애 곡선 (로테이션 한 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들, 쓰임 = 시즌 티어 C 이상, "
                  f"처음부터 범용 = 전성기 범용도 {CURVE_WIDE} 이상, 속성 전용으로 좁아짐 = 범용도 "
                  f"{config.generality_bands[0]} 아래)")
-    shapes = curves(history, config).assign(cls=lambda f: f["unit_id"].map(klass), name=lambda f: f["unit_id"].map(label))
+    shapes = curves(history, config).assign(name=lambda f: f["unit_id"].map(label))
     for curve in CURVES:
         members = shapes[shapes["curve"] == curve]
-        counts = " · ".join(f"{c} {int((members['cls'] == c).sum())}" for c in CLASS_GROUPS)
         listed = ", ".join(members.sort_values("peak", ascending=False)["name"].head(12))
-        lines.append(f"   {CURVE_KO[curve]:<12} {len(members):>3}명 ({counts})  — {listed}")
+        lines.append(f"   {CURVE_KO[curve]:<12} {len(members):>3}명  — {listed}")
     ended = shapes[shapes["curve"].isin(["narrowed", "faded"])]
     lines.append("   범용 → 속성 전용 · 범용인 채로 저묾의 전성기 범용도 중앙값: " + " · ".join(
         f"{CURVE_KO[c]} {ended.loc[ended['curve'] == c, 'g_peak'].median():.2f}" for c in ("narrowed", "faded")))
     lines.append("")
 
-    lines.append("7. 메타: 약점과 무관하게 쓰이는 화력형 (10시즌씩)")
+    lines.append("7. 메타: 약점을 따르는 정도 (10시즌씩)")
     meta = meta_index(history, config)
     era = eras_of(history["season"])
     block = meta.groupby(meta.index.map(era)).mean()
-    lines.append("   구간      약점 바뀌어도 같은 니케(화력형 · 지원·방어형) | 다른 속성 화력형 몫 | "
-                 "시즌 B 이상 화력형: 약점 속성 · 다른 속성 | 가장 높은 화력형: 약점 속성 · 다른 속성 | 약점 속성 화력형 풀")
+    lines.append("   구간      약점 교차 유사도 | 약점 속성 니케의 몫 | 시즌 B 이상: 약점 속성 · 다른 속성 | 약점 속성 니케 풀")
     for name, r in block.iterrows():
-        lines.append(f"   {name:<8}  {r.same_attacker:.2f} · {r.same_rest:.2f} | {_pct(r.other_attacker):>4} | "
-                     f"{r.attackers_own:.1f} · {r.attackers_other:.1f} | {r.best_own:.2f} · {r.best_other:.2f} | "
-                     f"{r.attackers_pool:.1f}")
+        lines.append(f"   {name:<8}  {r.same:.2f} | {_pct(r.own_share):>4} | {r.good_own:.1f} · {r.good_other:.1f} | "
+                     f"{r.pool:.1f}")
+    lines.append("   시즌별 약점 교차 유사도: " + " ".join(f"{s}:{v:.2f}" for s, v in meta["same"].dropna().items()))
     first = debuts(history, config)
     first = first.assign(era=first["first"].map(era))
     lines.append("   시즌 A 이상을 찍은 니케의 첫 1년 (데뷔 구간별): 범용도 중앙값 · 범용도 0.7 이상 비율 · "
                  "자기 속성 시즌 기여도 중앙값 · 명")
-    for cls in CLASS_GROUPS:
-        part = first[first["group"] == cls].groupby("era")
-        lines.append(f"   {cls:<6} " + " | ".join(
-            f"{e} {g['generality'].median():.2f} · {_pct((g['generality'] >= 0.7).mean())} · {g['own'].median():.2f} · "
-            f"{len(g)}" for e, g in part))
+    lines.append("   " + " | ".join(
+        f"{e} {g['generality'].median():.2f} · {_pct((g['generality'] >= 0.7).mean())} · {g['own'].median():.2f} · "
+        f"{len(g)}" for e, g in first.groupby("era")))
     return "\n".join(lines)
 
 

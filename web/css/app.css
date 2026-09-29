@@ -236,6 +236,10 @@ sup { font-size: 11px; margin-left: 1px; }
   background: var(--raised); color: var(--ink);
   box-shadow: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 0 0 1px var(--line-2), 0 4px 12px -6px rgba(0, 0, 0, .5);
 }
+/* the unit chart's weakness switch: 전체, then an icon per weakness (▶ = the unit's own) */
+.weak-seg { align-self: center; }
+.weak-seg .seg-btn { height: 28px; padding: 0 9px; gap: 3px; font-size: 11px; }
+.chart-panel .empty-note { padding: 28px 18px; text-align: center; }
 .viewtabs { align-self: flex-start; }
 .viewtabs .seg-btn { height: 36px; padding: 0 14px; font-size: 14px; }
 .viewtabs .seg-btn[aria-checked="true"] { box-shadow: 0 0 0 1px var(--accent), 0 0 16px -4px var(--glow); }
@@ -301,7 +305,7 @@ sup { font-size: 11px; margin-left: 1px; }
   mask-image: linear-gradient(90deg, transparent, #000 18px, #000 calc(100% - 18px), transparent);
 }
 .schip {
-  position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 3px; width: 40px; padding: 6px 0 5px;
+  position: relative; flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 46px; padding: 6px 0 5px;
   border-radius: 9px; text-decoration: none; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2);
   transition: border-color .15s, transform .15s, background .15s;
 }
@@ -309,6 +313,10 @@ sup { font-size: 11px; margin-left: 1px; }
 .schip-n { font: 700 13px/1 var(--display); letter-spacing: .02em; }
 .schip.on { border-color: var(--accent); color: var(--ink); background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent), 0 0 18px -6px var(--glow); }
 .schip.off { opacity: .45; }
+/* Number, boss, weakness, top to bottom. */
+.schip-boss { width: 36px; height: 36px; object-fit: contain; filter: drop-shadow(0 2px 4px rgb(0 0 0 / .3)); transition: transform .15s; }
+.schip-boss.none { display: block; }
+.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .schip.live::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 8px var(--accent-2); }
 .strip-step {
   flex: none; display: grid; place-items: center; width: 32px; border-radius: 9px; text-decoration: none; font-size: 20px; color: var(--ink-2);
@@ -322,6 +330,17 @@ sup { font-size: 11px; margin-left: 1px; }
   font: 700 13px/1 var(--display); color: var(--ink); background: var(--accent-soft); border: 1px solid var(--accent);
 }
 .strip-only:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+
+/* 모아 보기: one weakness's seasons side by side. */
+.cmp-head { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
+.cmp-head img { width: 28px; height: 28px; object-fit: contain; }
+.compare-panel th.cmp-season, .compare-panel td.cmp-season { text-align: center; padding-left: 6px; padding-right: 6px; }
+/* the unit stays in view while the seasons scroll sideways */
+.compare-panel tbody th, .compare-panel thead th:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface); }
+.compare-panel thead th:first-child { background: var(--surface-2); z-index: 3; }
+.compare-panel th.cmp-season .th-btn { flex-direction: column; }
+.cmp-cell { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.cmp-cell .heart-text { font-size: 11px; }
 
 /* ------------------------------------------------------------------------ season hero */
 

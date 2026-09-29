@@ -105,8 +105,10 @@ app.href = (tab, arg = null, extra = {}) => {
   const keep = {};
   if (tab === "date" || tab === "unit") keep.d = state.date;
   if (tab === "date") keep.v = state.view !== "overall" ? state.view : null;
-  if (tab === "season") keep.wk = state.weak;
+  // The weakness filter stays within its tab: the season strip's, or the unit chart's.
+  if ((tab === "season" || tab === "unit") && tab === state.tab) keep.wk = state.weak;
   if (tab !== "unit" && state.mode === "table") keep.m = "table";
+  if (tab === "season" && state.mode === "compare" && state.weak) keep.m = "compare";
   return `#/${tab}${arg != null ? `/${arg}` : ""}${app.query({ ...keep, ...extra })}`;
 };
 
@@ -126,7 +128,7 @@ function readHash() {
   state.date = /^\d{4}-\d{2}-\d{2}$/.test(q.get("d") || "") ? q.get("d") : null;
   state.view = M.ELEMENTS.includes(q.get("v")) ? q.get("v") : "overall";
   state.weak = M.ELEMENTS.includes(q.get("wk")) ? q.get("wk") : null;
-  state.mode = q.get("m") === "table" ? "table" : "tiers";
+  state.mode = q.get("m") === "table" ? "table" : q.get("m") === "compare" && state.weak ? "compare" : "tiers";
   if (state.tab === "season") {
     const n = Number(arg);
     state.season = app.model.seasons.some((s) => s.season === n) ? n : null;

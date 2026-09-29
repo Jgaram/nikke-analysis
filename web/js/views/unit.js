@@ -1,9 +1,9 @@
 // 니케 추이: one unit - where it stands now (or on the chosen day), and season by season.
 
-import { assignTier, unitSeasons } from "../model.js";
+import { assignTier, unitSeasons, ELEMENTS } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
-  WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst,
+  WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented,
 } from "../ui.js";
 import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, fold } from "./common.js";
 import { trajectoryChart } from "../chart.js";
@@ -15,23 +15,41 @@ export function unitView(app) {
   const moment = app.moment();
   const u = state.unit;
   const unit = model.units[u];
-  const records = unitSeasons(pop, history, u).map(({ season, row, hist }) => ({ season, row, hist }));
+  const all = unitSeasons(pop, history, u).map(({ season, row, hist }) => ({ season, row, hist }));
   const prof = app.profile(u, moment);
+  const own = prof.members.map((m) => m.element);
 
   const root = h("div", { class: "view view-unit" });
   root.append(picker(app, u));
   root.append(profile(app, u, prof, moment));
-  if (!records.length) {
+  if (!all.length) {
     root.append(h("div", { class: "panel empty" }, "아직 치른 시즌이 없습니다. 출시 뒤 첫 시즌이 열리면 여기에 나옵니다."));
     return root;
   }
-  root.append(h("section", { class: "panel chart-panel" },
-    h("div", { class: "panel-head" },
-      h("h3", null, "시즌별 기여도와 티어 변화"),
-      h("span", { class: "muted small" }, "막대에 마우스를 올리거나 눌러 보세요 · 선의 값은 그 시즌이 끝났을 때의 티어")),
-    trajectoryChart(app, u, records, { own: prof.members.map((m) => m.element), treasureAt: unit.treasure })));
-  root.append(seasonTable(app, u, records));
+  // A weakness chosen keeps the chart and the table to the seasons of that weakness.
+  const weak = state.weak;
+  const records = weak ? all.filter((r) => r.season.weak === weak) : all;
+  const head = h("div", { class: "panel-head" },
+    h("h3", null, "시즌별 기여도와 티어 변화"),
+    weakSwitch(app, all, own),
+    h("span", { class: "muted small" }, "막대에 마우스를 올리거나 눌러 보세요 · 선의 값은 그 시즌이 끝났을 때의 티어"));
+  root.append(h("section", { class: "panel chart-panel" }, head,
+    records.length ? trajectoryChart(app, u, records, { own, treasureAt: unit.treasure })
+      : h("p", { class: "empty-note muted" }, `출시 뒤 ${ELEMENT_KO[weak]} 약점 시즌이 아직 없습니다.`)));
+  if (records.length) root.append(seasonTable(app, u, records));
   return root;
+}
+
+// 전체, or one boss weakness: how many of the unit's seasons each has, its own element(s) marked.
+function weakSwitch(app, records, own) {
+  const count = (e) => records.filter((r) => r.season.weak === e).length;
+  return segmented([
+    { value: null, label: "전체", title: `전체 시즌 ${records.length}개` },
+    ...ELEMENTS.filter((e) => count(e)).map((e) => ({
+      value: e, icon: elementIcon(e, 16, { title: "" }), label: own.includes(e) ? "▶" : null,
+      title: `${ELEMENT_KO[e]} 약점 시즌만 (${count(e)}개)${own.includes(e) ? " · 자기 속성" : ""}`,
+    })),
+  ], app.state.weak, (v) => app.go({ weak: v }, { replace: true }), { class: "weak-seg", label: "약점 속성으로 거르기" });
 }
 
 // ---------------------------------------------------------------------------

@@ -149,9 +149,11 @@ export function filterRow(app) {
   return h("div", { class: "filters", role: "group", "aria-label": "필터" }, groups, clear);
 }
 
-export function modeSwitch(app) {
+// Tiers or table; ``compare`` adds 모아 보기 (the season tab with a weakness chosen).
+export function modeSwitch(app, { compare = false } = {}) {
   return segmented([
     { value: "tiers", label: "티어표" }, { value: "table", label: "표" },
+    ...(compare ? [{ value: "compare", label: "모아 보기" }] : []),
   ], app.state.mode, (v) => app.go({ mode: v }, { replace: true }), { class: "mode", label: "보기" });
 }
 

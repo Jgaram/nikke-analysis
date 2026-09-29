@@ -7,6 +7,7 @@ import {
 } from "../ui.js";
 import {
   provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, GENERALITY_KO, trendTabs, unitSearch, CURVE_KO, CURVE_HINT,
+  paramsNote, PARAM,
 } from "./common.js";
 import { timeStrip, whenLabel } from "./when.js";
 import { trajectoryChart, generalityChart } from "../chart.js";
@@ -151,7 +152,12 @@ function generalityHelp(app, g = null) {
     g ? h("p", null, !Number.isNaN(g.generality)
       ? `이 니케: 2 × ${num(g.otherLevel)} ÷ (${num(g.ownLevel)} + ${num(g.otherLevel)}) → ${num(g.generality)}`
       : "이 니케: 아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임") : null,
-    h("p", { class: "muted" }, "띠의 경계는 인자에서 바꿀 수 있다. 티어에는 들어가지 않는다."));
+    h("p", { class: "muted" }, "티어에는 들어가지 않는다. 최근성 반감기처럼 속성·종합 티어의 기억에 관한 인자는 범용도에 영향이 없다."),
+    paramsNote([
+      [PARAM.bands, "특화 · 속성 우선 · 범용의 경계"],
+      [PARAM.live, "진행 중 시즌을 최근 한 바퀴에 넣을지"],
+      [PARAM.sample, "기여도 자체"],
+    ]));
 }
 
 // 0-GENERALITY_MAX as a bar over the three bands, the unit's value marked.
@@ -194,7 +200,15 @@ function curveHelp(app, c = null) {
       + "마지막 바퀴가 전성기 수준의 절반 아래면 내려온 것."),
     c ? h("p", null, `이 니케: 전성기 범용도 ${num(c.gPeak)} · 내려오며 가장 낮은 범용도 ${num(c.gLow)} · `
       + `자기 속성만 남은 바퀴 ${c.narrowTurns}개 · 지금 수준 전성기의 ${Math.round((lastLevel(c) / c.peak) * 100)}%`) : null,
-    h("p", { class: "muted" }, "기준은 인자에서 바꿀 수 있다. 티어에는 들어가지 않는다."));
+    h("p", { class: "muted" }, "티어에는 들어가지 않는다."),
+    paramsNote([
+      [PARAM.curveUse, "한 바퀴를 쓰인 것으로 칠 기준 티어"],
+      [PARAM.curveWide, "처음부터 범용과 처음부터 속성 전용의 경계"],
+      [PARAM.bands, "아래 값 = 속성 전용으로 좁아졌다고 볼 범용도"],
+      [PARAM.cuts, "기준 티어의 기여도 값"],
+      [PARAM.live, "진행 중 시즌을 곡선에 넣을지"],
+      [PARAM.sample, "기여도 자체"],
+    ]));
 }
 
 const lastLevel = (c) => { const t = c.rotations[c.rotations.length - 1]; return Number.isNaN(t.other) ? t.own / 2 : t.level; };

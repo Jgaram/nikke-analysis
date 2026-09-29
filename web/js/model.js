@@ -599,8 +599,9 @@ export const SIMILARITY_BACK = 4;
 
 // Per season with a start: the units in use over the metaWindowDays up to its start, by the
 // generality band of that window's own-element (O) and other-element (X) mean lift - once they
-// met both sides and either is at curveMinTier or better (analyze/meta.py usage_mix).
-export function usageMix(population, params) {
+// met both sides and either is at curveMinTier or better - less those retired by the end of the
+// season (lifespans; ``retired`` counts them) (analyze/meta.py usage_mix).
+export function usageMix(model, population, params) {
   const use = params.cuts.find(([label]) => label === params.curveMinTier)[1];
   const span = params.metaWindowDays * DAY_MS;
   const seasons = population.summary.filter((s) => s.start != null);
@@ -615,11 +616,14 @@ export function usageMix(population, params) {
         if (r.elementMatch) { a[0] += r.lift; a[1]++; } else { a[2] += r.lift; a[3]++; }
       }
     }
-    const mix = { units: 0, specialist: 0, element_first: 0, generalist: 0 };
-    for (const a of sums.values()) {
+    const moment = at.final ? at.end : at.collectedUntil;
+    const life = moment != null ? lifespans(model, population, moment, params) : new Map();
+    const mix = { units: 0, specialist: 0, element_first: 0, generalist: 0, retired: 0 };
+    for (const [u, a] of sums) {
       if (!a[1] || !a[3]) continue;
       const own = a[0] / a[1], other = a[2] / a[3];
       if (!(own >= use || other >= use)) continue;
+      if (life.get(u)?.retired) { mix.retired++; continue; }
       mix.units++;
       mix[generalityBand((2 * other) / (own + other), params)]++;
     }
@@ -683,8 +687,8 @@ export function debuts(model, population, params) {
 }
 
 // The meta tab's numbers, season by season.
-export function metaTrend(population, params) {
-  const mix = usageMix(population, params);
+export function metaTrend(model, population, params) {
+  const mix = usageMix(model, population, params);
   const similarity = weaknessSimilarity(population);
   const share = ownShare(population);
   return population.summary.filter((s) => mix.has(s.season)).map((s) => ({

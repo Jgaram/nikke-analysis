@@ -6,8 +6,9 @@ The tier site's 메타 변화 tab shows these, computed in the browser
 
 **Generality mix** (``usage_mix``): per season, the units in use over the
 ``meta_window_days`` up to its start, banded by the generality of that window
-alone - no memory beyond it. A window rather than one season because a unit's
-own element comes round only every few months: a year holds every element.
+alone - no memory beyond it - less those retired by the end of that season
+(``tiers.lifespans``). A window rather than one season because a unit's own
+element comes round only every few months: a year holds every element.
 
 **Weakness similarity** (``weakness_similarity``): how alike a season's lifts
 are to those of the seasons before it with another weakness - 1 when the same
@@ -31,10 +32,10 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from .tiers import TierConfig, fielded, flags, generality_band
+from .tiers import TierConfig, fielded, flags, generality_band, lifespans
 
 SIMILARITY_BACK = 4  # seasons of another weakness each season is held against: the other four
-MIX_COLUMNS = ["units", "specialist", "element_first", "generalist"]
+MIX_COLUMNS = ["units", "specialist", "element_first", "generalist", "retired"]
 DEBUT_COLUMNS = ["unit_id", "first", "own", "other", "generality"]
 
 
@@ -45,31 +46,46 @@ def _rows(table: pd.DataFrame, seasons: pd.DataFrame) -> pd.DataFrame:
     return rows.assign(start=rows["season"].map(starts))
 
 
-def _mix(rows: pd.DataFrame, config: TierConfig) -> dict[str, int]:
+def _mix(rows: pd.DataFrame, config: TierConfig, retired: set = frozenset()) -> dict[str, int]:
     """Units in ``rows`` (a window) that met both sides with either mean at ``curve_min_tier``
-    or better, by generality band."""
+    or better, by generality band - leaving out the ``retired`` (counted apart)."""
     sides = rows.groupby(["unit_id", "own"])["lift"].mean().unstack()
     sides = sides.reindex(columns=[True, False]).dropna()
     use = config.cut(config.curve_min_tier)
     sides = sides[(sides[True] >= use) | (sides[False] >= use)]
+    out = sides.index.isin(list(retired))
+    sides = sides[~out]
     bands = (2 * sides[False] / (sides[True] + sides[False])).map(lambda g: generality_band(g, config))
-    return {"units": len(bands), **{band: int((bands == band).sum()) for band in MIX_COLUMNS[1:]}}
+    return {"units": len(bands), **{band: int((bands == band).sum()) for band in MIX_COLUMNS[1:4]},
+            "retired": int(out.sum())}
+
+
+def _moment(seasons: pd.DataFrame, season: Any) -> Any:
+    """Where a season is read at: its end once final, else as far as it was collected."""
+    row = seasons.set_index("season").loc[season]
+    final = str(row.get("final", True)).lower() in ("true", "1")
+    moment = row["end_at"] if final else row.get("collected_until")
+    return None if moment is None or pd.isna(moment) else moment
 
 
 def usage_mix(table: pd.DataFrame, seasons: pd.DataFrame, config: TierConfig | None = None) -> pd.DataFrame:
     """Per season with a start, the units in use over the ``meta_window_days`` up to its
     start (the seasons that started in that span, it included): per unit the mean lift in its
     own element's seasons (O) and in the others (X) there; a unit counts once it met both
-    sides and either mean is at ``curve_min_tier`` or better. ``specialist`` /
-    ``element_first`` / ``generalist``: how many fall in each generality band of ``2X / (O +
-    X)``; ``units``: all of them."""
+    sides and either mean is at ``curve_min_tier`` or better, unless it was retired by the end
+    of the season (``tiers.lifespans`` then - ``retired`` counts those left out).
+    ``specialist`` / ``element_first`` / ``generalist``: how many fall in each generality band
+    of ``2X / (O + X)``; ``units``: all of them."""
     config = config or TierConfig()
     rows = _rows(table, seasons).dropna(subset=["start"])
     span = pd.Timedelta(days=config.meta_window_days)
     out = {}
     for season, begun in rows.drop_duplicates("season").set_index("season")["start"].sort_index().items():
         window = rows[(rows["start"] > begun - span) & (rows["start"] <= begun)]
-        out[season] = _mix(window, config)
+        moment = _moment(seasons, season)
+        life = lifespans(table, seasons, moment, config) if moment is not None else None
+        retired = set(life.loc[life["retired"], "unit_id"]) if life is not None else set()
+        out[season] = _mix(window, config, retired)
     return pd.DataFrame.from_dict(out, orient="index", columns=MIX_COLUMNS).rename_axis("season")
 
 

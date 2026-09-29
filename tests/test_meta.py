@@ -27,15 +27,18 @@ def test_similarity_and_share_see_the_units_follow_the_weakness():
 def test_the_usage_mix_counts_units_by_their_generality_in_the_window():
     weak = ["Fire", "Water", "Wind"] * 6  # monthly: a year back from a season holds it and the eleven before
     lifts = {"special": [1.0 if w == "Fire" else 0.0 for w in weak], "general": [1.0] * 18,
-             "narrowed": [1.0] * 9 + [1.0 if w == "Fire" else 0.0 for w in weak[9:]], "never": [0.05] * 18}
+             "narrowed": [1.0] * 9 + [1.0 if w == "Fire" else 0.0 for w in weak[9:]], "never": [0.05] * 18,
+             "gone": [1.0] * 12 + [0.0] * 6}  # out after season 12: retired once Fire 13 and 16 pass it by
     table, seasons = monthly_table(lifts, weak)
     mix = meta.usage_mix(table, seasons, tiers.TierConfig())
-    assert mix.loc[1].tolist() == [0, 0, 0, 0]  # no other-element season yet
-    assert mix.loc[6].tolist() == [3, 1, 0, 2]  # "narrowed" still general
-    # a year back from season 18 holds two of its other-element seasons at 1.0 of eight: X 0.25, g 0.4
-    assert mix.loc[18].tolist() == [3, 1, 1, 1]
+    assert mix.loc[1].tolist() == [0, 0, 0, 0, 0]  # no other-element season yet
+    assert mix.loc[6].tolist() == [4, 1, 0, 3, 0]  # "narrowed" still general, "gone" too
+    # a year back from season 18 holds two of "narrowed"'s other-element seasons at 1.0 of eight: X 0.25, g 0.4;
+    # "gone" was in use over that year, but retired by then: left out, and counted apart
+    assert mix.loc[18].tolist() == [3, 1, 1, 1, 1]
     short = meta.usage_mix(table, seasons, tiers.TierConfig(meta_window_days=200))  # six or seven seasons back
-    assert short.loc[18].tolist() == [3, 2, 0, 1]
+    # seasons 12-18: "narrowed" is down to its Fire seasons; "gone" played season 12, and is still left out
+    assert short.loc[18].tolist() == [3, 2, 0, 1, 1]
 
 
 def test_debuts_read_a_units_first_year():

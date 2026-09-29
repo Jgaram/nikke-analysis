@@ -3,9 +3,11 @@
 // seasons may be dealing the damage there or giving that element's decks what they need.
 
 import { GENERALITY_MAX, DAY_MS } from "../model.js";
-import { h, s, num, pct, elementIcon, ELEMENT_KO, unitName, face, showTip, moveTip, hideTip, sortableTable, segmented } from "../ui.js";
+import {
+  h, s, num, pct, elementIcon, ELEMENT_KO, unitName, face, showTip, moveTip, hideTip, sortableTable, segmented, infoButton,
+} from "../ui.js";
 import { lineChart, lineLegend } from "../linechart.js";
-import { CURVE_KO, CURVE_HINT } from "./common.js";
+import { CURVE_KO, CURVE_HINT, paramsNote, PARAM, unitInline } from "./common.js";
 
 const MIX = [
   { key: "specialist", name: "특화", cls: "mix0" },
@@ -13,6 +15,74 @@ const MIX = [
   { key: "generalist", name: "범용", cls: "mix2" },
 ];
 const SHOWN_CURVES = ["specialist", "narrowed", "faded", "general"];
+const LISTED_CURVES = [...SHOWN_CURVES, "unknown", "unused"];
+
+const help = (name, ...body) => h("div", { class: "tip tip-help" }, h("div", { class: "tip-name" }, name), ...body);
+
+function mixHelp(app) {
+  const p = app.state.params;
+  const [low, high] = p.generalityBands;
+  return help("쓰인 니케의 범용도",
+    h("p", null, `시즌마다 그 시즌 시작까지 ${p.metaWindowDays}일 동안 열린 시즌들로, 니케마다 자기 속성 시즌 기여도 평균(O)과 다른 속성 시즌 `
+      + "기여도 평균(X)을 내고 범용도 2X ÷ (O + X)로 특화 · 속성 우선 · 범용을 나눕니다."),
+    h("p", null, `O나 X가 시즌 티어 ${p.curveMinTier} 이상이면 쓰인 니케로 셉니다. `, h("b", null, "은퇴한 니케는 뺍니다"),
+      " — 그 시즌이 끝났을 때 은퇴(수명 규칙)면, 기간 안에 쓰였어도 세지 않고 따로 셉니다(툴팁의 \"은퇴해서 뺌\")."),
+    h("p", { class: "muted" }, `그 기간에 자기 속성과 다른 속성 시즌을 둘 다 겪어야 셉니다. 첫 ${p.metaWindowDays}일은 기간이 덜 차서 비웁니다. `
+      + `특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용.`),
+    paramsNote([
+      [PARAM.window, "시즌마다 거슬러 보는 기간"],
+      [PARAM.curveUse, "쓰인 니케로 칠 기준 티어"],
+      [PARAM.cuts, "그 기준 티어의 기여도 값"],
+      [PARAM.bands, "특화 · 속성 우선 · 범용의 경계"],
+      [PARAM.used, "은퇴 판정의 \"쓰인 시즌\""],
+      [PARAM.retire, "은퇴 판정 → 빼는 니케"],
+      [PARAM.live, "진행 중 시즌을 은퇴 판정에 넣을지"],
+      [PARAM.sample, "기여도 자체"],
+    ]));
+}
+
+function followHelp() {
+  return help("약점을 따르는 정도",
+    h("p", null, "교차 유사도 = 그 시즌 니케별 기여도가, 약점이 다른 앞 시즌 네 개와 얼마나 같은가(코사인 유사도의 평균). "
+      + "1 = 약점이 바뀌어도 같은 니케를 같은 만큼, 0 = 약점마다 완전히 다른 니케."),
+    h("p", null, "약점 속성 몫 = 그 시즌 기여도 합 중 약점 속성 니케가 가져간 비율. 약점과 무관하면 20% 근처."),
+    h("p", { class: "muted" }, "모든 니케가 들어갑니다(은퇴 여부와 무관 — 그 시즌에 안 쓰인 니케는 기여도 0이라 저절로 빠짐)."),
+    paramsNote([[PARAM.sample, "기여도 자체 — 이 두 지표는 다른 인자의 영향을 받지 않습니다"]]));
+}
+
+function debutHelp(app) {
+  const p = app.state.params;
+  return help("새 니케의 첫 1년",
+    h("p", null, `니케마다 처음 쓰인 시즌(시즌 티어 ${p.minTier} 이상)부터 ${p.metaWindowDays}일 동안의 자기 속성·다른 속성 기여도 평균과 범용도.`),
+    h("p", { class: "muted" }, `그 기간이 끝났고, 그 기간의 자기 속성이나 다른 속성 기여도가 시즌 티어 ${p.curveMinTier} 이상인 니케만 점으로 찍습니다. `
+      + "한쪽 시즌만 겪었으면 범용도가 없어 빠집니다."),
+    paramsNote([
+      [PARAM.used, "처음 쓰인 시즌"],
+      [PARAM.window, "첫 기간의 길이"],
+      [PARAM.curveUse, "점으로 찍을 기준 티어"],
+      [PARAM.cuts, "그 기준 티어들의 기여도 값"],
+      [PARAM.bands, "배경 띠의 경계"],
+      [PARAM.sample, "기여도 자체"],
+    ]));
+}
+
+function cohortHelp(app) {
+  const p = app.state.params;
+  return help("데뷔 시기별 생애 곡선",
+    h("p", null, `처음 쓰인 시즌(시즌 티어 ${p.minTier} 이상)으로 10시즌씩 묶고, 니케마다 지금(고른 시즌이 있으면 그때)까지의 생애 곡선을 셉니다. `
+      + "줄을 누르면 그 구간의 니케가 곡선별로 펼쳐집니다."),
+    h("dl", { class: "tip-list" }, ...LISTED_CURVES.flatMap((k) => [h("dt", null, CURVE_KO[k]), h("dd", null, CURVE_HINT[k])])),
+    h("p", { class: "muted" }, "곡선은 역할이 아니라 쓰임의 모양입니다. 최근 데뷔일수록 곡선이 덜 그려져 \"아직 범용\"·\"아직 모름\"이 많습니다."),
+    paramsNote([
+      [PARAM.curveUse, "한 바퀴를 쓰인 것으로 칠 기준 티어"],
+      [PARAM.curveWide, "처음부터 범용과 처음부터 속성 전용의 경계"],
+      [PARAM.bands, "아래 값 = 속성 전용으로 좁아졌다고 볼 범용도"],
+      [PARAM.cuts, "기준 티어들의 기여도 값"],
+      [PARAM.used, "처음 쓰인 시즌 → 어느 구간에 드나"],
+      [PARAM.live, "진행 중 시즌을 곡선에 넣을지"],
+      [PARAM.sample, "기여도 자체"],
+    ]));
+}
 
 export function metaView(app) {
   const { state } = app;
@@ -57,7 +127,7 @@ function intro(app, rows, full, upTo) {
     h("div", { class: "panel-head" }, h("h3", null, "메타 변화"),
       h("span", { class: "muted small" }, `${seasonName(then)} → ${seasonName(now)} · 쓰인 니케 = 시즌 티어 ${params.curveMinTier} 이상`)),
     h("p", null, "시즌마다, 그때까지 ", h("b", null, `${params.metaWindowDays}일`), " 동안 쓰인 니케를 그 기간의 범용도(자기 속성 시즌 기여도와 "
-      + "다른 속성 시즌 기여도의 비율)로 나눠 셉니다. 특화가 늘고 범용이 줄면 메타가 보스 약점을 더 따르게 된 것입니다. "
+      + "다른 속성 시즌 기여도의 비율)로 나눠 셉니다. 그 시즌에 은퇴한 니케는 뺍니다. 특화가 늘고 범용이 줄면 메타가 보스 약점을 더 따르게 된 것입니다. "
       + "역할(딜러·서포터)이 아니라 쓰임의 모양입니다 — 속성 시즌에만 쓰이는 건 딜 때문일 수도, 그 속성 덱에 주는 버프 때문일 수도 있습니다."),
     h("div", { class: "meta-tiles" },
       tile("쓰인 니케 중 특화", pct(share(then, "specialist")), pct(share(now, "specialist")),
@@ -91,8 +161,8 @@ function mixPanel(app, rows, full, points, markAt) {
   const toggle = segmented([{ value: "count", label: "명" }, { value: "share", label: "비율" }], mode,
     (v) => { app.state.metaMix = v; app.rerender(); }, { label: "명 또는 비율" });
   return h("section", { class: "panel chart-panel" },
-    h("div", { class: "panel-head" }, h("h3", null, "쓰인 니케의 범용도"), toggle,
-      h("span", { class: "muted small" }, `시즌마다 그때까지 ${params.metaWindowDays}일 · 특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용 · 첫 ${params.metaWindowDays}일은 기간이 덜 차서 비움`)),
+    h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "쓰인 니케의 범용도"), infoButton("쓰인 니케의 범용도", () => mixHelp(app))), toggle,
+      h("span", { class: "muted small" }, `시즌마다 그때까지 ${params.metaWindowDays}일 동안 쓰인 니케, 은퇴한 니케는 뺌 · 특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용 · 첫 ${params.metaWindowDays}일은 기간이 덜 차서 비움`)),
     lineLegend(series, { stacked: true }),
     lineChart({
       points, series, stacked: true, max, ticks, mark: markAt, height: 240,
@@ -101,7 +171,8 @@ function mixPanel(app, rows, full, points, markAt) {
       tip: (i) => {
         const r = rows[i];
         if (!full(r)) return seasonTip(r, [["", `아직 ${params.metaWindowDays}일이 차지 않음`]]);
-        return seasonTip(r, [...MIX.map((m) => [m.name, `${r[m.key]}명 (${pct(r[m.key] / r.units)})`]), ["쓰인 니케", `${r.units}명`]]);
+        return seasonTip(r, [...MIX.map((m) => [m.name, `${r[m.key]}명 (${pct(r[m.key] / r.units)})`]), ["쓰인 니케", `${r.units}명`],
+          ["은퇴해서 뺌", `${r.retired}명`]]);
       },
     }));
 }
@@ -112,7 +183,7 @@ function followPanel(app, rows, points, markAt) {
     { name: "약점 속성 몫", cls: "other", values: rows.map((r) => r.ownShare) },
   ];
   return h("section", { class: "panel chart-panel" },
-    h("div", { class: "panel-head" }, h("h3", null, "약점을 따르는 정도"),
+    h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "약점을 따르는 정도"), infoButton("약점을 따르는 정도", () => followHelp())),
       h("span", { class: "muted small" }, "교차 유사도 = 그 시즌의 기여도가 약점이 다른 앞 시즌 네 개와 얼마나 같은가(1 = 약점이 바뀌어도 같은 니케) · "
         + "약점 속성 몫 = 그 시즌 기여도 중 약점 속성 니케가 가져간 비율(20% = 약점과 무관)")),
     lineLegend(series),
@@ -190,13 +261,14 @@ function debutPanel(app) {
     if (w && w !== lastWidth) { lastWidth = w; draw(); }
   }).observe(host);
   return h("section", { class: "panel chart-panel" },
-    h("div", { class: "panel-head" }, h("h3", null, "새 니케의 첫 1년"),
+    h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "새 니케의 첫 1년"), infoButton("새 니케의 첫 1년", () => debutHelp(app))),
       h("span", { class: "muted small" }, `점 하나가 니케 하나(색 = 속성) · 처음 쓰인 시즌부터 ${params.metaWindowDays}일 동안의 범용도 · `
         + `그 기간이 끝났고 시즌 티어 ${params.curveMinTier} 이상으로 쓰인 니케 ${list.length}명 · 누르면 그 니케로`)),
     host);
 }
 
-// The curves of the units that came in each ten seasons, as known now (or on the chosen season).
+// The curves of the units that came in each ten seasons, as known now (or on the chosen season):
+// a bar per span, and under it (opened) who is in each curve.
 function cohortPanel(app) {
   const view = app.viewAt(app.moment());
   const eras = new Map();
@@ -206,26 +278,37 @@ function cohortPanel(app) {
     if (!a || a.firstUsed == null) continue;
     const lo = Math.floor((a.firstUsed - 1) / 10) * 10 + 1;
     const key = lo + 9 >= latest ? `S${lo}–` : `S${lo}–${lo + 9}`;
-    if (!eras.has(key)) eras.set(key, { lo, counts: {} });
+    if (!eras.has(key)) eras.set(key, { lo, units: {} });
     const e = eras.get(key);
-    e.counts[c.curve] = (e.counts[c.curve] || 0) + 1;
+    (e.units[c.curve] ||= []).push({ u, c });
   }
   const list = [...eras.entries()].sort((a, b) => a[1].lo - b[1].lo);
+  const count = (e, k) => (e.units[k] || []).length;
   const legend = h("div", { class: "legend" }, SHOWN_CURVES.map((k) =>
     h("span", { class: "lg", title: CURVE_HINT[k] }, h("i", { class: `sw zone s-${k}` }), CURVE_KO[k])));
+  const open = app.state.cohortOpen ||= new Set();
   return h("section", { class: "panel chart-panel" },
-    h("div", { class: "panel-head" }, h("h3", null, "데뷔 시기별 생애 곡선"),
-      h("span", { class: "muted small" }, `처음 쓰인 시즌(시즌 티어 ${app.state.params.minTier} 이상)으로 10시즌씩 묶어, 지금까지의 생애 곡선을 셈 · 최근 데뷔일수록 아직 곡선이 덜 그려짐`)),
+    h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "데뷔 시기별 생애 곡선"), infoButton("데뷔 시기별 생애 곡선", () => cohortHelp(app))),
+      h("span", { class: "muted small" }, `처음 쓰인 시즌(시즌 티어 ${app.state.params.minTier} 이상)으로 10시즌씩 묶어, 지금까지의 생애 곡선을 셈 · 줄을 누르면 누가 어느 곡선인지 펼쳐짐`)),
     legend,
     h("div", { class: "cohort" }, list.map(([key, e]) => {
-      const shown = SHOWN_CURVES.reduce((a, k) => a + (e.counts[k] || 0), 0);
-      return h("div", { class: "cohort-row" },
-        h("b", null, key),
-        h("div", { class: "cohort-bar", role: "img", "aria-label": SHOWN_CURVES.map((k) => `${CURVE_KO[k]} ${e.counts[k] || 0}명`).join(", ") },
-          SHOWN_CURVES.filter((k) => e.counts[k]).map((k) => h("span", { class: `cohort-seg s-${k}`,
-            style: { flex: `${e.counts[k]} 1 0` }, title: `${CURVE_KO[k]} ${e.counts[k]}명` }, String(e.counts[k])))),
-        h("span", { class: "cohort-rest" }, `${shown}명`,
-          e.counts.unknown ? ` · 아직 모름 ${e.counts.unknown}` : "", e.counts.unused ? ` · 안 쓰임 ${e.counts.unused}` : ""));
+      const shown = SHOWN_CURVES.reduce((a, k) => a + count(e, k), 0);
+      const item = h("details", { class: "cohort-item", open: open.has(key) },
+        h("summary", null, h("div", { class: "cohort-row" },
+          h("b", null, key),
+          h("div", { class: "cohort-bar", role: "img", "aria-label": SHOWN_CURVES.map((k) => `${CURVE_KO[k]} ${count(e, k)}명`).join(", ") },
+            SHOWN_CURVES.filter((k) => count(e, k)).map((k) => h("span", { class: `cohort-seg s-${k}`,
+              style: { flex: `${count(e, k)} 1 0` }, title: `${CURVE_KO[k]} ${count(e, k)}명` }, String(count(e, k))))),
+          h("span", { class: "cohort-rest" }, `${shown}명`,
+            count(e, "unknown") ? ` · 아직 모름 ${count(e, "unknown")}` : "", count(e, "unused") ? ` · 안 쓰임 ${count(e, "unused")}` : ""))),
+        h("div", { class: "cohort-units" }, LISTED_CURVES.filter((k) => count(e, k)).map((k) =>
+          h("div", { class: "cohort-group" },
+            h("div", { class: "cohort-group-head" }, h("span", { class: ["curve-tag", SHOWN_CURVES.includes(k) && `s-${k}`] }, CURVE_KO[k]),
+              h("span", { class: "muted" }, ` ${count(e, k)}명`)),
+            h("div", { class: "cohort-group-list" }, [...e.units[k]].sort((a, b) => b.c.peak - a.c.peak)
+              .map(({ u }) => unitInline(app, u, { size: 24 })))))));
+      item.addEventListener("toggle", () => { if (item.open) open.add(key); else open.delete(key); });
+      return item;
     })));
 }
 

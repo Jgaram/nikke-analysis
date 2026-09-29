@@ -258,12 +258,12 @@ def compare(tables: Path, page: dict, config: tiers.TierConfig) -> None:
     _flags(elements["treasure"], theirs["treasure"], "element tables: treasure")
 
     summary = seasons.copy()
-    for column in ("start_at", "end_at"):
+    for column in ("start_at", "end_at", "collected_on", "collected_until"):
         summary[column] = pd.to_datetime(summary[column], utc=True)
     ours = meta.trend(usage, summary, config).reset_index()
     mine = pd.DataFrame(page["meta"])
     assert list(ours["season"]) == list(mine["season"]), "meta: seasons"
-    for column in ("units", "specialist", "element_first", "generalist"):
+    for column in ("units", "specialist", "element_first", "generalist", "retired"):
         _same(ours[column], mine[column], f"meta: {column}")
     for column in ("similarity", "own_share"):
         _close(ours[column], mine[column], f"meta: {column}")
@@ -320,5 +320,6 @@ def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_pat
         # the curves and the meta had something to say
         assert len(set(overall["curve"])) >= 3
         assert pd.DataFrame(page["meta"])["similarity"].notna().any()
+        assert pd.DataFrame(page["meta"])["retired"].sum() > 0  # a retired unit left out of the mix
     if name == "flat-frequency-prior":  # nine seasons hold no full year, but 120 days
         assert page["debuts"]

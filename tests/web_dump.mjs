@@ -48,9 +48,9 @@ const overall = view.standing.overall.map((r) => {
     curve_g_low: view.curves.get(r.u)?.gLow ?? NaN,
   };
 });
-const meta = M.metaTrend(population, params).map((r) => ({
+const meta = M.metaTrend(model, population, params).map((r) => ({
   season: r.season.season, units: r.units, specialist: r.specialist, element_first: r.element_first,
-  generalist: r.generalist, similarity: r.similarity, own_share: r.ownShare,
+  generalist: r.generalist, retired: r.retired, similarity: r.similarity, own_share: r.ownShare,
 }));
 const debuts = M.debuts(model, population, params).map((r) => ({
   unit_id: model.units[r.u].id, first: r.first, own: r.own, other: r.other, generality: r.generality,

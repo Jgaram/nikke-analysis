@@ -356,6 +356,27 @@ export function generalityColumn(app, view) {
   };
 }
 
+// For an "i" explanation: what the parameter drawer can change about it - ``items`` as
+// [where in the drawer, what it does here].
+export function paramsNote(items) {
+  return h("div", { class: "tip-params" },
+    h("div", { class: "tip-params-head" }, "인자 패널에서 바꾸면"),
+    h("ul", null, items.map(([where, what]) => h("li", null, h("b", null, where), ` — ${what}`))));
+}
+
+// The drawer's entries, as the drawer names them.
+export const PARAM = {
+  sample: "표본 (서버 · 서버마다 상위 · 순위 가중)",
+  cuts: "티어 컷 · 시즌·속성 티어",
+  live: "속성·종합 티어 · 진행 중 시즌",
+  used: "수명 · 쓰인 시즌",
+  retire: "수명 · 은퇴 공백 · 놓친 자기 속성 시즌",
+  bands: "범용도 · 범용도 띠",
+  curveUse: "범용도 · 생애 곡선 · 쓰인 바퀴",
+  curveWide: "범용도 · 생애 곡선 · 처음부터 범용",
+  window: "메타 변화 · 기간",
+};
+
 // A career's shape (model.js curves) - how it has run, not a role.
 export const CURVE_KO = { unused: "안 쓰임", specialist: "처음부터 속성 전용", narrowed: "범용 → 속성 전용",
   faded: "범용인 채로 저묾", general: "아직 범용", unknown: "아직 모름" };

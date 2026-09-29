@@ -86,7 +86,7 @@ app.metaTrend = () => {
   const pop = app.population();
   const key = `${M.populationKey(state.params)}|${M.lifeKey(state.params)}`;
   if (cache.metaKey !== key) {
-    cache.meta = { trend: M.metaTrend(pop, state.params), debuts: M.debuts(app.model, pop, state.params) };
+    cache.meta = { trend: M.metaTrend(app.model, pop, state.params), debuts: M.debuts(app.model, pop, state.params) };
     cache.metaKey = key;
   }
   return cache.meta.trend;

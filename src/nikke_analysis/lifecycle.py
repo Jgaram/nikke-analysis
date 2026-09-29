@@ -10,7 +10,7 @@ element's seasons (``O``, its element tier) and in the other elements' seasons
 (``X``, the mean of the other-element slots of its overall tier), the other
 side's part, ``g = X / (O + X)``. 0 is a specialist fielded only when the boss
 is weak to its element, 0.5 a unit the weakness makes no difference to, above
-0.5 a support carried by other elements' decks. It is a ratio of the two tiers'
+0.5 one other elements' decks field more than its own. It is a ratio of the two tiers'
 own numbers: with the default ``overall: mean``, overall = (O + 4X) / 5.
 
 **Which way is its career going?** ``careers``: a unit fielded in at least
@@ -28,6 +28,12 @@ which is what retires them (``analyze.tiers.lifespans``).
 
 **Could retirement be read off the tiers?** ``retirement_rules`` replays other
 rules season by season against what happened after.
+
+Where the study splits units in two, the split is the class (``class_group``:
+화력형 or the rest), not the role. Whether a unit deals the damage or supports
+is not in the data - the rankings give a deck's damage, not a unit's - and the
+class only mostly follows it. ``class_group`` is the one place to swap a role
+judgement in once there is one.
 
 Nothing here feeds the tiers, the committed tables or the tier site.
 """
@@ -55,6 +61,18 @@ def band(g: float) -> str:
     if g is None or pd.isna(g):
         return ""
     return next(label for floor, label in BANDS if g >= floor)
+
+
+CLASS_GROUPS = ("화력형", "지원·방어형")
+
+
+def class_group(unit_class: pd.Series) -> pd.Series:
+    """The half of the split each unit falls in: 화력형 (Attacker) or 지원·방어형 (the rest).
+
+    The class, not the role. Most 화력형 deal the damage and most of the rest
+    support, but not all, and the data cannot tell which - there is no damage
+    per unit. Until a dealer/support judgement exists, this stands in for it."""
+    return (unit_class == "Attacker").map({True: CLASS_GROUPS[0], False: CLASS_GROUPS[1]})
 
 
 def _flags(rows: pd.DataFrame, column: str) -> pd.Series:
@@ -338,9 +356,9 @@ def eras_of(seasons: Any, size: int = 10) -> dict[int, str]:
 def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -> pd.DataFrame:
     """Old and recent Solo Raid, ten seasons at a time.
 
-    Where the damage came from (``own_attacker`` ... ``other_support``: the
-    share of the season's lift from dealers and from supports and defenders,
-    of the boss's weak element or not), how general the units in use were
+    Where the damage came from (``own_attacker`` ... ``other_rest``: the
+    share of the season's lift from 화력형 units and from the rest, of the
+    boss's weak element or not - by class, ``class_group``), how general the units in use were
     (``generalist``: the share of B-or-better, settled, unretired units with
     generality 0.35 or more; ``g_median``), and how well a standing held: of
     the units at A or better in a season, how many were A or better again in
@@ -350,11 +368,12 @@ def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -
     era a unit was first fielded in, of the units that ever reached a season
     tier of A and have been around a year since: how many retired within that
     year (``retired_in_year``, of ``debuts``)."""
-    rows = history.assign(own=_flags(history, "element_match"), attacker=history["unit_class"] == "Attacker")
+    rows = history.assign(own=_flags(history, "element_match"),
+                          attacker=class_group(history["unit_class"]) == CLASS_GROUPS[0])
     total = rows.groupby("season")["lift"].transform("sum")
     rows["share"] = rows["lift"] / total
-    parts = {"own_attacker": rows["own"] & rows["attacker"], "own_support": rows["own"] & ~rows["attacker"],
-             "other_attacker": ~rows["own"] & rows["attacker"], "other_support": ~rows["own"] & ~rows["attacker"]}
+    parts = {"own_attacker": rows["own"] & rows["attacker"], "own_rest": rows["own"] & ~rows["attacker"],
+             "other_attacker": ~rows["own"] & rows["attacker"], "other_rest": ~rows["own"] & ~rows["attacker"]}
     per_season = pd.DataFrame({name: rows["share"].where(mask, 0.0).groupby(rows["season"]).sum()
                                for name, mask in parts.items()})
     era = eras_of(rows["season"]).get
@@ -413,7 +432,7 @@ def report(book=None) -> str:
     history, seasons, config = book.history, book.seasons, book.config
     names = history.drop_duplicates("unit_id").set_index("unit_id")
     label = names["name_ko"].where(names["name_ko"].fillna("") != "", names["name_en"])
-    klass = (names["unit_class"] == "Attacker").map({True: "화력형", False: "지원·방어형"})
+    klass = class_group(names["unit_class"])
     panel = replay(history, seasons, config, treasured=book.treasured)
     newest = int(panel["season"].max())
     now = moments(seasons)[newest]
@@ -460,12 +479,12 @@ def report(book=None) -> str:
 
     lines.append("4. 예전과 요즘 (10시즌씩)")
     table = eras(history, panel, config)
-    lines.append("   구간      대미지 몫: 약점속성 딜러 · 약점속성 서포터 · 다른속성 딜러 · 다른속성 서포터 | "
+    lines.append("   구간      기여도 몫(클래스별): 약점속성 화력형 · 약점속성 지원·방어형 · 다른속성 화력형 · 다른속성 지원·방어형 | "
                  "범용 비율 · g 중앙값 | A 유지(다음 같은 약점): 자기 속성 · 다른 속성 | 종합 A 10시즌 뒤 | "
                  "1년 안 은퇴(이 구간에 데뷔, 시즌 A 이상 찍은 니케)")
     for name, r in table.iterrows():
-        lines.append(f"   {name:<8}  {_pct(r.own_attacker):>4} · {_pct(r.own_support):>4} · {_pct(r.other_attacker):>4} · "
-                     f"{_pct(r.other_support):>4} | {_pct(r.generalist):>4} · {r.g_median:.2f} | "
+        lines.append(f"   {name:<8}  {_pct(r.own_attacker):>4} · {_pct(r.own_rest):>4} · {_pct(r.other_attacker):>4} · "
+                     f"{_pct(r.other_rest):>4} | {_pct(r.generalist):>4} · {r.g_median:.2f} | "
                      f"{_pct(r.keep_own):>4} · {_pct(r.keep_other):>4} | {_pct(r.keep_overall_10):>4} | "
                      f"{_pct(r.retired_in_year)}" + (f" ({r.debuts:.0f}명)" if r.debuts == r.debuts else ""))
     lines.append("")

@@ -256,6 +256,9 @@ def run(
     standing = tiers.standings(table, summary_table, newest, config, treasured=treasure.index[treasure <= newest])
     life = tiers.lifespans(table, summary_table, newest, config)
     general = tiers.generality(standing, config)[["unit_id", "generality", "generality_band"]]
+    shapes = tiers.curves(table, summary_table, newest, config)
+    general = general.merge(shapes[["unit_id", "curve", "g_peak", "g_low"]]
+                            .rename(columns={"g_peak": "curve_g_peak", "g_low": "curve_g_low"}), on="unit_id", how="left")
     overall, elements = comparison_tables(standing, info, life, general)
     changes = tiers.tier_changes(history, config)
     shift = metrics.meta_shift(table)

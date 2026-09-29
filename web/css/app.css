@@ -54,6 +54,9 @@
   --ti-SS: #ffd468; --ti-S: #f1ba4b; --ti-A: #d6a12b; --ti-B: #bc8800; --ti-C: #b98419; --ti-D: #76819a;
   --on-SS: #1d1400; --on-S: #1d1400; --on-A: #1d1400; --on-B: #1d1400; --on-C: #140e00; --on-D: #e6ebf5;
   --t-F: #252d3e; --ti-F: #5c6782; --on-F: #a4afc4;
+  /* the meta tab and a unit's turns (validated: dataviz validate_palette.js, dark surface) */
+  --mix-0: #e36927; --mix-1: #aab2c2; --mix-2: #3496ef;
+  --cv-specialist: #d95926; --cv-narrowed: #9085e9; --cv-faded: #199e70; --cv-general: #3987e5;
 }
 
 :root[data-theme="light"] {
@@ -92,6 +95,8 @@
   --ti-SS: #784600; --ti-S: #8d5a00; --ti-A: #93620a; --ti-B: #8a6020; --ti-C: #85602a; --ti-D: #6b7690;
   --on-SS: #ffffff; --on-S: #ffffff; --on-A: #ffffff; --on-B: #1c2231; --on-C: #1c2231; --on-D: #1c2231;
   --t-F: #e8ebf0; --ti-F: #8a93a6; --on-F: #4f5a71;
+  --mix-0: #eb6834; --mix-1: #8c95a6; --mix-2: #2a78d6;
+  --cv-specialist: #eb6834; --cv-narrowed: #4a3aa7; --cv-faded: #1baf7a; --cv-general: #2a78d6;
 }
 
 /* The device's dark setting, before the script has picked a theme; it also tells a browser
@@ -1054,3 +1059,48 @@ a.mb:hover { background: var(--surface-3); }
 .grid tr.picked-row:hover > * { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
 a.cmp-head { color: inherit; text-decoration: none; }
 a.cmp-head:hover span { color: var(--accent); }
+
+
+/* ---- small line/area charts (linechart.js): the meta tab, a unit's turns ---- */
+.s-own { --sc: var(--accent); }
+.s-other { --sc: var(--accent-2); }
+.s-mix0 { --sc: var(--mix-0); }
+.s-mix1 { --sc: var(--mix-1); }
+.s-mix2 { --sc: var(--mix-2); }
+.s-specialist { --sc: var(--cv-specialist); }
+.s-narrowed { --sc: var(--cv-narrowed); }
+.s-faded { --sc: var(--cv-faded); }
+.s-general { --sc: var(--cv-general); }
+.traj .line[class*="s-"] { stroke: var(--sc); }
+.traj .dot[class*="s-"], .traj .hover-dot[class*="s-"] { fill: var(--sc); }
+.traj .area { fill: var(--sc); stroke: var(--surface); stroke-width: 2; stroke-linejoin: round; }
+.traj .end-label { fill: var(--ink-2); font-weight: 600; }
+.sw.line[class*="s-"], .sw.zone[class*="s-"] { background: var(--sc); }
+.lc-host { min-height: 200px; }
+
+/* ---- 메타 변화 ---- */
+.view-meta .meta-intro { display: grid; gap: 10px; }
+.view-meta .meta-intro > p { margin: 0; padding: 0 18px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
+.meta-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; padding: 4px 18px 18px; }
+.meta-table > summary { display: flex; align-items: center; gap: 8px; padding: 14px 18px; cursor: pointer; list-style: none; }
+.meta-table > summary::-webkit-details-marker { display: none; }
+.meta-table > summary::before { content: "›"; font-weight: 700; color: var(--ink-3); transition: transform .15s; }
+.meta-table[open] > summary::before { transform: rotate(90deg); }
+.meta-table > summary h3 { margin: 0; font-size: 15px; }
+.meta-tile { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 12px 14px; }
+.meta-tile .mt-label { font-size: 12px; color: var(--ink-3); }
+.meta-tile .mt-value { font: 700 22px var(--display); color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
+.meta-tile .mt-value small { font: 500 13px var(--font); color: var(--ink-2); margin-left: 6px; }
+.meta-tile .mt-sub { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.cohort { display: grid; gap: 8px; padding: 8px 12px 12px; }
+.cohort-row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.cohort-bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: var(--surface-3); gap: 2px; }
+.cohort-seg { background: var(--sc); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center;
+  justify-content: center; min-width: 0; overflow: hidden; white-space: nowrap; }
+.cohort-rest { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.debut-dots .dot-unit { cursor: pointer; }
+.debut-dots .dot-unit circle { stroke: var(--surface); stroke-width: 1.5; }
+.curve-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.curve-tag::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: var(--sc, var(--gen-neutral)); }
+.tile-curve .tile-state.curve-tag { font-size: 17px; font-weight: 700; color: var(--ink); }
+.tile-curve .tile-state.curve-tag::before { width: 10px; height: 10px; }

@@ -21,7 +21,7 @@
 
 ## 티어 사이트 (`web/`)
 
-`web/js/model.js` 는 `analyze/metrics.py` · `analyze/tiers.py` 의 계산을 브라우저로 옮긴 것이다. 둘 중
+`web/js/model.js` 는 `analyze/metrics.py` · `analyze/tiers.py` · `analyze/meta.py` 의 계산을 브라우저로 옮긴 것이다. 둘 중
 하나의 계산을 고치면 다른 쪽도 같이 고친다. `tests/test_web.py` 가 같은 인자에서 두 쪽 숫자가 같은지
 본다(node 가 있어야 돈다). 화면은 `nikke build raids` 한 번 뒤 `nikke web --serve` 로 본다.
 

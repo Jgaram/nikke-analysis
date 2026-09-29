@@ -152,6 +152,13 @@ class TierConfig:
     retire_after_own_seasons: int = 1
     # generality bands, low to high (0-2)
     generality_bands: tuple[float, float] = (0.3, 0.7)
+    # career curves: a turn of the rotation is in use when its own-element or other-element
+    # lift is at this season tier or better; a career that was this general at its peak or more
+    # started out general
+    curve_min_tier: str | None = None
+    curve_wide: float = 0.5
+    # the meta: how far back each season looks to band the units in use by their generality
+    meta_window_days: int = 365
     # diagnostics
     deck_effect_ridge: float = 20.0
     synergy_min_decks: int = 20
@@ -177,6 +184,16 @@ class TierConfig:
             raise ValueError(f"career.generality_bands must be two values 0 <= low <= high <= {GENERALITY_MAX:g}, "
                              f"not {self.generality_bands}")
         self.generality_bands = (low, high)
+        if self.curve_min_tier is None:
+            self.curve_min_tier = "C" if "C" in labels else self.min_tier
+        if self.curve_min_tier not in labels:
+            raise ValueError(f"career.curve_min_tier must be one of the cuts' labels {labels}, not {self.curve_min_tier!r}")
+        if not 0 <= float(self.curve_wide) <= GENERALITY_MAX:
+            raise ValueError(f"career.curve_wide must be 0 - {GENERALITY_MAX:g}, not {self.curve_wide}")
+        self.curve_wide = float(self.curve_wide)
+        if int(self.meta_window_days) < 1:
+            raise ValueError(f"meta.window_days must be at least 1, not {self.meta_window_days}")
+        self.meta_window_days = int(self.meta_window_days)
 
     @property
     def server_filter(self) -> ServerFilter:
@@ -206,6 +223,7 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
     element = doc.get("element") or {}
     lifespan = doc.get("lifespan") or {}
     career = doc.get("career") or {}
+    meta = doc.get("meta") or {}
     diagnostics = doc.get("diagnostics") or {}
     defaults = TierConfig()
     cuts = doc.get("cuts")
@@ -226,6 +244,9 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         retire_after_days=float(lifespan.get("retire_after_days", defaults.retire_after_days)),
         retire_after_own_seasons=int(lifespan.get("retire_after_own_seasons", defaults.retire_after_own_seasons)),
         generality_bands=tuple(float(v) for v in career.get("generality_bands", defaults.generality_bands)),
+        curve_min_tier=str(career["curve_min_tier"]) if career.get("curve_min_tier") else None,
+        curve_wide=float(career.get("curve_wide", defaults.curve_wide)),
+        meta_window_days=int(meta.get("window_days", defaults.meta_window_days)),
         deck_effect_ridge=float(diagnostics.get("deck_effect_ridge", defaults.deck_effect_ridge)),
         synergy_min_decks=int(diagnostics.get("synergy_min_decks", defaults.synergy_min_decks)),
     )
@@ -258,6 +279,7 @@ OVERALL_COLUMNS = ["unit_id", "overall", "overall_tier", "overall_rank", "provis
 ELEMENT_COLUMNS = ["unit_id", "element", "source", "element_lift", "element_tier", "element_seasons", "element_rank",
                    "treasure"]
 SLOT_COLUMNS = ["unit_id", "element", "lift", "seasons"]
+TURN_COLUMNS = ["season", "unit_id", "lift", "own"]
 
 
 @dataclass
@@ -275,12 +297,15 @@ class Standings:
     unit's own element. ``slots``: the five values the overall is made of, one
     row per unit and boss weakness (``element``), with the seasons behind each
     (``seasons`` 0: not met yet, filled in). ``treasure`` says a unit's tiers
-    stand on the seasons played with its treasure.
+    stand on the seasons played with its treasure. ``rows``: the season rows
+    the standing is made of, each with whether its boss was weak to an element
+    the unit counts as (``own``) - what ``generality`` reads.
     """
 
     overall: pd.DataFrame
     elements: pd.DataFrame
     slots: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=SLOT_COLUMNS))
+    rows: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=TURN_COLUMNS))
 
 
 def flags(rows: pd.DataFrame, column: str) -> pd.Series:
@@ -447,7 +472,10 @@ def standings(
     overall = overall.sort_values(["overall", "unit_id"], ascending=[False, True]).reset_index(drop=True)
     slots = (estimate.rename_axis(index="unit_id", columns="element").stack().rename("lift").to_frame()
              .join(count.rename_axis(index="unit_id", columns="element").stack().rename("seasons")).reset_index())
-    return Standings(overall, elements[ELEMENT_COLUMNS].reset_index(drop=True), slots[SLOT_COLUMNS])
+    mine = set(zip(members["unit_id"], members["element"]))
+    turns = rows.assign(own=[(u, e) in mine for u, e in zip(rows["unit_id"], rows["weak_element"])])
+    return Standings(overall, elements[ELEMENT_COLUMNS].reset_index(drop=True), slots[SLOT_COLUMNS],
+                     turns[TURN_COLUMNS].sort_values(["unit_id", "season"]).reset_index(drop=True))
 
 
 # --------------------------------------------------------------------------
@@ -557,35 +585,170 @@ def generality_band(value: float, config: TierConfig | None = None) -> str:
     return GENERALITY_BANDS[2] if value >= high else GENERALITY_BANDS[1] if value >= low else GENERALITY_BANDS[0]
 
 
-def generality(standing: Standings, config: TierConfig | None = None) -> pd.DataFrame:
-    """How general each unit is, from the numbers behind its tiers at the moment of ``standing``.
+def latest_turn(rows: pd.DataFrame) -> pd.DataFrame:
+    """Each unit's latest turn of the element rotation, from its season rows (``season``,
+    ``unit_id``, ``lift``, ``own``): ``own_level``, its lift in its latest own-element season
+    (the mean with the own-element seasons right before it, back to back), and ``other_level``,
+    the mean of its other-element seasons since the own-element season before that - the
+    seasons on either side of the latest own one, about one turn of the rotation. A unit with no
+    own-element season, or no other-element season in that span, has none."""
+    out = []
+    for unit_id, group in rows.sort_values(["unit_id", "season"]).groupby("unit_id", sort=False):
+        own = group["own"].to_numpy(dtype=bool)
+        lift = group["lift"].to_numpy(dtype=float)
+        at = np.flatnonzero(own)
+        if not len(at):
+            continue
+        end = start = int(at[-1])
+        while start > 0 and own[start - 1]:
+            start -= 1
+        before = at[at < start]
+        first = int(before[-1]) + 1 if len(before) else 0
+        others = lift[first:][~own[first:]]
+        if len(others):
+            out.append((unit_id, float(lift[start:end + 1].mean()), float(others.mean())))
+    return pd.DataFrame(out, columns=["unit_id", "own_level", "other_level"])
 
-    ``own_level``: its element tier's lift (the higher, for a unit with two
-    elements); ``other_level``: the mean of its overall's slots for the other
-    elements it was seen in. ``generality = 2 x other / (own + other)``:
-    0 for a unit fielded only when the boss is weak to its element, 1 for one
-    the weakness makes no difference to (other = own), 2 for one fielded only
+
+def generality(standing: Standings, config: TierConfig | None = None) -> pd.DataFrame:
+    """How general each unit is at the moment of ``standing``: over its latest turn of the
+    element rotation (``latest_turn``), with no memory beyond it.
+
+    ``own_level``: its lift in its latest own-element season; ``other_level``: the
+    mean of its other-element seasons around it. ``generality = 2 x other / (own +
+    other)``: 0 for a unit fielded only when the boss is weak to its element, 1 for
+    one the weakness makes no difference to (other = own), 2 for one fielded only
     when the boss is weak to another element (own = 0, as Delta: Ninja Thief).
-    With the default overall (the slots' mean) the overall is (own + 4 x other)
-    / 5, so this is the ratio the two tiers already carry, taken out and scaled
-    to 0-2. Empty until the unit has met both sides, and when it is
-    barely used at all (own + other under ``GENERALITY_MIN_LEVEL``). It shares
-    the tiers' memory.
+    Empty until the unit has met both sides, and when it is barely used at all
+    (own + other under ``GENERALITY_MIN_LEVEL``). A turn, not the tiers' memory:
+    one own-element season comes round every few months, so a turn is the least
+    that holds both sides, and the tiers' half-life would keep a unit that left
+    the other elements' decks general for a year after (docs/lifecycle.md 2절).
+    The seasons are the standing's - on the side of its treasure the unit was on.
     """
     config = config or TierConfig()
     if standing.overall.empty:
         return pd.DataFrame(columns=GENERALITY_COLUMNS)
-    elements = standing.elements
-    own = elements[elements["element_seasons"] > 0].groupby("unit_id")["element_lift"].max()
-    mine = set(zip(elements["unit_id"], elements["element"]))
-    slots = standing.slots[standing.slots["seasons"] > 0]
-    other = slots[[(u, e) not in mine for u, e in zip(slots["unit_id"], slots["element"])]]
-    frame = pd.DataFrame({"own_level": own, "other_level": other.groupby("unit_id")["lift"].mean()})
-    frame = frame.reindex(standing.overall["unit_id"])
+    frame = latest_turn(standing.rows).set_index("unit_id").reindex(standing.overall["unit_id"])
     level = frame["own_level"] + frame["other_level"]
     frame["generality"] = (2 * frame["other_level"] / level).where(level >= GENERALITY_MIN_LEVEL)
     frame["generality_band"] = frame["generality"].map(lambda g: generality_band(g, config))
     return frame.rename_axis("unit_id").reset_index()[GENERALITY_COLUMNS]
+
+
+# --------------------------------------------------------------------------
+# career curves: the shape of a whole career
+# --------------------------------------------------------------------------
+
+ROTATION_COLUMNS = ["unit_id", "rotation", "own_season", "own", "other", "others", "level", "generality"]
+CURVE_COLUMNS = ["unit_id", "turns", "peak", "g_peak", "g_low", "narrow_turns", "declined", "curve"]
+CURVES = ("unused", "specialist", "narrowed", "faded", "general", "unknown")
+
+
+def rotations(rows: pd.DataFrame) -> pd.DataFrame:
+    """Each unit's career one turn of the element rotation at a time, from its season rows
+    (``season``, ``unit_id``, ``lift``, ``own``).
+
+    A turn is a season of the unit's own element (``own_season``) and the
+    other-element seasons after it, up to the next own-element season; the first
+    also takes the other-element seasons before it, and own-element seasons back
+    to back share a turn. Per turn: its lift in the own-element season(s)
+    (``own``, their mean), the mean of the others (``other``, over ``others``
+    seasons; none after the latest own season yet, NaN), ``level = (own + other)
+    / 2`` and ``generality = 2 x other / (own + other)``."""
+    out = []
+    for unit_id, group in rows.sort_values(["unit_id", "season"]).groupby("unit_id", sort=False):
+        own = group["own"].to_numpy(dtype=bool)
+        if not own.any():
+            continue
+        lift, season = group["lift"].to_numpy(dtype=float), group["season"].to_numpy()
+        turn, k = np.zeros(len(own), dtype=int), -1
+        for i in range(len(own)):  # a new turn at an own-element season not right after another
+            if own[i] and (i == 0 or not own[i - 1]):
+                k += 1
+            turn[i] = max(k, 0)
+        for t in range(k + 1):
+            here = turn == t
+            mine, rest = lift[here & own], lift[here & ~own]
+            out.append({"unit_id": unit_id, "rotation": t, "own_season": int(season[here & own][0]),
+                        "own": float(mine.mean()), "other": float(rest.mean()) if len(rest) else np.nan,
+                        "others": int(len(rest))})
+    frame = pd.DataFrame(out, columns=ROTATION_COLUMNS[:-2])
+    total = frame["own"] + frame["other"]
+    frame["level"] = total / 2
+    frame["generality"] = (2 * frame["other"] / total).where(total > 0)
+    return frame[ROTATION_COLUMNS]
+
+
+def curve_of(turns: pd.DataFrame, config: TierConfig | None = None) -> dict[str, Any]:
+    """The shape of one unit's career from its turns (``rotations``), in order.
+
+    ``peak``: its best turn's level (a turn with no other-element season yet at
+    half its own lift). ``g_peak``: its generality at the top - over the turns up
+    to the best one at half its level or more, weighted by level. ``g_low``: the
+    lowest generality from the best turn on while still in use (``own`` or
+    ``other`` at ``curve_min_tier`` or better); ``narrow_turns``, those in-use
+    turns with ``other`` under a quarter of ``own``; ``declined``: its latest turn
+    under half the peak. Its ``curve``:
+
+    * ``unused`` - no turn reached ``curve_min_tier``;
+    * ``specialist`` - narrow from the start (``g_peak`` under ``curve_wide``);
+    * ``narrowed`` - general at the top, then used in its own element's seasons
+      only (``g_low`` under the lower generality band);
+    * ``faded`` - general at the top and came down still general;
+    * ``general`` - general and not come down yet: which of the two it ends as
+      is not known yet;
+    * ``unknown`` - fewer than two turns, or no other-element season yet.
+    """
+    config = config or TierConfig()
+    use, narrow = config.cut(config.curve_min_tier), config.generality_bands[0]
+    own, other = turns["own"].to_numpy(dtype=float), turns["other"].to_numpy(dtype=float)
+    g = turns["generality"].to_numpy(dtype=float)
+    level = np.where(np.isnan(other), own / 2, (own + np.nan_to_num(other)) / 2)
+    other0 = np.nan_to_num(other)
+    n = len(level)
+    top = int(np.argmax(level))
+    peak = float(level[top])
+    rise = [i for i in range(top + 1) if level[i] >= peak / 2 and level[i] > 0 and not np.isnan(g[i])]
+    weight = sum(level[i] for i in rise)
+    g_peak = float(sum(g[i] * level[i] for i in rise) / weight) if rise and weight > 0 else np.nan
+    after = [i for i in range(top, n) if (own[i] >= use or other0[i] >= use) and not np.isnan(g[i])]
+    g_low = float(min(g[i] for i in after)) if after else np.nan
+    declined = n > 1 and bool(level[-1] < peak / 2)
+    if n < 2 or np.isnan(g_peak):
+        curve = "unused" if n >= 2 and peak < use else "unknown"
+    elif peak < use:
+        curve = "unused"
+    elif g_peak < config.curve_wide:
+        curve = "specialist"
+    elif g_low < narrow:
+        curve = "narrowed"
+    else:
+        curve = "faded" if declined else "general"
+    return {"turns": n, "peak": peak, "g_peak": g_peak, "g_low": g_low,
+            "narrow_turns": sum(1 for i in after if other0[i] < own[i] / 4), "declined": declined, "curve": curve}
+
+
+def curves(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: TierConfig | None = None) -> pd.DataFrame:
+    """The shape of each unit's career as known at ``moment`` (``curve_of`` on its
+    ``rotations``), one row per unit out by then with an own-element season.
+
+    Same seasons as ``lifespans`` - those over by then and the one in progress as
+    far as collected - and, like the lifespan, not split at the treasure: the
+    same unit. A season is the unit's own when the table says so
+    (``element_match``: its element, one its skill adds, or its treasure's once
+    it had it). The curve is how a career has run, not a role: a unit fielded in
+    its own element's seasons only may be dealing the damage there or giving that
+    element's decks what they need."""
+    config = config or TierConfig()
+    counted = counted_seasons(seasons, moment, config)
+    rows = table.loc[table["season"].isin(counted["season"]), ["season", "unit_id", "lift"]]
+    if rows.empty:
+        return pd.DataFrame(columns=CURVE_COLUMNS)
+    rows = rows.assign(own=flags(table.loc[rows.index], "element_match"))
+    out = [{"unit_id": unit_id, **curve_of(turns, config)}
+           for unit_id, turns in rotations(rows).groupby("unit_id", sort=True)]
+    return pd.DataFrame(out, columns=CURVE_COLUMNS)
 
 
 # --------------------------------------------------------------------------

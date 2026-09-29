@@ -10,8 +10,12 @@
 //               how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
 //   lifespans   the season tier that counts as used, how long idle - and through how
-//               many seasons of its own element - means retired; the generality bands
-//               -> since when each unit was in use, whether it still is, its generality
+//               many seasons of its own element - means retired; the generality bands;
+//               the career curves' bars
+//               -> since when each unit was in use, whether it still is, its generality,
+//                  the shape of its career (analyze/tiers.py curves)
+//   the meta    how far the units in use follow the boss's weakness, season by season
+//               (analyze/meta.py)
 //
 // No DOM here: the same module runs under Node for the tests.
 
@@ -41,6 +45,9 @@ export function defaultParams(model) {
     retireAfterDays: d.retireAfterDays,
     retireAfterOwnSeasons: d.retireAfterOwnSeasons,
     generalityBands: d.generalityBands,
+    curveMinTier: d.curveMinTier,
+    curveWide: d.curveWide,
+    metaWindowDays: d.metaWindowDays,
   });
 }
 
@@ -51,6 +58,7 @@ export function normalizeParams(p) {
   const overallCuts = sortCuts(p.overallCuts || p.cuts);
   if (!OVERALL_MODES.includes(p.overall)) throw new Error(`overall must be one of ${OVERALL_MODES}`);
   if (!cuts.some(([label]) => label === p.minTier)) throw new Error(`minTier must be one of the cuts' labels`);
+  if (!cuts.some(([label]) => label === p.curveMinTier)) throw new Error(`curveMinTier must be one of the cuts' labels`);
   const generalityBands = p.generalityBands.map(Number);
   return { ...p, cuts, overallCuts, generalityBands, servers: [...p.servers] };
 }
@@ -64,7 +72,8 @@ export function tierKey(p) {
 }
 
 export function lifeKey(p) {
-  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.generalityBands]);
+  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.generalityBands, p.curveMinTier,
+    p.curveWide, p.metaWindowDays]);
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +296,7 @@ export function unitElements(unit, treasured) {
 }
 
 const EMPTY_STANDINGS = (counted) => ({
-  counted, overall: [], overallByUnit: new Map(), elements: [], slots: new Map(), treasured: new Set(),
+  counted, overall: [], overallByUnit: new Map(), elements: [], slots: new Map(), turns: new Map(), treasured: new Set(),
 });
 
 export function standings(model, population, moment, params, treasured = null) {
@@ -310,10 +319,11 @@ export function standings(model, population, moment, params, treasured = null) {
       a = {
         W: [0], WC: [0], WL: [0], WLC: [0], seasons: 0, last: -Infinity,
         sW: new Float64Array(5), sWC: new Float64Array(5), sWL: new Float64Array(5), sWLC: new Float64Array(5),
-        n: new Int32Array(5),
+        n: new Int32Array(5), rows: [],
       };
       per.set(r.u, a);
     }
+    a.rows.push({ season: r.season, lift: r.lift, e });
     kahan(a.W, a.WC, 0, w);
     kahan(a.WL, a.WLC, 0, w * r.lift);
     a.seasons++;
@@ -337,7 +347,7 @@ export function standings(model, population, moment, params, treasured = null) {
     freq = total > 0 ? freq.map((v) => v / total) : freq.map(() => 1 / 5);
   }
 
-  const overall = [], elements = [], slots = new Map();
+  const overall = [], elements = [], slots = new Map(), turns = new Map();
   for (const u of units) {
     const a = per.get(u);
     const unit = model.units[u];
@@ -373,6 +383,7 @@ export function standings(model, population, moment, params, treasured = null) {
       ownUnseen,
     });
     slots.set(u, ELEMENTS.map((element, e) => ({ element, lift: estimate[e], seasons: a.n[e], own: own[e] })));
+    turns.set(u, a.rows.sort((x, y) => x.season - y.season).map((x) => ({ season: x.season, lift: x.lift, own: own[x.e] })));
   }
 
   const ranks = minRanks(overall.map((r) => r.overall));
@@ -389,7 +400,7 @@ export function standings(model, population, moment, params, treasured = null) {
     || (Number.isNaN(a.lift) ? 1 : 0) - (Number.isNaN(b.lift) ? 1 : 0)
     || (Number.isNaN(a.lift) ? 0 : b.lift - a.lift) || cmpId(a.id, b.id));
 
-  return { counted, overall, overallByUnit: new Map(overall.map((r) => [r.u, r])), elements, slots, treasured };
+  return { counted, overall, overallByUnit: new Map(overall.map((r) => [r.u, r])), elements, slots, turns, treasured };
 }
 
 // ---------------------------------------------------------------------------
@@ -462,25 +473,224 @@ export function generalityBand(value, params) {
   return value >= high ? GENERALITY_BANDS[2] : value >= low ? GENERALITY_BANDS[1] : GENERALITY_BANDS[0];
 }
 
-// Per unit of the standing: ownLevel (its element tier's lift, the higher of two), otherLevel
-// (the mean of its other elements' slots seen), generality = 2 x other / (own + other):
-// 0 = fielded only in its own element's seasons, 1 = whatever the weakness, 2 = only in other
-// elements' - NaN until both are seen, or with own + other under GENERALITY_MIN_LEVEL.
+// A unit's latest turn of the element rotation, from its season rows ({season, lift, own},
+// by season): ownLevel, its lift in its latest own-element season (the mean with the own-element
+// seasons right before it, back to back), and otherLevel, the mean of its other-element seasons
+// since the own-element season before that. null without an own-element season, or without an
+// other-element season in that span (analyze/tiers.py latest_turn).
+export function latestTurn(rows) {
+  let end = -1;
+  for (let i = rows.length - 1; i >= 0; i--) if (rows[i].own) { end = i; break; }
+  if (end < 0) return null;
+  let start = end;
+  while (start > 0 && rows[start - 1].own) start--;
+  let first = 0;
+  for (let i = start - 1; i >= 0; i--) if (rows[i].own) { first = i + 1; break; }
+  let ownSum = 0, otherSum = 0, others = 0;
+  for (let i = start; i <= end; i++) ownSum += rows[i].lift;
+  for (let i = first; i < rows.length; i++) if (!rows[i].own) { otherSum += rows[i].lift; others++; }
+  if (!others) return null;
+  return { ownLevel: ownSum / (end - start + 1), otherLevel: otherSum / others };
+}
+
+// Per unit of the standing, over its latest turn (latestTurn): ownLevel, otherLevel,
+// generality = 2 x other / (own + other): 0 = fielded only in its own element's seasons,
+// 1 = whatever the weakness, 2 = only in other elements' - NaN until both are seen, or with
+// own + other under GENERALITY_MIN_LEVEL.
 export function generality(standing, params) {
-  const own = new Map();
-  for (const r of standing.elements) {
-    if (r.seasons > 0 && !(own.get(r.u) >= r.lift)) own.set(r.u, r.lift);
-  }
   const out = new Map();
   for (const o of standing.overall) {
-    const others = (standing.slots.get(o.u) || []).filter((sl) => !sl.own && sl.seasons > 0).map((sl) => sl.lift);
-    const ownLevel = own.has(o.u) ? own.get(o.u) : NaN;
-    const otherLevel = others.length ? others.reduce((a, b) => a + b, 0) / others.length : NaN;
+    const turn = latestTurn(standing.turns.get(o.u) || []);
+    const ownLevel = turn ? turn.ownLevel : NaN;
+    const otherLevel = turn ? turn.otherLevel : NaN;
     const level = ownLevel + otherLevel;
     const value = level >= GENERALITY_MIN_LEVEL ? (2 * otherLevel) / level : NaN;
     out.set(o.u, { ownLevel, otherLevel, generality: value, band: generalityBand(value, params) });
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// career curves: the shape of a whole career (analyze/tiers.py rotations, curve_of, curves)
+
+export const CURVES = ["unused", "specialist", "narrowed", "faded", "general", "unknown"];
+
+// A unit's season rows ({season, lift, own}, by season) one turn of the element rotation at a
+// time: an own-element season (own seasons back to back share one) and the other-element seasons
+// after it, the first also taking those before it. {ownSeason, own, other (NaN: none yet),
+// others, level, generality}.
+export function rotations(rows) {
+  if (!rows.some((r) => r.own)) return [];
+  const turns = [];
+  let k = -1;
+  const turnOf = rows.map((r, i) => {
+    if (r.own && (i === 0 || !rows[i - 1].own)) k++;
+    return Math.max(k, 0);
+  });
+  for (let t = 0; t <= k; t++) {
+    let ownSum = 0, ownN = 0, otherSum = 0, otherN = 0, ownSeason = null;
+    rows.forEach((r, i) => {
+      if (turnOf[i] !== t) return;
+      if (r.own) { ownSum += r.lift; ownN++; if (ownSeason == null) ownSeason = r.season; }
+      else { otherSum += r.lift; otherN++; }
+    });
+    const own = ownSum / ownN;
+    const other = otherN ? otherSum / otherN : NaN;
+    const total = own + other;
+    turns.push({ ownSeason, own, other, others: otherN, level: total / 2, generality: total > 0 ? (2 * other) / total : NaN });
+  }
+  return turns;
+}
+
+// The shape of one career from its turns (analyze/tiers.py curve_of).
+export function curveOf(turns, params) {
+  const use = params.cuts.find(([label]) => label === params.curveMinTier)[1];
+  const narrow = params.generalityBands[0];
+  const n = turns.length;
+  const level = turns.map((t) => (Number.isNaN(t.other) ? t.own / 2 : (t.own + t.other) / 2));
+  const other0 = turns.map((t) => (Number.isNaN(t.other) ? 0 : t.other));
+  const g = turns.map((t) => t.generality);
+  let top = 0;
+  for (let i = 1; i < n; i++) if (level[i] > level[top]) top = i;
+  const peak = level[top];
+  let weight = 0, weighted = 0, rise = 0;
+  for (let i = 0; i <= top; i++) {
+    if (level[i] >= peak / 2 && level[i] > 0 && !Number.isNaN(g[i])) { weight += level[i]; weighted += g[i] * level[i]; rise++; }
+  }
+  const gPeak = rise && weight > 0 ? weighted / weight : NaN;
+  let gLow = NaN, narrowTurns = 0;
+  for (let i = top; i < n; i++) {
+    if (!((turns[i].own >= use || other0[i] >= use) && !Number.isNaN(g[i]))) continue;
+    if (Number.isNaN(gLow) || g[i] < gLow) gLow = g[i];
+    if (other0[i] < turns[i].own / 4) narrowTurns++;
+  }
+  const declined = n > 1 && level[n - 1] < peak / 2;
+  let curve;
+  if (n < 2 || Number.isNaN(gPeak)) curve = n >= 2 && peak < use ? "unused" : "unknown";
+  else if (peak < use) curve = "unused";
+  else if (gPeak < params.curveWide) curve = "specialist";
+  else if (gLow < narrow) curve = "narrowed";
+  else curve = declined ? "faded" : "general";
+  return { turns: n, peak, gPeak, gLow, narrowTurns, declined, curve };
+}
+
+// Per unit out by ``moment`` with an own-element season: its curve (curveOf) and its turns.
+// The lifespan's seasons, not split at the treasure; own = the row's elementMatch.
+export function curves(model, population, moment, params) {
+  const rows = new Map();
+  for (const c of countedSeasons(population.summary, moment, params)) {
+    for (const r of population.tables.get(c.season).rows) {
+      if (!rows.has(r.u)) rows.set(r.u, []);
+      rows.get(r.u).push({ season: c.season, lift: r.lift, own: r.elementMatch });
+    }
+  }
+  const out = new Map();
+  for (const [u, list] of rows) {
+    const turns = rotations(list);
+    if (turns.length) out.set(u, { ...curveOf(turns, params), rotations: turns });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// the meta: how far the units in use follow the boss's weakness (analyze/meta.py)
+
+export const SIMILARITY_BACK = 4;
+
+// Per season with a start: the units in use over the metaWindowDays up to its start, by the
+// generality band of that window's own-element (O) and other-element (X) mean lift - once they
+// met both sides and either is at curveMinTier or better (analyze/meta.py usage_mix).
+export function usageMix(population, params) {
+  const use = params.cuts.find(([label]) => label === params.curveMinTier)[1];
+  const span = params.metaWindowDays * DAY_MS;
+  const seasons = population.summary.filter((s) => s.start != null);
+  const out = new Map();
+  for (const at of seasons) {
+    const sums = new Map();
+    for (const s of seasons) {
+      if (!(s.start > at.start - span && s.start <= at.start)) continue;
+      for (const r of s.rows) {
+        let a = sums.get(r.u);
+        if (!a) { a = [0, 0, 0, 0]; sums.set(r.u, a); }
+        if (r.elementMatch) { a[0] += r.lift; a[1]++; } else { a[2] += r.lift; a[3]++; }
+      }
+    }
+    const mix = { units: 0, specialist: 0, element_first: 0, generalist: 0 };
+    for (const a of sums.values()) {
+      if (!a[1] || !a[3]) continue;
+      const own = a[0] / a[1], other = a[2] / a[3];
+      if (!(own >= use || other >= use)) continue;
+      mix.units++;
+      mix[generalityBand((2 * other) / (own + other), params)]++;
+    }
+    out.set(at.season, mix);
+  }
+  return out;
+}
+
+// Per season: the mean cosine similarity of its lifts to each of the SIMILARITY_BACK latest seasons
+// before it of another weakness (analyze/meta.py weakness_similarity).
+export function weaknessSimilarity(population) {
+  const list = population.summary;
+  const vec = (s) => s.byUnit;
+  const dot = (a, b) => { let v = 0; for (const [u, r] of a) { const o = b.get(u); if (o) v += r.lift * o.lift; } return v; };
+  const norm = (a) => Math.sqrt(dot(a, a));
+  const out = new Map();
+  list.forEach((s, i) => {
+    const before = list.slice(0, i).filter((p) => p.weak !== s.weak).slice(-SIMILARITY_BACK);
+    if (before.length < SIMILARITY_BACK) return;
+    const mean = before.reduce((sum, p) => sum + dot(vec(s), vec(p)) / (norm(vec(s)) * norm(vec(p))), 0) / before.length;
+    out.set(s.season, mean);
+  });
+  return out;
+}
+
+// Per season: the share of its lift that went to units of the weak element (analyze/meta.py own_share).
+export function ownShare(population) {
+  const out = new Map();
+  for (const s of population.summary) {
+    let own = 0, all = 0;
+    for (const r of s.rows) { all += r.lift; if (r.elementMatch) own += r.lift; }
+    out.set(s.season, own / all);
+  }
+  return out;
+}
+
+// Each unit in use in its first year from its first season in use, once that year is over:
+// its own-element and other-element mean lift then, and their generality (analyze/meta.py debuts).
+export function debuts(model, population, params) {
+  const use = params.cuts.find(([label]) => label === params.curveMinTier)[1];
+  const span = params.metaWindowDays * DAY_MS;
+  const seasons = population.summary.filter((s) => s.start != null);
+  const newest = Math.max(...seasons.map((s) => s.start));
+  const first = new Map();
+  for (const s of seasons) for (const r of s.rows) if (!first.has(r.u) && fielded(r, params)) first.set(r.u, s);
+  const out = [];
+  for (const [u, s0] of [...first].sort((a, b) => cmpId(model.units[a[0]].id, model.units[b[0]].id))) {
+    if (s0.start + span > newest) continue;
+    let o = 0, on = 0, x = 0, xn = 0;
+    for (const s of seasons) {
+      if (!(s.start >= s0.start && s.start < s0.start + span)) continue;
+      const r = s.byUnit.get(u);
+      if (!r) continue;
+      if (r.elementMatch) { o += r.lift; on++; } else { x += r.lift; xn++; }
+    }
+    const own = on ? o / on : NaN, other = xn ? x / xn : NaN;
+    if (!(own >= use || other >= use)) continue;
+    out.push({ u, first: s0.season, own, other, generality: own + other > 0 ? (2 * other) / (own + other) : NaN });
+  }
+  return out;
+}
+
+// The meta tab's numbers, season by season.
+export function metaTrend(population, params) {
+  const mix = usageMix(population, params);
+  const similarity = weaknessSimilarity(population);
+  const share = ownShare(population);
+  return population.summary.filter((s) => mix.has(s.season)).map((s) => ({
+    season: s, ...mix.get(s.season), similarity: similarity.has(s.season) ? similarity.get(s.season) : NaN,
+    ownShare: share.get(s.season),
+  }));
 }
 
 // ---------------------------------------------------------------------------
@@ -557,6 +767,7 @@ export function viewAt(model, population, moment, params) {
   return {
     moment, standing, final, live, life, around: seasonsAround(model, moment),
     generality: generality(standing, params),
+    curves: curves(model, population, moment, params),
   };
 }
 

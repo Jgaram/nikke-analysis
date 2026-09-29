@@ -174,6 +174,9 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
         "retireAfterDays": config.retire_after_days,
         "retireAfterOwnSeasons": config.retire_after_own_seasons,
         "generalityBands": list(config.generality_bands),
+        "curveMinTier": config.curve_min_tier,
+        "curveWide": config.curve_wide,
+        "metaWindowDays": config.meta_window_days,
     }
 
 

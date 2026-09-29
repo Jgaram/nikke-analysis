@@ -5,7 +5,7 @@ import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
 import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable, int, kst } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs,
-  generalityColumn, generalityRule, generalityLegend,
+  generalityColumn, generalityRule, generalityLegend, curveColumn,
 } from "./common.js";
 import { timeStrip } from "./when.js";
 
@@ -81,6 +81,7 @@ function overallTable(app, view, rows) {
       cell: (o) => h("span", { class: "el-tiers" }, (mine.get(o.u) || []).map((r) => h("span", { class: "el-tier" },
         elementIcon(r.element, 14), r.seasons ? tierBadge(r.tier, r.lift) : h("span", { class: "muted" }, "미관측")))) },
     generalityColumn(app, view),
+    curveColumn(app, view),
     ...lifeColumns(app, view),
   ];
   return sortableTable(columns, rows, {
@@ -246,6 +247,7 @@ function elementTable(app, view, rows, element) {
     { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", null, tierBadge(r.o.tier, r.o.overall),
       r.o.provisional ? h("sup", { class: "muted" }, "*") : null, h("span", { class: "muted" }, ` ${r.o.rank}위`)) },
     generalityColumn(app, view),
+    curveColumn(app, view),
     ...lifeColumns(app, view),
   ];
   return sortableTable(columns, rows, {

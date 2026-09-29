@@ -350,9 +350,40 @@ export function generalityColumn(app, view) {
   const of = (row) => view.generality.get(row.u);
   return {
     key: "generality", label: "범용도",
-    title: `${generalityRule(app.state.params)} · 칸이 빈 니케 = 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임`,
+    title: `${generalityRule(app.state.params)} · 최근 한 바퀴(가장 최근 자기 속성 시즌과 그 앞뒤 다른 속성 시즌)로 잼 · 칸이 빈 니케 = 그 한 바퀴에 자기 속성·다른 속성 시즌 중 한쪽이 없거나 거의 안 쓰임`,
     sort: (row) => of(row)?.generality,
     cell: (row) => generalityTag(of(row)?.band, app.model.units[row.u].element) || h("span", { class: "muted" }, "–"),
+  };
+}
+
+// A career's shape (model.js curves) - how it has run, not a role.
+export const CURVE_KO = { unused: "안 쓰임", specialist: "처음부터 속성 전용", narrowed: "범용 → 속성 전용",
+  faded: "범용인 채로 저묾", general: "아직 범용", unknown: "아직 모름" };
+export const CURVE_SHORT = { unused: "안 쓰임", specialist: "속성 전용", narrowed: "범용→속성", faded: "범용→저묾",
+  general: "범용 중", unknown: "모름" };
+export const CURVE_HINT = {
+  unused: "로테이션 어느 바퀴에서도 자기 속성·다른 속성 기여도가 기준에 못 미침",
+  specialist: "전성기부터 약점이 자기 속성일 때 주로 쓰임",
+  narrowed: "전성기엔 약점과 무관하게 쓰이다가 다른 속성 시즌에서 먼저 빠지고 자기 속성 시즌에만 남음",
+  faded: "전성기엔 약점과 무관하게 쓰였고, 그 성질을 크게 잃지 않은 채로 내려옴",
+  general: "약점과 무관하게 쓰이고 아직 내려오지 않음 — 어느 쪽으로 끝날지는 아직 모름",
+  unknown: "로테이션을 아직 두 바퀴 돌지 않았거나 다른 속성 시즌을 아직 못 겪음",
+};
+
+export function curveTag(curve, { short = false } = {}) {
+  if (!curve) return null;
+  return h("span", { class: ["curve-tag", ["specialist", "narrowed", "faded", "general"].includes(curve) && `s-${curve}`],
+    title: CURVE_HINT[curve] }, short ? CURVE_SHORT[curve] : CURVE_KO[curve]);
+}
+
+// The curve column of a date-view table; its rows carry the unit as ``.u``.
+export function curveColumn(app, view) {
+  const order = ["general", "faded", "narrowed", "specialist", "unknown", "unused"];
+  const of = (row) => view.curves.get(row.u);
+  return {
+    key: "curve", label: "생애 곡선", title: "로테이션 한 바퀴씩 본 생애의 모양 — 역할이 아니라 쓰임의 모양",
+    sort: (row) => (of(row) ? -order.indexOf(of(row).curve) : null),
+    cell: (row) => curveTag(of(row)?.curve, { short: true }) || h("span", { class: "muted" }, "–"),
   };
 }
 

@@ -498,9 +498,82 @@ def test_generality_splits_specialists_from_units_that_go_anywhere(world, built)
         assert g.loc[unit, "generality"] == pytest.approx(1.0, abs=0.1) and g.loc[unit, "generality_band"] == "generalist"
     assert g.loc[world.partner, "generality"] == 2.0  # a Water support that only Wind decks field: the most there is
     assert g["generality"].dropna().between(0, 2).all()
-    # own and other are the numbers behind the two tiers: overall = (own + 4 x other) / 5
-    overall = standing.overall.set_index("unit_id")["overall"]
     dealer = world.element_dps["Fire"]
-    assert overall[dealer] == pytest.approx((g.loc[dealer, "own_level"] + 4 * g.loc[dealer, "other_level"]) / 5)
     wide = tiers.generality(standing, tiers.TierConfig(generality_bands=(0.0, 0.5))).set_index("unit_id")
     assert wide.loc[dealer, "generality_band"] == "element_first"
+
+
+def test_generality_reads_the_latest_turn_of_the_rotation():
+    """The latest own-element season (with any right before it) and the other-element seasons
+    since the own one before that - nothing older, however strong."""
+    own = [False, True, False, False, True, True, False, False]  # own in 2, 5 and 6
+    lifts = {"narrowed": [1.5, 1.5, 1.5, 0.0, 1.0, 0.8, 0.0, 0.0], "general": [1.0] * 8,
+             "new": [1.0, 1.0] + [None] * 6, "none": [0.5, None, 0.5] + [None] * 5}
+    rows = pd.DataFrame([{"season": n, "unit_id": u, "lift": v, "own": own[n - 1]}
+                         for u, values in lifts.items() for n, v in enumerate(values, start=1) if v is not None])
+    turn = tiers.latest_turn(rows).set_index("unit_id")
+    # own 5-6 back to back: 0.9; the others since season 2 - 3, 4, 7, 8 - average 0.375; season 1's 1.5 is gone
+    assert tuple(turn.loc["narrowed"]) == (pytest.approx(0.9), pytest.approx(0.375))
+    assert tuple(turn.loc["general"]) == (1.0, 1.0)
+    assert tuple(turn.loc["new"]) == (1.0, 1.0)  # the others before its first own season count
+    assert "none" not in turn.index  # no own-element season yet
+
+
+# --------------------------------------------------------------------------
+# career curves
+
+
+def monthly_table(lifts: dict[str, list[float | None]], weak: list[str], element: str = "Fire"):
+    """Monthly seasons a week long, weak to ``weak[i]``; units (``element``) at ``lifts[unit][i]``
+    in season i + 1, None = not out yet. The season table and the summary."""
+    start = pd.Timestamp("2024-01-01T00:00:00Z")
+    seasons = pd.DataFrame([{"season": n, "weak_element": e, "start_at": start + pd.DateOffset(months=n - 1),
+                             "end_at": start + pd.DateOffset(months=n - 1) + pd.Timedelta(days=7), "final": True,
+                             "collected_on": start + pd.DateOffset(months=n - 1)} for n, e in enumerate(weak, start=1)])
+    table = pd.DataFrame([{"season": n, "unit_id": u, "lift": values[n - 1], "element_match": e == element,
+                           "weak_element": e} for u, values in lifts.items()
+                          for n, e in enumerate(weak, start=1) if values[n - 1] is not None])
+    return table, seasons
+
+
+EVERY_THIRD = ["Fire", "Water", "Wind"] * 6  # Fire in 1, 4, 7, 10, 13, 16
+
+
+def test_a_turn_is_an_own_season_and_the_others_after_it():
+    weak = ["Water", "Fire", "Fire", "Wind", "Water", "Fire", "Iron"]
+    table, _ = monthly_table({"a": [0.6, 1.0, 0.8, 0.3, 0.0, 0.5, 0.1]}, weak)
+    turns = tiers.rotations(table.assign(own=table["element_match"]))
+    first, second = turns.iloc[0], turns.iloc[1]
+    # the Water season before the first Fire one, and Fire back to back, go in the first turn
+    assert (first["own_season"], first["own"], first["others"]) == (2, pytest.approx(0.9), 3)
+    assert first["other"] == pytest.approx(0.3) and first["generality"] == pytest.approx(2 * 0.3 / 1.2)
+    assert (second["own_season"], second["own"], second["other"], second["others"]) == (6, 0.5, 0.1, 1)
+    assert len(turns) == 2
+
+
+def test_curves_tell_the_shapes_apart():
+    everywhere = [1.0] * 6
+    lifts = {
+        "narrowed": everywhere + [1.0, 0, 0, 1.0, 0, 0] + [0.0] * 6,  # own seasons only from 7, then out
+        "faded": everywhere + [0.4] * 3 + [0.0] * 9,  # down everywhere at once
+        "general": [1.0] * 18,
+        "special": [1.0 if w == "Fire" else 0.0 for w in EVERY_THIRD],
+        "never": [0.1] * 18,  # under the C cut throughout
+        "new": [None] * 15 + [1.0, 1.0, 1.0],  # one turn only
+    }
+    table, seasons = monthly_table(lifts, EVERY_THIRD)
+    config = tiers.TierConfig()
+    shapes = tiers.curves(table, seasons, seasons["end_at"].max(), config).set_index("unit_id")
+    assert shapes["curve"].to_dict() == {"faded": "faded", "general": "general", "narrowed": "narrowed",
+                                         "never": "unused", "new": "unknown", "special": "specialist"}
+    assert tuple(shapes.loc["narrowed", ["g_peak", "g_low", "narrow_turns"]]) == (1.0, 0.0, 2)
+    assert shapes.loc["faded", "g_low"] == 1.0 and shapes.loc["faded", "declined"]
+    assert not shapes.loc["general", "declined"]
+    # as known at season 9: "narrowed" has only just left the others - one narrow turn, still in use
+    early = tiers.curves(table, seasons, seasons.loc[8, "end_at"], config).set_index("unit_id")
+    assert early.loc["narrowed", "curve"] == "narrowed" and not early.loc["narrowed", "declined"]
+    # the bar for "started out general" and for "in use" are parameters
+    assert tiers.curves(table, seasons, seasons["end_at"].max(), tiers.TierConfig(curve_wide=1.5)).set_index(
+        "unit_id").loc["general", "curve"] == "specialist"
+    assert tiers.curves(table, seasons, seasons["end_at"].max(), tiers.TierConfig(curve_min_tier="S")).set_index(
+        "unit_id").loc["faded", "curve"] == "unused"

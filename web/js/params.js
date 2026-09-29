@@ -38,6 +38,9 @@ export function encodeParams(p, d) {
   if (p.retireAfterDays !== d.retireAfterDays) q.ret = String(p.retireAfterDays);
   if (p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) q.rown = String(p.retireAfterOwnSeasons);
   if (!same(p.generalityBands, d.generalityBands)) q.band = p.generalityBands.join(",");
+  if (p.curveMinTier !== d.curveMinTier) q.cuse = p.curveMinTier;
+  if (p.curveWide !== d.curveWide) q.cw = String(p.curveWide);
+  if (p.metaWindowDays !== d.metaWindowDays) q.mw = String(p.metaWindowDays);
   return q;
 }
 
@@ -76,6 +79,10 @@ export function decodeParams(q, d, model) {
     const bands = q.get("band").split(",").map((v) => number(v, 0, GENERALITY_MAX));
     if (bands.length === 2 && bands.every((v) => v != null) && bands[0] <= bands[1]) p.generalityBands = bands;
   }
+  if (tierChoices(d).includes(q.get("cuse"))) p.curveMinTier = q.get("cuse");
+  p.curveWide = number(q.get("cw"), 0, GENERALITY_MAX) ?? d.curveWide;
+  const window = number(q.get("mw"), 30, 1460);
+  if (window != null) p.metaWindowDays = Math.round(window);
   return p;
 }
 
@@ -105,6 +112,8 @@ export function changedParams(p, d) {
   if (p.minTier !== d.minTier) out.push("쓰인 기준");
   if (p.retireAfterDays !== d.retireAfterDays || p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) out.push("은퇴 기준");
   if (!same(p.generalityBands, d.generalityBands)) out.push("범용도 띠");
+  if (p.curveMinTier !== d.curveMinTier || p.curveWide !== d.curveWide) out.push("생애 곡선");
+  if (p.metaWindowDays !== d.metaWindowDays) out.push("메타 기간");
   return out;
 }
 
@@ -268,10 +277,28 @@ export function buildParams(app, body) {
         + "자기 속성 시즌이 아직 안 온 속성 특화 니케는 공백이 길어도 현역으로 둡니다. 안 봄 = 공백만으로.")),
     h("section", { class: "psec" },
       h("h3", null, "범용도", h("small", null, "약점을 얼마나 타나 · 티어와 별개")),
-      field("범용도 띠", bandRow(), "범용도 = 2 × 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균). 0 = 약점이 자기 "
-        + `속성일 때만 쓰임, 1 = 약점과 무관, ${GENERALITY_MAX} = 약점이 다른 속성일 때만 쓰임. `
+      field("범용도 띠", bandRow(), "범용도 = 2 × 다른 속성 평균 ÷ (자기 속성 + 다른 속성 평균), 최근 한 바퀴(가장 최근 자기 속성 "
+        + `시즌과 그 앞뒤 다른 속성 시즌)로. 0 = 약점이 자기 속성일 때만 쓰임, 1 = 약점과 무관, ${GENERALITY_MAX} = 약점이 다른 속성일 때만 쓰임. `
         + "이 두 값으로 특화 · 속성 우선 · 범용을 나눕니다."),
-      bandError),
+      bandError,
+      field("생애 곡선 · 쓰인 바퀴", segmented(tierChoices(d).map((label) => ({ value: label, label: `${label} 이상` })), p.curveMinTier,
+        (v) => { app.setParams({ curveMinTier: v }); buildParams(app, body); }, { label: "생애 곡선에서 쓰인 바퀴로 칠 시즌 티어" }),
+      "로테이션 한 바퀴의 자기 속성 기여도나 다른 속성 기여도 평균이 이 시즌 티어 이상이면 그 바퀴에 쓰인 것입니다. "
+        + "메타 변화 탭의 \"쓰인 니케\"도 이 기준입니다."),
+      field("생애 곡선 · 처음부터 범용", range({
+        min: 0, max: GENERALITY_MAX, step: 0.05, value: p.curveWide, label: "처음부터 범용으로 볼 전성기 범용도",
+        format: (v) => `범용도 ${num(v)} 이상`,
+        onCommit: (v) => app.setParams({ curveWide: v }),
+      }), "전성기의 범용도가 이 값 이상이면 처음부터 범용, 아래면 처음부터 속성 전용입니다. 내려오며 범용도가 특화 띠로 "
+        + "들어가면 범용 → 속성 전용, 안 들어가고 내려오면 범용인 채로 저묾.")),
+    h("section", { class: "psec" },
+      h("h3", null, "메타 변화", h("small", null, "시즌마다 거슬러 볼 기간")),
+      field("기간", range({
+        min: 90, max: upTo(730, d.metaWindowDays, p.metaWindowDays), step: 15, value: p.metaWindowDays, label: "메타 기간 (일)",
+        format: (v) => `${v}일`,
+        onCommit: (v) => app.setParams({ metaWindowDays: v }),
+      }), "시즌마다 그 시즌 시작까지 이만큼 거슬러 열린 시즌들로, 쓰인 니케를 그 기간의 범용도 띠로 셉니다. "
+        + "같은 약점이 돌아오는 데 길면 1년 걸려서, 짧게 잡으면 빨리 보이지만 자기 속성 시즌이 없던 니케가 빠집니다.")),
   );
 
   renderParamsFoot(app, () => buildParams(app, body));

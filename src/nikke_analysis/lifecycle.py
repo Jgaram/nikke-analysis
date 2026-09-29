@@ -20,13 +20,11 @@ which is what retires them (``analyze.tiers.lifespans``).
 **Could retirement be read off the tiers?** ``retirement_rules`` replays other
 rules season by season against what happened after.
 
-**What shape does a whole career take?** ``curves``: the generality of each turn
-of the element rotation (``rotations``), without the tiers' memory - unused,
-narrow from the start, general then narrowed to its own element, or general
-all the way down.
+**What shape does a whole career take?** ``analyze.tiers.curves`` - the tables
+and the site carry it; the study counts the shapes.
 
-**Does the meta follow the boss's weakness more than it did?** ``meta_index``
-per season, ``debuts`` per unit's first year.
+**Does the meta follow the boss's weakness more than it did?** ``analyze.meta``
+- the site's 메타 변화 tab; the study adds ``meta_index`` and ten seasons at a time.
 
 The study does not split units by role, nor by class: the class has too many
 exceptions to stand for the role, and the role is not two groups but a matter
@@ -43,7 +41,7 @@ from typing import Any, Callable
 import numpy as np
 import pandas as pd
 
-from .analyze import tiers
+from .analyze import meta, tiers
 from .analyze.metrics import ELEMENTS
 
 OUTLOOK_TIERS = ["S 이상", "A", "B", "C", "D 이하"]  # own-season tiers for the outlook: SS and S, ..., D and F together
@@ -392,184 +390,22 @@ def careers(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: tie
 
 
 # --------------------------------------------------------------------------
-# the shape of a whole career
+# the shape of a whole career, and the meta (analyze.tiers.curves, analyze.meta)
 # --------------------------------------------------------------------------
 
-ROTATION_COLUMNS = ["unit_id", "rotation", "own_season", "own", "other", "others", "level", "generality"]
-CURVE_WIDE = 0.5  # generality at its peak from here: it started out general
-CURVES = ("unused", "specialist", "narrowed", "faded", "general", "unknown")
-CURVE_KO = {"unused": "안 쓰임", "specialist": "처음부터 속성 전용", "narrowed": "범용 → 속성 전용",
-            "faded": "범용인 채로 저묾", "general": "아직 범용", "unknown": "아직 모름"}
-
-
-def rotations(table: pd.DataFrame) -> pd.DataFrame:
-    """Each unit's career one turn of the element rotation at a time.
-
-    A turn is a season of the unit's own element (``own_season``) and the
-    other-element seasons after it, up to the next own-element season; the
-    first also takes the other-element seasons before it, and own-element
-    seasons back to back share a turn. Per turn: its lift in the own-element
-    season(s) (``own``, their mean), the mean of the others (``other``, over
-    ``others`` seasons), ``level = (own + other) / 2`` and ``generality =
-    2 x other / (own + other)`` - the tiers' generality, on the seasons of
-    the turn alone, without the tiers' memory."""
-    rows = table.assign(own=_flags(table, "element_match")).sort_values(["unit_id", "season"])
-    out = []
-    for unit_id, group in rows.groupby("unit_id", sort=True):
-        own = group["own"].to_numpy(dtype=bool)
-        if not own.any():
-            continue
-        lift, season = group["lift"].to_numpy(dtype=float), group["season"].to_numpy()
-        turn = np.maximum(np.cumsum(own) - 1, 0)  # the others before the first own season join the first turn
-        starts = np.flatnonzero(own)
-        # own seasons back to back: the later joins the turn before
-        merged = np.cumsum(np.r_[True, ~(np.diff(starts) == 1)]) - 1
-        turn = merged[turn]
-        for k in np.unique(turn):
-            here = turn == k
-            mine, rest = lift[here & own], lift[here & ~own]
-            out.append({"unit_id": unit_id, "rotation": int(k), "own_season": int(season[here & own][0]),
-                        "own": float(mine.mean()), "other": float(rest.mean()) if len(rest) else np.nan,
-                        "others": int(len(rest))})
-    frame = pd.DataFrame(out, columns=ROTATION_COLUMNS[:-2])
-    total = frame["own"] + frame["other"]
-    frame["level"] = total / 2
-    frame["generality"] = (2 * frame["other"] / total).where(total > 0)
-    return frame[ROTATION_COLUMNS]
-
-
-def curves(table: pd.DataFrame, config: tiers.TierConfig | None = None, *, wide: float = CURVE_WIDE) -> pd.DataFrame:
-    """The shape of each unit's career from its turns of the rotation (``rotations``).
-
-    Per unit: its best turn's ``level`` (``peak``); its generality at the top
-    (``g_peak``: the turns up to the best one at half its level or more,
-    weighted by level); the lowest generality after the best turn while still
-    in use (``g_low``: a turn with ``own`` or ``other`` at the C cut or more);
-    ``narrow_turns``, those in-use turns with ``other`` under a quarter of
-    ``own``; and whether it has come down (``declined``: its latest turn under
-    half the peak). Its ``curve``:
-
-    * ``unused`` - no turn reached the C cut;
-    * ``specialist`` - narrow from the start (``g_peak`` under ``wide``);
-    * ``narrowed`` - general at the top, then used in its own element's
-      seasons only (``g_low`` under the lower generality band);
-    * ``faded`` - general at the top and came down still general;
-    * ``general`` - general and not come down yet: which of the two it ends
-      as, the data does not say yet;
-    * ``unknown`` - fewer than two turns, or no other-element season yet.
-    """
-    config = config or tiers.TierConfig()
-    use, narrow = config.cut("C"), config.generality_bands[0]
-    out = []
-    for unit_id, turns in rotations(table).groupby("unit_id", sort=True):
-        level, g = turns["level"].to_numpy(), turns["generality"].to_numpy()
-        own, other = turns["own"].to_numpy(), turns["other"].fillna(0).to_numpy()
-        top = int(np.nanargmax(np.nan_to_num(level, nan=own / 2)))
-        peak = float(np.nanmax(np.nan_to_num(level, nan=own / 2)))
-        rise = [i for i in range(top + 1) if level[i] >= peak / 2 and level[i] > 0]
-        g_peak = float(np.average(g[rise], weights=level[rise])) if rise else np.nan
-        after = [i for i in range(top, len(turns)) if (own[i] >= use or other[i] >= use) and not np.isnan(g[i])]
-        g_low = float(np.nanmin(g[after])) if after else np.nan
-        declined = len(turns) > 1 and np.nan_to_num(level[-1], nan=own[-1] / 2) < peak / 2
-        if len(turns) < 2 or np.isnan(g_peak):
-            curve = "unused" if len(turns) >= 2 and peak < use else "unknown"
-        elif peak < use:
-            curve = "unused"
-        elif g_peak < wide:
-            curve = "specialist"
-        elif g_low < narrow:
-            curve = "narrowed"
-        else:
-            curve = "faded" if declined else "general"
-        out.append({"unit_id": unit_id, "turns": len(turns), "peak": peak, "g_peak": g_peak, "g_low": g_low,
-                    "narrow_turns": sum(1 for i in after if other[i] < own[i] / 4), "declined": bool(declined),
-                    "curve": curve})
-    return pd.DataFrame(out)
-
-
-# --------------------------------------------------------------------------
-# the meta: following the boss's weakness
-# --------------------------------------------------------------------------
-
-def _cross_weakness(lifts: pd.DataFrame, weak: pd.Series, back: int = 4) -> pd.Series:
-    """Per season, how alike its lifts (unit x season) are to those of the last ``back`` seasons
-    of another boss weakness: the mean cosine. 1 = the same units whatever the weakness."""
-    out = {}
-    for season in lifts.columns:
-        before = [s for s in lifts.columns if s < season and weak[s] != weak[season]][-back:]
-        if len(before) < back:
-            continue
-        now = lifts[season].to_numpy()
-        out[season] = float(np.mean([now @ lifts[s].to_numpy() / (np.linalg.norm(now) * np.linalg.norm(lifts[s]))
-                                     for s in before]))
-    return pd.Series(out, dtype=float)
-
-
-def usage_mix(history: pd.DataFrame, config: tiers.TierConfig | None = None, days: int = 365) -> pd.DataFrame:
-    """Per season, the units in use over the ``days`` up to its start, by how general they were
-    then - with no memory beyond that window.
-
-    Per unit, over the seasons that started in the window: the mean lift in
-    its own element's seasons (O) and in the others (X), and ``2X / (O + X)``;
-    a unit counts when it met both sides in the window and either mean is at
-    the C cut or more. ``specialist`` / ``element_first`` / ``generalist``:
-    how many fall in each generality band, ``units`` all of them."""
-    config = config or tiers.TierConfig()
-    rows = history.assign(own=_flags(history, "element_match"), start=pd.to_datetime(history["start_at"], utc=True))
-    starts = rows.drop_duplicates("season").set_index("season")["start"].sort_index()
-    use, (low, high) = config.cut("C"), config.generality_bands
-    out = []
-    for season, begun in starts.items():
-        window = rows[(rows["start"] > begun - pd.Timedelta(days=days)) & (rows["start"] <= begun)]
-        sides = window.groupby(["unit_id", "own"])["lift"].mean().unstack().reindex(columns=[True, False]).dropna()
-        sides = sides[(sides[True] >= use) | (sides[False] >= use)]
-        g = 2 * sides[False] / (sides[True] + sides[False])
-        out.append({"season": season, "units": len(g), "specialist": int((g < low).sum()),
-                    "element_first": int(((g >= low) & (g < high)).sum()), "generalist": int((g >= high).sum())})
-    return pd.DataFrame(out).set_index("season")
-
-
-def meta_index(history: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.DataFrame:
-    """Per season, how far the units in use depend on the boss's weakness.
-
-    ``same``: how alike the season's lifts are to those of the four seasons
-    before it of another weakness (``_cross_weakness``); ``own_share``: the
-    share of the season's lift from units of the weak element; ``good_own`` /
-    ``good_other``: units at a season tier of B or better, of the weak element
+def meta_index(history: pd.DataFrame, seasons: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.DataFrame:
+    """Per season: ``same`` (``meta.weakness_similarity``), ``own_share`` (``meta.own_share``);
+    ``good_own`` / ``good_other``: units at a season tier of B or better, of the weak element
     or not; ``pool``: units of the weak element out by then."""
     config = config or tiers.TierConfig()
     rows = history.assign(own=_flags(history, "element_match"))
-    weak = rows.drop_duplicates("season").set_index("season")["weak_element"]
-    total = rows.groupby("season")["lift"].transform("sum")
     frame = pd.DataFrame(index=sorted(rows["season"].unique()))
-    lifts = rows.pivot_table(index="unit_id", columns="season", values="lift", fill_value=0)
-    frame["same"] = _cross_weakness(lifts, weak)
-    frame["own_share"] = (rows["lift"] / total).where(rows["own"], 0.0).groupby(rows["season"]).sum()
+    frame["same"] = meta.weakness_similarity(history, seasons)
+    frame["own_share"] = meta.own_share(history)
     good = rows["lift"] >= config.cut("B")
     for name, mask in (("good_own", rows["own"] & good), ("good_other", ~rows["own"] & good), ("pool", rows["own"])):
         frame[name] = mask.groupby(rows["season"]).sum()
     return frame.rename_axis("season")
-
-
-def debuts(history: pd.DataFrame, config: tiers.TierConfig | None = None) -> pd.DataFrame:
-    """Each unit that reached a season tier of A: how it was used in its first year from its
-    first season in use - the mean lift in its own element's seasons (``own``) and in the others
-    (``other``), their ``generality`` - and the season it came in (``first``)."""
-    config = config or tiers.TierConfig()
-    rows = history.assign(own=_flags(history, "element_match"), start=pd.to_datetime(history["start_at"], utc=True),
-                          used=tiers.fielded(history, config)).sort_values("season")
-    out = []
-    for unit_id, group in rows.groupby("unit_id"):
-        if group["lift"].max() < config.cut("A") or not group["used"].any():
-            continue
-        began = group.loc[group["used"], "start"].iloc[0]
-        year = group[(group["start"] >= began) & (group["start"] < began + pd.Timedelta(days=365))]
-        own, other = year.loc[year["own"], "lift"].mean(), year.loc[~year["own"], "lift"].mean()
-        out.append({"unit_id": unit_id, "first": int(group.loc[group["used"], "season"].iloc[0]),
-                    "own": own, "other": other,
-                    "generality": 2 * other / (own + other) if own + other > 0 else np.nan,
-                    "year_over": bool(began + pd.Timedelta(days=365) <= rows["start"].max())})
-    return pd.DataFrame(out)
 
 
 # --------------------------------------------------------------------------
@@ -582,7 +418,7 @@ def _pct(value: float) -> str:
 
 def report(book=None) -> str:
     """The numbers in docs/lifecycle.md, from the committed tables."""
-    from .tierlist import GENERALITY_KO, TierBook
+    from .tierlist import CURVE_KO, GENERALITY_KO, TierBook
 
     book = book or TierBook.load()
     history, seasons, config = book.history, book.seasons, book.config
@@ -609,7 +445,7 @@ def report(book=None) -> str:
                  f"{_pct(same.mean())} ({int(same.sum())}/{len(same)})")
     lines.append("")
 
-    lines.append("2. 범용도 g = 2X / (O + X) — O 자기 속성 칸(속성 티어), X 다른 속성 칸 평균. "
+    lines.append("2. 범용도 g = 2X / (O + X), 최근 한 바퀴 — O 가장 최근 자기 속성 시즌, X 그 앞뒤 다른 속성 시즌 평균. "
                  "1 = 약점과 무관, 2 = 다른 속성 시즌에만 쓰임")
     here = panel[(panel["season"] == newest) & panel["generality"].notna() & ~_true(panel["retired"])]
     here = here.assign(name=here["unit_id"].map(label)).sort_values("generality")
@@ -669,11 +505,11 @@ def report(book=None) -> str:
                      f"{r.tier} {r.lift:.2f} → {state} (보통 {r.wait_days:.0f}일 간격)")
     lines.append("")
 
-    lines.append(f"6. 생애 곡선 (로테이션 한 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들, 쓰임 = 시즌 티어 C 이상, "
-                 f"처음부터 범용 = 전성기 범용도 {CURVE_WIDE} 이상, 속성 전용으로 좁아짐 = 범용도 "
-                 f"{config.generality_bands[0]} 아래)")
-    shapes = curves(history, config).assign(name=lambda f: f["unit_id"].map(label))
-    for curve in CURVES:
+    lines.append(f"6. 생애 곡선 (로테이션 한 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들, 쓰임 = 시즌 티어 "
+                 f"{config.curve_min_tier} 이상, 처음부터 범용 = 전성기 범용도 {config.curve_wide} 이상, 속성 전용으로 좁아짐 = "
+                 f"범용도 {config.generality_bands[0]} 아래)")
+    shapes = tiers.curves(history, seasons, now, config).assign(name=lambda f: f["unit_id"].map(label))
+    for curve in tiers.CURVES:
         members = shapes[shapes["curve"] == curve]
         listed = ", ".join(members.sort_values("peak", ascending=False)["name"].head(12))
         lines.append(f"   {CURVE_KO[curve]:<12} {len(members):>3}명  — {listed}")
@@ -683,22 +519,22 @@ def report(book=None) -> str:
     lines.append("")
 
     lines.append("7. 메타: 약점을 따르는 정도 (10시즌씩)")
-    meta = meta_index(history, config)
+    index = meta_index(history, seasons, config)
     era = eras_of(history["season"])
-    block = meta.groupby(meta.index.map(era)).mean()
+    block = index.groupby(index.index.map(era)).mean()
     lines.append("   구간      약점 교차 유사도 | 약점 속성 니케의 몫 | 시즌 B 이상: 약점 속성 · 다른 속성 | 약점 속성 니케 풀")
     for name, r in block.iterrows():
         lines.append(f"   {name:<8}  {r.same:.2f} | {_pct(r.own_share):>4} | {r.good_own:.1f} · {r.good_other:.1f} | "
                      f"{r.pool:.1f}")
-    mix = usage_mix(history, config)
-    lines.append("   그 시즌까지 1년 동안 쓰인 니케(C 이상), 그 1년의 범용도로: 특화 · 속성 우선 · 범용 / 전체 (특화 비율)")
+    mix = meta.usage_mix(history, seasons, config)
+    lines.append(f"   그 시즌까지 {config.meta_window_days}일 동안 쓰인 니케(시즌 티어 {config.curve_min_tier} 이상), "
+                 "그 기간의 범용도로: 특화 · 속성 우선 · 범용 / 전체 (특화 비율)")
     lines.append("   " + " | ".join(f"S{i} {r.specialist} · {r.element_first} · {r.generalist} / {r.units} "
                                     f"({_pct(r.specialist / r.units)})" for i, r in mix.loc[mix.index % 5 == 1].iloc[1:].iterrows()))
-    lines.append("   시즌별 약점 교차 유사도: " + " ".join(f"{s}:{v:.2f}" for s, v in meta["same"].dropna().items()))
-    first = debuts(history, config)
+    lines.append("   시즌별 약점 교차 유사도: " + " ".join(f"{s}:{v:.2f}" for s, v in index["same"].dropna().items()))
+    first = meta.debuts(history, seasons, config)
     first = first.assign(era=first["first"].map(era))
-    lines.append("   시즌 A 이상을 찍은 니케의 첫 1년 (데뷔 구간별): 범용도 중앙값 · 범용도 0.7 이상 비율 · "
-                 "자기 속성 시즌 기여도 중앙값 · 명")
+    lines.append("   첫 1년에 쓰인 니케 (데뷔 구간별): 범용도 중앙값 · 범용도 0.7 이상 비율 · 자기 속성 시즌 기여도 중앙값 · 명")
     lines.append("   " + " | ".join(
         f"{e} {g['generality'].median():.2f} · {_pct((g['generality'] >= 0.7).mean())} · {g['own'].median():.2f} · "
         f"{len(g)}" for e, g in first.groupby("era")))

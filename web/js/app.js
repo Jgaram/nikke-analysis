@@ -11,8 +11,9 @@ import { dateView } from "./views/date.js";
 import { unitView } from "./views/unit.js";
 import { pickView } from "./views/pick.js";
 import { compareView, COMPARE_MAX } from "./views/trend.js";
+import { metaView } from "./views/meta.js";
 
-const TABS = ["tier", "trend"];
+const TABS = ["tier", "trend", "meta"];
 const TRENDS = ["unit", "compare"];
 const VIEWS = {
   tier: (app) => (app.state.view === "raid" ? seasonView(app) : dateView(app)),
@@ -20,6 +21,7 @@ const VIEWS = {
     unit: () => (app.state.unit == null ? pickView(app) : unitView(app)),
     compare: () => compareView(app),
   })[app.state.trend](),
+  meta: (app) => metaView(app),
 };
 
 const state = {
@@ -40,7 +42,7 @@ const state = {
 };
 
 const app = { state, model: null, decks: null, defaults: null };
-const cache = { pop: null, popKey: null, hist: null, histKey: null, views: new Map() };
+const cache = { pop: null, popKey: null, hist: null, histKey: null, views: new Map(), meta: null, metaKey: null };
 
 // ---------------------------------------------------------------------------
 // the computation, cached
@@ -78,6 +80,18 @@ app.viewAt = (moment) => {
   }
   return view;
 };
+
+// The meta tab's numbers: they move with the population and the career parameters.
+app.metaTrend = () => {
+  const pop = app.population();
+  const key = `${M.populationKey(state.params)}|${M.lifeKey(state.params)}`;
+  if (cache.metaKey !== key) {
+    cache.meta = { trend: M.metaTrend(pop, state.params), debuts: M.debuts(app.model, pop, state.params) };
+    cache.metaKey = key;
+  }
+  return cache.meta.trend;
+};
+app.debuts = () => { app.metaTrend(); return cache.meta.debuts; };
 
 app.profile = (u, moment) => M.unitProfile(app.model, app.population(), moment, state.params, u);
 
@@ -132,7 +146,7 @@ app.query = (extra = {}) => {
 };
 
 // Which kind of place a state is: the within-place choices (the weakness) do not travel between kinds.
-const placeOf = (st) => (st.tab === "tier" ? "tier" : `trend-${st.trend}`);
+const placeOf = (st) => (st.tab === "trend" ? `trend-${st.trend}` : st.tab);
 
 const compareText = (list) => list.map((u) => app.model.units[u].id).join(",");
 
@@ -143,6 +157,8 @@ function hashOf(st) {
     path = "#/tier";
     if (st.view !== "overall") extra.v = st.view;
     if (st.mode === "table") extra.m = "table";
+  } else if (st.tab === "meta") {
+    path = "#/meta";
   } else {
     const arg = st.trend === "unit" ? (st.unit != null ? app.model.units[st.unit].id : null) : st.trend;
     path = `#/trend${arg != null ? `/${arg}` : ""}`;
@@ -192,6 +208,9 @@ function readHash() {
     // 약점별 시즌 became the comparison with a weakness chosen
     state.trend = arg === "compare" || arg === "weak" ? "compare" : "unit";
     if (state.trend === "unit" && arg != null && arg !== "unit") state.unit = app.unitIndex(decodeURIComponent(arg)) ?? null;
+  } else if (tab === "meta") {
+    state.tab = "meta";
+    state.weak = null;
   } else {
     state.tab = "tier";
     const v = q.get("v");
@@ -271,7 +290,7 @@ function render() {
     a.setAttribute("aria-current", on ? "page" : "false");
     // the unit tab opens on its list, to pick a unit from
     // a tab goes back to where it was left; pressed while on it, to its start (the unit list)
-    a.href = a.dataset.tab === "tier" ? app.link({ tab: "tier" })
+    a.href = a.dataset.tab === "tier" ? app.link({ tab: "tier" }) : a.dataset.tab === "meta" ? app.link({ tab: "meta" })
       : app.link({ tab: "trend", unit: on && state.trend === "unit" ? null : state.unit });
   }
   renderParamsBadge();
@@ -286,7 +305,7 @@ function render() {
   main.replaceChildren(content);
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
-  const place = state.tab === "tier"
+  const place = state.tab === "meta" ? "메타 변화" : state.tab === "tier"
     ? (state.view === "raid" ? "레이드별 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 약점 티어`)
     : state.trend === "compare" ? (state.weak ? `니케 비교 · ${ELEMENT_KO[state.weak]} 약점` : "니케 비교")
       : state.unit != null ? `${unitName(app.model.units[state.unit])} · 티어 변화` : "티어 변화";

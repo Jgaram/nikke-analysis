@@ -5,9 +5,12 @@ import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, tierBadge, deckSplit, sortableTable, unitName, segmented, infoButton,
 } from "../ui.js";
-import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, GENERALITY_KO, trendTabs, unitSearch } from "./common.js";
+import {
+  provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, GENERALITY_KO, trendTabs, unitSearch, CURVE_KO, CURVE_HINT,
+} from "./common.js";
 import { timeStrip, whenLabel } from "./when.js";
 import { trajectoryChart, generalityChart } from "../chart.js";
+import { lineChart, lineLegend } from "../linechart.js";
 
 export function unitView(app) {
   const { model, state } = app;
@@ -46,9 +49,11 @@ export function unitView(app) {
     root.append(h("section", { class: "panel chart-panel" },
       h("div", { class: "panel-head" },
         h("h3", null, "범용도 변화"), infoButton("범용도", () => generalityHelp(app)),
-        h("span", { class: "muted small" }, "각 시즌이 끝났을 때의 범용도 · 1 = 약점과 무관, 위로 갈수록 다른 속성 시즌에 쓰임")),
+        h("span", { class: "muted small" }, "각 시즌이 끝났을 때의 범용도(그때의 최근 한 바퀴) · 1 = 약점과 무관, 위로 갈수록 다른 속성 시즌에 쓰임")),
       generalityChart(app, u, all, { treasureAt: unit.treasure, at })));
   }
+  const curve = prof.view.curves.get(u);
+  if (curve && curve.rotations.length) root.append(turnPanel(app, u, curve));
   if (records.length) root.append(seasonTable(app, u, records));
   return root;
 }
@@ -136,8 +141,9 @@ function generalityHelp(app, g = null) {
     h("div", { class: "tip-name" }, "범용도"),
     h("p", null, "보스 약점이 이 니케의 속성이 ", h("b", null, "아닐"), " 때도 얼마나 쓰이나. 0 = 약점이 자기 속성일 때만 쓰임, "
       + `1 = 약점과 무관하게 쓰임, ${GENERALITY_MAX} = 약점이 다른 속성일 때만 쓰임.`),
-    h("p", { class: "muted" }, "= 2 × 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균). "
-      + "칸은 종합 티어를 이루는 보스 약점별 값이고, 자기 속성 칸은 속성 티어의 값이다."),
+    h("p", { class: "muted" }, "= 2 × 다른 속성 기여도 평균 ÷ (자기 속성 기여도 + 다른 속성 기여도 평균). 최근 한 바퀴로 잰다: "
+      + "자기 속성 기여도는 가장 최근 자기 속성 시즌의 값, 다른 속성은 그 앞 자기 속성 시즌 뒤로의 다른 속성 시즌들의 평균. "
+      + "티어처럼 지난 시즌을 기억하지 않아서, 다른 속성 덱에서 빠지면 다음 자기 속성 시즌에 바로 보인다."),
     h("div", { class: "gauge-legend" },
       h("span", { class: "z0" }, h("b", null, "특화"), ` 0 – ${num(low)}`),
       h("span", { class: "z1" }, h("b", null, "속성 우선"), ` ${num(low)} – ${num(high)}`),
@@ -170,8 +176,68 @@ function generalityTile(app, u, view) {
       h("span", { class: "tile-state" }, value != null ? GENERALITY_KO[g.band] : "–"),
       value != null ? h("span", { class: "tile-num" }, num(value)) : null),
     gauge(app, value),
-    h("div", { class: "tile-sub" }, value != null ? `자기 속성 칸 ${num(g.ownLevel)} · 다른 속성 칸 평균 ${num(g.otherLevel)}`
-      : "아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 못 겪었거나 거의 안 쓰임"));
+    h("div", { class: "tile-sub" }, value != null ? `최근 한 바퀴: 자기 속성 ${num(g.ownLevel)} · 다른 속성 평균 ${num(g.otherLevel)}`
+      : "아직 없음 — 최근 한 바퀴에 자기 속성·다른 속성 시즌 중 한쪽이 없거나 거의 안 쓰임"));
+}
+
+// What the career curves are, with the parameters in force - for the "i" beside them.
+function curveHelp(app, c = null) {
+  const { curveWide, generalityBands, curveMinTier } = app.state.params;
+  return h("div", { class: "tip tip-help" },
+    h("div", { class: "tip-name" }, "생애 곡선"),
+    h("p", null, "니케의 생애를 로테이션 한 바퀴씩(자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들) 보고 모양으로 나눈다. "
+      + "역할이 아니라 쓰임의 모양이다 — 속성 시즌에만 쓰이는 건 딜 때문일 수도, 그 속성 덱에 주는 버프 때문일 수도 있다."),
+    h("dl", { class: "tip-list" },
+      ...["specialist", "narrowed", "faded", "general", "unused", "unknown"].flatMap((k) => [h("dt", null, CURVE_KO[k]), h("dd", null, CURVE_HINT[k])])),
+    h("p", { class: "muted" }, `전성기 = 수준((자기 속성 + 다른 속성) ÷ 2)이 가장 높은 바퀴. 전성기 범용도 ${num(curveWide)} 이상이면 처음부터 범용, `
+      + `그 뒤 아직 쓰이는(시즌 티어 ${curveMinTier} 이상) 바퀴의 범용도가 ${num(generalityBands[0])} 아래로 가면 속성 전용으로 좁아진 것, `
+      + "마지막 바퀴가 전성기 수준의 절반 아래면 내려온 것."),
+    c ? h("p", null, `이 니케: 전성기 범용도 ${num(c.gPeak)} · 내려오며 가장 낮은 범용도 ${num(c.gLow)} · `
+      + `자기 속성만 남은 바퀴 ${c.narrowTurns}개 · 지금 수준 전성기의 ${Math.round((lastLevel(c) / c.peak) * 100)}%`) : null,
+    h("p", { class: "muted" }, "기준은 인자에서 바꿀 수 있다. 티어에는 들어가지 않는다."));
+}
+
+const lastLevel = (c) => { const t = c.rotations[c.rotations.length - 1]; return Number.isNaN(t.other) ? t.own / 2 : t.level; };
+
+function curveTile(app, u, view) {
+  const c = view.curves.get(u);
+  if (!c) return null;
+  const ratio = c.peak > 0 ? lastLevel(c) / c.peak : NaN;
+  return h("div", { class: "tile tile-curve", dataset: { tier: "none", curve: c.curve } },
+    h("div", { class: "tile-label" }, "생애 곡선", infoButton("생애 곡선", () => curveHelp(app, c))),
+    h("div", { class: "tile-value" }, h("span", { class: ["tile-state", "curve-tag", `s-${c.curve}`] }, CURVE_KO[c.curve])),
+    h("div", { class: "tile-sub" }, c.curve === "unused" || c.curve === "unknown" ? CURVE_HINT[c.curve]
+      : `전성기 범용도 ${num(c.gPeak)} · 내려오며 가장 낮은 ${num(c.gLow)} · 지금 수준 전성기의 ${Number.isNaN(ratio) ? "–" : `${Math.round(ratio * 100)}%`}`));
+}
+
+// The unit's career a turn of the rotation at a time: its own-element lift and the mean of the
+// other-element seasons of each turn - the curve's shape, drawn.
+function turnPanel(app, u, c) {
+  const turns = c.rotations;
+  const series = [
+    { name: "자기 속성", cls: "own", values: turns.map((t) => t.own) },
+    { name: "다른 속성 평균", cls: "other", values: turns.map((t) => (Number.isNaN(t.other) ? null : t.other)) },
+  ];
+  const top = Math.max(1.5, ...turns.map((t) => Math.max(t.own, Number.isNaN(t.other) ? 0 : t.other)));
+  const ticks = [0, 0.5, 1, 1.5, 2, 2.5].filter((v) => v <= top + 0.001);
+  const chart = lineChart({
+    points: turns.map((t) => ({ label: `S${t.ownSeason}` })), series, max: Math.ceil(top * 2) / 2, ticks,
+    format: (v) => num(v, 1), height: 200, xLabel: "바퀴", label: `${unitName(app.model.units[u])} 로테이션 한 바퀴씩의 기여도`,
+    tip: (i) => {
+      const t = turns[i];
+      return h("div", { class: "tip" },
+        h("div", { class: "tip-name" }, `${i + 1}번째 바퀴`, h("span", { class: "muted" }, ` 자기 속성 시즌 S${t.ownSeason}부터`)),
+        h("dl", { class: "tip-list" },
+          h("dt", null, "자기 속성"), h("dd", null, num(t.own)),
+          h("dt", null, "다른 속성 평균"), h("dd", null, Number.isNaN(t.other) ? "아직 없음" : `${num(t.other)} (${t.others}시즌)`),
+          h("dt", null, "범용도"), h("dd", null, Number.isNaN(t.generality) ? "–" : num(t.generality))));
+    },
+  });
+  return h("section", { class: "panel chart-panel" },
+    h("div", { class: "panel-head" },
+      h("h3", null, "로테이션 한 바퀴씩"), infoButton("생애 곡선", () => curveHelp(app, c)),
+      h("span", { class: "muted small" }, `생애 곡선: ${CURVE_KO[c.curve]} · 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들 · 두 선이 같이 가면 범용, 다른 속성 선만 먼저 떨어지면 속성 전용으로 좁아짐`)),
+    lineLegend(series), chart);
 }
 
 function profile(app, u, prof, moment) {
@@ -190,10 +256,12 @@ function profile(app, u, prof, moment) {
     ...elementTiles,
     lifeTile(app, u, prof.view),
     generalityTile(app, u, prof.view),
+    curveTile(app, u, prof.view),
     prof.slots ? slotChart(app, prof.slots, state.params.overall) : null,
   ] : [h("div", { class: "tile tile-none" }, prof.treasured
     ? "애장품을 낀 시즌 기록이 아직 없어 티어가 없습니다 (애장품 전 기록은 아래 차트·표)."
-    : "이때까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), generalityTile(app, u, prof.view)];
+    : "이때까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), generalityTile(app, u, prof.view),
+  curveTile(app, u, prof.view)];
   const added = unit.extra.map((e) => ELEMENT_KO[e]);
   const byTreasure = unit.treasureElements.map((e) => ELEMENT_KO[e]);
   return h("section", { class: "profile" },

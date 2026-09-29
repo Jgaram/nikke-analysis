@@ -327,7 +327,7 @@ class TierBook:
         overall["name"] = [_name(r) for _, r in overall.iterrows()]
         beside = overall[["unit_id", "name", "name_ko", "name_en", "element", "overall_tier", "overall",
                           "overall_rank", "provisional"]].rename(columns={"element": "own_element"})
-        return tiering.Standings(overall, standing.elements.merge(beside, on="unit_id", how="left"), standing.slots)
+        return tiering.Standings(overall, standing.elements.merge(beside, on="unit_id", how="left"), standing.slots, standing.rows)
 
     def _counted(self, instant: pd.Timestamp) -> tuple[list[int], list[int], dict[int, str]]:
         """The finished and the live seasons the standings at ``instant`` stand on, and each one's weak element."""
@@ -403,14 +403,22 @@ class TierBook:
             listed_elements(info.get("treasure_elements")) if treasured else [])
         elements = tuple(dict.fromkeys(e for e in [info.get("element")] + added if isinstance(e, str) and e))
         return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live, treasure_at, treasured,
-                           self._life(unit_id, instant), self._general(unit_id, standing))
+                           self._life(unit_id, instant), self._general(unit_id, standing, instant))
 
-    def _general(self, unit_id: str, standing: tiering.Standings) -> dict[str, Any] | None:
-        """The unit's generality, from ``standing`` (where it stands at the moment); None when
-        it has no place there."""
+    def _general(self, unit_id: str, standing: tiering.Standings, instant: pd.Timestamp) -> dict[str, Any] | None:
+        """The unit's generality, from ``standing`` (where it stands at the moment), and the
+        shape of its career then (``curve``, ``g_peak``, ``g_low``); None when it has no
+        place there."""
         general = tiering.generality(standing, self.config)
         general = general[general["unit_id"] == unit_id]
-        return _records(general.drop(columns="unit_id"))[0] if not general.empty else None
+        if general.empty:
+            return None
+        record = _records(general.drop(columns="unit_id"))[0]
+        shapes = tiering.curves(self.history, self.seasons, instant, self.config)
+        mine = shapes[shapes["unit_id"] == unit_id]
+        if not mine.empty:
+            record.update(_records(mine[["curve", "g_peak", "g_low"]])[0])
+        return record
 
     def _life(self, unit_id: str, instant: pd.Timestamp) -> dict[str, Any] | None:
         """The unit's lifespan at ``instant``, with ``run_days``: how long its run in use has
@@ -509,6 +517,8 @@ def _provisional_note(config: tiering.TierConfig) -> str:
             "자기 속성 시즌을 아직 못 겪음")
 
 
+CURVE_KO = {"unused": "안 쓰임", "specialist": "처음부터 속성 전용", "narrowed": "범용 → 속성 전용",
+            "faded": "범용인 채로 저묾", "general": "아직 범용", "unknown": "아직 모름"}
 FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성의 평균(다른 속성 기록이 없으면 0), "
              "자기 속성 칸은 0")
 
@@ -718,12 +728,18 @@ def _general_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str
     if not c:
         return []
     g = c.get("generality")
-    general = (f"{GENERALITY_KO[c['generality_band']]} {g:.2f} (2 × 다른 속성 칸 평균 {c['other_level']:.2f} ÷ "
-               f"(자기 속성 칸 {c['own_level']:.2f} + {c['other_level']:.2f}), 0–2)" if g is not None and g == g
-               else "없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임")
+    general = (f"{GENERALITY_KO[c['generality_band']]} {g:.2f} (최근 한 바퀴: 2 × 다른 속성 평균 {c['other_level']:.2f} ÷ "
+               f"(자기 속성 {c['own_level']:.2f} + {c['other_level']:.2f}), 0–2)" if g is not None and g == g
+               else "없음 — 최근 한 바퀴에 자기 속성·다른 속성 시즌 중 한쪽이 없거나 거의 안 쓰임")
     low, high = config.generality_bands
-    return [f"  {pad('범용도', 9)}  {general}",
-            f"  {pad('', 9)}  범용도 띠 = 특화 < {low:g} ≤ 속성 우선 < {high:g} ≤ 범용"]
+    lines = [f"  {pad('범용도', 9)}  {general}",
+             f"  {pad('', 9)}  범용도 띠 = 특화 < {low:g} ≤ 속성 우선 < {high:g} ≤ 범용"]
+    curve = c.get("curve")
+    if curve:
+        numbers = (f" (전성기 범용도 {c['g_peak']:.2f} · 내려오며 가장 낮은 {c['g_low']:.2f})"
+                   if curve not in ("unused", "unknown") and c.get("g_low") is not None and c["g_low"] == c["g_low"] else "")
+        lines.append(f"  {pad('생애 곡선', 9)}  {CURVE_KO[curve]}{numbers} — 로테이션 한 바퀴씩 본 쓰임의 모양, 역할이 아님")
+    return lines
 
 
 def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) -> str:

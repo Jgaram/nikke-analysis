@@ -23,7 +23,7 @@ import pandas as pd
 import pytest
 
 from nikke_analysis import web
-from nikke_analysis.analyze import pipeline, tiers
+from nikke_analysis.analyze import meta, pipeline, tiers
 from nikke_analysis.servers import ordered
 from tests.synthetic import make_world, write_processed
 
@@ -37,7 +37,8 @@ CONFIGS = {
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
                              "min_elements_observed": 2, "min_tier": "B", "retire_after_days": 40.0,
                              "retire_after_own_seasons": 0,
-                             "generality_bands": (0.4, 1.2)},
+                             "generality_bands": (0.4, 1.2), "curve_min_tier": "B", "curve_wide": 0.8,
+                             "meta_window_days": 120},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
                                "overall_cuts": [("SS", 1.0), ("S", 0.7), ("A", 0.4), ("B", 0.2), ("C", 0.1),
@@ -173,6 +174,8 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "minTier": config.min_tier, "retireAfterDays": config.retire_after_days,
         "retireAfterOwnSeasons": config.retire_after_own_seasons,
         "generalityBands": list(config.generality_bands),
+        "curveMinTier": config.curve_min_tier, "curveWide": config.curve_wide,
+        "metaWindowDays": config.meta_window_days,
     }
 
 
@@ -205,7 +208,7 @@ def _flags(py: pd.Series, js: pd.Series, what: str) -> None:
     _same(truthy(py), truthy(js), what)
 
 
-def compare(tables: Path, page: dict) -> None:
+def compare(tables: Path, page: dict, config: tiers.TierConfig) -> None:
     """Every number the page shows against the pipeline's tables in ``tables``."""
     usage = _table(tables / "metrics_unit_season.csv")
     rows = pd.DataFrame(page["rows"])
@@ -231,9 +234,10 @@ def compare(tables: Path, page: dict) -> None:
     theirs = pd.DataFrame(page["overall"])
     assert list(overall["unit_id"]) == list(theirs["unit_id"]), "overall table: order"
     _close(overall["overall"], theirs["overall"], "overall table: overall")
-    _close(overall["generality"], theirs["generality"], "overall table: generality")
+    for column in ("generality", "curve_g_peak", "curve_g_low"):
+        _close(overall[column], theirs[column], f"overall table: {column}")
     for column in ("overall_rank", "overall_tier", "elements_observed", "seasons_observed", "last_season",
-                   "generality_band"):
+                   "generality_band", "curve"):
         _same(overall[column], theirs[column], f"overall table: {column}")
     for column in ("provisional", "treasure"):
         _flags(overall[column], theirs[column], f"overall table: {column}")
@@ -252,6 +256,23 @@ def compare(tables: Path, page: dict) -> None:
     for column in ("element_rank", "element_tier", "element_seasons", "source"):
         _same(elements[column], theirs[column], f"element tables: {column}")
     _flags(elements["treasure"], theirs["treasure"], "element tables: treasure")
+
+    summary = seasons.copy()
+    for column in ("start_at", "end_at"):
+        summary[column] = pd.to_datetime(summary[column], utc=True)
+    ours = meta.trend(usage, summary, config).reset_index()
+    mine = pd.DataFrame(page["meta"])
+    assert list(ours["season"]) == list(mine["season"]), "meta: seasons"
+    for column in ("units", "specialist", "element_first", "generalist"):
+        _same(ours[column], mine[column], f"meta: {column}")
+    for column in ("similarity", "own_share"):
+        _close(ours[column], mine[column], f"meta: {column}")
+    first = meta.debuts(usage, summary, config)
+    theirs = pd.DataFrame(page["debuts"], columns=meta.DEBUT_COLUMNS)
+    assert list(first["unit_id"]) == list(theirs["unit_id"]), "debuts: units"
+    _same(first["first"], theirs["first"], "debuts: first")
+    for column in ("own", "other", "generality"):
+        _close(first[column], theirs[column], f"debuts: {column}")
 
 
 def compare_lives(tables: Path, page: dict, config: tiers.TierConfig) -> pd.DataFrame:
@@ -281,7 +302,7 @@ def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_pat
     config = tiers.TierConfig(**CONFIGS[name])
     pipeline.run(data_dir=directory, config=config, out_dir=tmp_path)
     page = run_page(out, js_params(config, ordered(world.entries["server"].unique())))
-    compare(tmp_path, page)
+    compare(tmp_path, page, config)
     lives = compare_lives(tmp_path, page, config)
     if name == "defaults":
         # somewhere along the way units sat out a season of their own element, and one retired for it
@@ -292,5 +313,12 @@ def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_pat
         assert set(pd.DataFrame(page["elements"]).query("source == 'skill'")["element"]) == {"Water", "Iron"}
         # the element dealers are specialists by generality, the supports that go anywhere generalists
         overall = pd.DataFrame(page["overall"]).set_index("unit_id")
-        assert set(overall.loc[list(world.element_dps.values()), "generality_band"]) == {"specialist"}
+        # (the Fire dealer's treasure came at season 5: a turn with it has no Fire season after it yet)
+        others = [u for e, u in world.element_dps.items() if e != "Fire"]
+        assert set(overall.loc[others, "generality_band"]) == {"specialist"}
         assert set(overall.loc[world.universal, "generality_band"]) == {"generalist"}
+        # the curves and the meta had something to say
+        assert len(set(overall["curve"])) >= 3
+        assert pd.DataFrame(page["meta"])["similarity"].notna().any()
+    if name == "flat-frequency-prior":  # nine seasons hold no full year, but 120 days
+        assert page["debuts"]

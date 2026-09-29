@@ -44,8 +44,17 @@ const overall = view.standing.overall.map((r) => {
     overall_rank: r.rank, unit_id: r.id, overall: r.overall, overall_tier: r.tier, provisional: r.provisional,
     elements_observed: r.elementsObserved, seasons_observed: r.seasonsObserved, last_season: r.lastSeason,
     treasure: r.treasure, generality: g.generality, generality_band: g.band,
+    curve: view.curves.get(r.u)?.curve ?? "", curve_g_peak: view.curves.get(r.u)?.gPeak ?? NaN,
+    curve_g_low: view.curves.get(r.u)?.gLow ?? NaN,
   };
 });
+const meta = M.metaTrend(population, params).map((r) => ({
+  season: r.season.season, units: r.units, specialist: r.specialist, element_first: r.element_first,
+  generalist: r.generalist, similarity: r.similarity, own_share: r.ownShare,
+}));
+const debuts = M.debuts(model, population, params).map((r) => ({
+  unit_id: model.units[r.u].id, first: r.first, own: r.own, other: r.other, generality: r.generality,
+}));
 const elements = view.standing.elements.map((r) => ({
   element: r.element, element_rank: r.rank, unit_id: r.id, source: r.source, element_lift: r.lift,
   element_tier: r.tier, element_seasons: r.seasons, treasure: r.treasure,
@@ -63,5 +72,5 @@ const seasons = population.summary.map((s) => ({
 }));
 
 process.stdout.write(JSON.stringify({
-  params, rows, overall, elements, life, lives, seasons, final: view.final, live: view.live,
+  params, rows, overall, elements, life, lives, seasons, meta, debuts, final: view.final, live: view.live,
 }));

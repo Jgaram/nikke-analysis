@@ -5,7 +5,7 @@ import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented,
 } from "../ui.js";
-import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, fold } from "./common.js";
+import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, fold, careerText, GENERALITY_KO } from "./common.js";
 import { trajectoryChart } from "../chart.js";
 
 export function unitView(app) {
@@ -166,6 +166,24 @@ function lifeTile(app, u, view) {
     h("div", { class: "tile-sub" }, used ? `${lifeSub(t)} · 출시 뒤 ${t.a.seasonsOut}시즌 중 ${t.a.seasonsUsed}번 쓰임` : t.sub));
 }
 
+// How general the unit is, and which way its career is going.
+function careerTile(app, u, view) {
+  const t = careerText(app, view, u);
+  if (!t) return null;
+  const g = view.generality.get(u);
+  const value = g && !Number.isNaN(g.generality) ? g.generality : null;
+  const why = g && value != null
+    ? `범용도 = 다른 속성 칸 평균 ${num(g.otherLevel)} ÷ (자기 속성 칸 ${num(g.ownLevel)} + ${num(g.otherLevel)}). `
+      + "0 = 약점이 자기 속성일 때만 쓰임, 0.5 = 약점과 무관, 0.5 넘음 = 다른 속성 덱에서 더 쓰임"
+    : "범용도 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임";
+  return h("div", { class: "tile tile-career", dataset: { tier: "none" }, title: `${why}\n${t.rule}` },
+    h("div", { class: "tile-label" }, "범용도 · 경로"),
+    h("div", { class: "tile-value" },
+      h("span", { class: "tile-state" }, value != null ? GENERALITY_KO[g.band] : "–"),
+      value != null ? h("span", { class: "tile-num" }, num(value)) : null),
+    h("div", { class: "tile-sub" }, h("b", null, t.label), ` · ${t.detail}`));
+}
+
 function profile(app, u, prof, moment) {
   const { model, state } = app;
   const unit = model.units[u];
@@ -183,10 +201,11 @@ function profile(app, u, prof, moment) {
       { mark: o.provisional ? "*" : null, class: "tile-overall" }),
     ...elementTiles,
     lifeTile(app, u, prof.view),
+    careerTile(app, u, prof.view),
     prof.slots ? slotChart(app, prof.slots, state.params.overall) : null,
   ] : [h("div", { class: "tile tile-none" }, prof.treasured
     ? "애장품을 낀 시즌 기록이 아직 없어 티어가 없습니다 (애장품 전 기록은 아래 차트·표)."
-    : "이 날짜까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view)];
+    : "이 날짜까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), careerTile(app, u, prof.view)];
   const added = unit.extra.map((e) => ELEMENT_KO[e]);
   const byTreasure = unit.treasureElements.map((e) => ELEMENT_KO[e]);
   return h("section", { class: "profile" },

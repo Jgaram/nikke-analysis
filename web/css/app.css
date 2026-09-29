@@ -505,7 +505,7 @@ sup { font-size: 11px; margin-left: 1px; }
 .life-strip { display: inline-grid; gap: 1px; height: 14px; vertical-align: middle; max-width: 100%; }
 .life-strip i { display: block; border-radius: 1px; }
 .life-strip .idle { background: var(--line-2); }
-.life-strip .used { background: var(--accent); }
+.life-strip .used { background: var(--ti, var(--accent)); }
 .life-th { display: inline-flex; flex-direction: column; gap: 3px; width: 150px; }
 .life-axis { display: flex; justify-content: space-between; font: 600 10.5px/1 var(--display); letter-spacing: .04em; color: var(--ink-3); }
 .life-cell { display: inline-flex; flex-direction: column; gap: 2px; line-height: 1.25; }
@@ -668,6 +668,9 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .tile-state { font: 800 24px/1 var(--font); color: var(--ink-3); }
 .tile-state.active { color: var(--accent); }
 .tile-life-main { font-size: 14px; font-weight: 700; }
+.tile-career .tile-state { color: var(--ink); }
+.cut .band-label { white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--ink-2); }
+.tile-career .tile-sub b { color: var(--ink-2); }
 .mini-bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; height: 104px; align-items: end; padding-top: 4px; }
 .mb { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
 .mb-val { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }

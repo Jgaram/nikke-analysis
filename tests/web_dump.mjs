@@ -38,11 +38,16 @@ for (const s of population.summary) {
 }
 
 const view = M.viewAt(model, population, model.asOf, params);
-const overall = view.standing.overall.map((r) => ({
-  overall_rank: r.rank, unit_id: r.id, overall: r.overall, overall_tier: r.tier, provisional: r.provisional,
-  elements_observed: r.elementsObserved, seasons_observed: r.seasonsObserved, last_season: r.lastSeason,
-  treasure: r.treasure,
-}));
+const overall = view.standing.overall.map((r) => {
+  const g = view.generality.get(r.u);
+  const c = view.careers.get(r.u) ?? {};
+  return {
+    overall_rank: r.rank, unit_id: r.id, overall: r.overall, overall_tier: r.tier, provisional: r.provisional,
+    elements_observed: r.elementsObserved, seasons_observed: r.seasonsObserved, last_season: r.lastSeason,
+    treasure: r.treasure, generality: g.generality, generality_band: g.band, other_used: c.otherUsed,
+    last_other: c.lastOther, other_since: c.otherSince, own_after: c.ownAfter, path: c.path,
+  };
+});
 const elements = view.standing.elements.map((r) => ({
   element: r.element, element_rank: r.rank, unit_id: r.id, source: r.source, element_lift: r.lift,
   element_tier: r.tier, element_seasons: r.seasons, treasure: r.treasure,

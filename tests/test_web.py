@@ -35,8 +35,9 @@ CONFIGS = {
     "defaults": {},
     "servers-top-uniform": {"exclude_servers": ("S2",), "top_n": 8, "rank_weighting": "uniform"},
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
-                             "min_elements_observed": 2, "min_usage": 0.3, "retire_after_days": 40.0,
-                             "retire_after_own_seasons": 0},
+                             "min_elements_observed": 2, "min_tier": "B", "retire_after_days": 40.0,
+                             "retire_after_own_seasons": 0, "generalist_seasons": 2, "left_after": 1,
+                             "generality_bands": (0.2, 0.45)},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
                                "overall_cuts": [("SS", 1.0), ("S", 0.7), ("A", 0.4), ("B", 0.2), ("C", 0.1),
@@ -163,8 +164,9 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "overallCuts": [[label, value] for label, value in config.overall_cuts], "halfLifeDays": config.half_life_days,
         "priorStrength": config.prior_strength, "overall": config.overall,
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
-        "minUsage": config.min_usage, "retireAfterDays": config.retire_after_days,
-        "retireAfterOwnSeasons": config.retire_after_own_seasons,
+        "minTier": config.min_tier, "retireAfterDays": config.retire_after_days,
+        "retireAfterOwnSeasons": config.retire_after_own_seasons, "generalistSeasons": config.generalist_seasons,
+        "leftAfter": config.left_after, "generalityBands": list(config.generality_bands),
     }
 
 
@@ -223,7 +225,9 @@ def compare(tables: Path, page: dict) -> None:
     theirs = pd.DataFrame(page["overall"])
     assert list(overall["unit_id"]) == list(theirs["unit_id"]), "overall table: order"
     _close(overall["overall"], theirs["overall"], "overall table: overall")
-    for column in ("overall_rank", "overall_tier", "elements_observed", "seasons_observed", "last_season"):
+    _close(overall["generality"], theirs["generality"], "overall table: generality")
+    for column in ("overall_rank", "overall_tier", "elements_observed", "seasons_observed", "last_season",
+                   "generality_band", "other_used", "last_other", "other_since", "own_after", "path"):
         _same(overall[column], theirs[column], f"overall table: {column}")
     for column in ("provisional", "treasure"):
         _flags(overall[column], theirs[column], f"overall table: {column}")
@@ -280,3 +284,8 @@ def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_pat
         rows = pd.DataFrame(page["rows"])
         assert rows["treasure"].any()
         assert set(pd.DataFrame(page["elements"]).query("source == 'skill'")["element"]) == {"Water", "Iron"}
+        # the element dealers are specialists by generality, the supports that go anywhere generalists
+        overall = pd.DataFrame(page["overall"]).set_index("unit_id")
+        assert set(overall.loc[list(world.element_dps.values()), "generality_band"]) == {"specialist"}
+        assert set(overall.loc[world.universal, "generality_band"]) == {"generalist"}
+        assert set(overall.loc[world.universal, "path"]) == {"generalist"}

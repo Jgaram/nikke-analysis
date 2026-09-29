@@ -21,7 +21,8 @@ Outputs:
                                and rank - the overall comparison table; a unit with
                                its treasure (``treasure``) on its seasons with it.
                                Beside it the unit's lifespan: first and last season
-                               in use, seasons used, retired or not
+                               in use, seasons used, retired or not; and its career:
+                               generality, and the path it is on
 ``metrics_element_tiers.csv``  per element and unit of it, as of the newest data:
                                the tier and rank in that element, with the overall
                                tier beside - the element comparison tables. A unit
@@ -173,15 +174,17 @@ def patch_impact(
     return pd.DataFrame(rows)
 
 
-def comparison_tables(standing: tiers.Standings, info: pd.DataFrame,
-                      life: pd.DataFrame | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+def comparison_tables(standing: tiers.Standings, info: pd.DataFrame, life: pd.DataFrame | None = None,
+                      career: pd.DataFrame | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """The two comparison tables: every unit by overall tier (with its lifespan,
-    ``life``, beside), and each element's units by their tier in it (with the
-    overall tier beside). ``info`` is the roster's unit columns, by unit id."""
+    ``life``, and its generality and career path, ``career``, beside), and each
+    element's units by their tier in it (with the overall tier beside). ``info``
+    is the roster's unit columns, by unit id."""
     names = [c for c in ("name_ko", "name_en") if c in info.columns]
     overall = standing.overall.join(info, on="unit_id")
-    if life is not None:
-        overall = overall.merge(life, on="unit_id", how="left")
+    for beside in (life, career):
+        if beside is not None:
+            overall = overall.merge(beside, on="unit_id", how="left")
     first = ["overall_rank", "unit_id"] + names + [c for c in ("element", "extra_elements", "treasure_elements")
                                                    if c in overall.columns]
     overall = overall[first + [c for c in overall.columns if c not in first]]
@@ -252,7 +255,9 @@ def run(
     treasure = metrics.treasure_instants(roster)
     standing = tiers.standings(table, summary_table, newest, config, treasured=treasure.index[treasure <= newest])
     life = tiers.lifespans(table, summary_table, newest, config)
-    overall, elements = comparison_tables(standing, info, life)
+    career = (tiers.generality(standing, config)[["unit_id", "generality", "generality_band"]]
+              .merge(tiers.careers(table, summary_table, newest, config, life), on="unit_id", how="outer"))
+    overall, elements = comparison_tables(standing, info, life, career)
     changes = tiers.tier_changes(history, config)
     shift = metrics.meta_shift(table)
     pairs = metrics.synergy(entries, min_decks=config.synergy_min_decks)

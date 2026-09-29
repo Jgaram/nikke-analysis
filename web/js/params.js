@@ -13,8 +13,12 @@ const OVERALL_HINT = {
 const cutLabels = (d) => d.cuts.slice(0, -1).map(([label]) => label);
 // The most own-element seasons a unit may sit out before it counts as retired.
 const RETIRE_OWN_MAX = 3;
+// The choices for a generalist once (other-element seasons fielded) and for having left them.
+const GENERALIST_MAX = 6;
+const LEFT_MAX = 5;
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const range1 = (n) => Array.from({ length: n }, (_, i) => i + 1);
 const sortedServers = (p) => [...p.servers].sort();
 
 export function encodeParams(p, d) {
@@ -29,9 +33,12 @@ export function encodeParams(p, d) {
   if (p.overall !== d.overall) q.ov = p.overall;
   if (p.minElementsObserved !== d.minElementsObserved) q.min = String(p.minElementsObserved);
   if (p.includeLive !== d.includeLive) q.live = p.includeLive ? "1" : "0";
-  if (p.minUsage !== d.minUsage) q.use = String(Math.round(p.minUsage * 100));
+  if (p.minTier !== d.minTier) q.use = p.minTier;
   if (p.retireAfterDays !== d.retireAfterDays) q.ret = String(p.retireAfterDays);
   if (p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) q.rown = String(p.retireAfterOwnSeasons);
+  if (p.generalistSeasons !== d.generalistSeasons) q.gen = String(p.generalistSeasons);
+  if (p.leftAfter !== d.leftAfter) q.left = String(p.leftAfter);
+  if (!same(p.generalityBands, d.generalityBands)) q.band = p.generalityBands.join(",");
   return q;
 }
 
@@ -61,13 +68,27 @@ export function decodeParams(q, d, model) {
   if (OVERALL_MODES.includes(q.get("ov"))) p.overall = q.get("ov");
   p.minElementsObserved = Math.round(number(q.get("min"), 1, 5) ?? d.minElementsObserved);
   if (q.has("live")) p.includeLive = q.get("live") === "1";
-  const use = number(q.get("use"), 1, 100);
-  if (use != null) p.minUsage = Math.round(use) / 100;
+  if (tierChoices(d).includes(q.get("use"))) p.minTier = q.get("use");
   const ret = number(q.get("ret"), 0, 3650);
   if (ret != null) p.retireAfterDays = Math.round(ret);
   const own = number(q.get("rown"), 0, RETIRE_OWN_MAX);
   if (own != null) p.retireAfterOwnSeasons = Math.round(own);
+  const gen = number(q.get("gen"), 1, GENERALIST_MAX);
+  if (gen != null) p.generalistSeasons = Math.round(gen);
+  const left = number(q.get("left"), 1, LEFT_MAX);
+  if (left != null) p.leftAfter = Math.round(left);
+  if (q.has("band")) {
+    const bands = q.get("band").split(",").map((v) => number(v, 0, 1));
+    if (bands.length === 2 && bands.every((v) => v != null) && bands[0] <= bands[1]) p.generalityBands = bands;
+  }
   return p;
+}
+
+// The season tiers that can count as fielded: every one above the bottom (F) - or the one
+// the defaults name, should that be the bottom.
+function tierChoices(d) {
+  const labels = cutLabels(d);
+  return labels.includes(d.minTier) ? labels : [...labels, d.minTier];
 }
 
 function descending(values) {
@@ -86,8 +107,10 @@ export function changedParams(p, d) {
   if (p.overall !== d.overall) out.push("종합 방식");
   if (p.minElementsObserved !== d.minElementsObserved) out.push("잠정 기준");
   if (p.includeLive !== d.includeLive) out.push("진행 중 시즌");
-  if (p.minUsage !== d.minUsage) out.push("쓰인 기준");
+  if (p.minTier !== d.minTier) out.push("쓰인 기준");
   if (p.retireAfterDays !== d.retireAfterDays || p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) out.push("은퇴 기준");
+  if (p.generalistSeasons !== d.generalistSeasons || p.leftAfter !== d.leftAfter) out.push("경로 기준");
+  if (!same(p.generalityBands, d.generalityBands)) out.push("범용도 띠");
   return out;
 }
 
@@ -135,6 +158,27 @@ export function buildParams(app, body) {
   }));
 
   const cutError = h("p", { class: "hint error", hidden: true }, "위 티어일수록 커야 하고 0 이상이어야 합니다.");
+  const bandError = h("p", { class: "hint error", hidden: true }, "0 이상 1 이하, 왼쪽이 오른쪽보다 크지 않게.");
+  // The two generality bands: 특화 below the first, 범용 from the second.
+  const bandRow = () => {
+    const row = h("div", { class: "cuts" });
+    const read = () => [...row.querySelectorAll("input")].map((i) => Number(i.value));
+    [["속성 우선", 0], ["범용", 1]].forEach(([label, i]) => {
+      row.append(h("label", { class: "cut" },
+        h("span", { class: "band-label" }, label), h("span", { class: "cut-ge", "aria-hidden": "true" }, "≥"),
+        h("input", {
+          type: "number", min: 0, max: 1, step: 0.05, value: p.generalityBands[i], inputMode: "decimal",
+          "aria-label": `${label} 띠의 최소 범용도`,
+          onchange: () => {
+            const values = read();
+            const ok = values.every((v) => Number.isFinite(v) && v >= 0 && v <= 1) && values[0] <= values[1];
+            bandError.hidden = ok;
+            if (ok) app.setParams({ generalityBands: values });
+          },
+        })));
+    });
+    return row;
+  };
   const labels = cutLabels(d);
   const floor = d.cuts[d.cuts.length - 1][0];
   // One row of cut inputs for ``name`` (the season/element cuts, or the overall's).
@@ -200,12 +244,11 @@ export function buildParams(app, body) {
       field("진행 중 시즌", toggle("지금까지 수집분으로 포함", p.includeLive, (v) => app.setParams({ includeLive: v })),
         "진행 중인 시즌의 순위도 속성·종합 티어와 수명에 잠정으로 넣습니다. 끄면 끝난 시즌만.")),
     h("section", { class: "psec" },
-      h("h3", null, "수명", h("small", null, "언제부터 쓰였고 아직 쓰이나 · 티어와 별개")),
-      field("쓰인 시즌", range({
-        min: 1, max: 50, step: 1, value: Math.round(p.minUsage * 100), label: "쓰인 시즌으로 칠 최소 사용률 (%)",
-        format: (v) => `사용 ${v}% 이상`,
-        onCommit: (v) => app.setParams({ minUsage: v / 100 }),
-      }), "상위 랭커의 이만큼 이상이 쓴 시즌을 그 니케가 쓰인 시즌으로 칩니다."),
+      h("h3", null, "수명", h("small", null, "언제부터 쓰였고 아직 쓰이나 · 시즌 티어로")),
+      field("쓰인 시즌", segmented(tierChoices(d).map((label) => ({ value: label, label: `${label} 이상` })), p.minTier,
+        (v) => { app.setParams({ minTier: v }); buildParams(app, body); }, { label: "쓰인 시즌으로 칠 시즌 티어" }),
+      "그 시즌의 시즌 티어가 이 티어 이상이면 그 니케가 쓰인 시즌입니다. D = 기여도 0.03 이상 — 대개 상위 랭커 열 명에 "
+        + "한 명 남짓이 씀. 속성·종합 티어는 지난 시즌을 기억해서 은퇴를 늦게 알아채므로 시즌 티어로 봅니다."),
       field("은퇴 공백", range({
         min: 0, max: 730, step: 5, value: p.retireAfterDays, label: "은퇴로 볼 공백 (일)",
         format: (v) => `${v}일 공백`,
@@ -216,6 +259,20 @@ export function buildParams(app, body) {
         { label: "은퇴로 볼 놓친 자기 속성 시즌 수" }),
       "그 공백 동안 자기 속성이 약점인 시즌이 이만큼 지나가도록 안 쓰여야 은퇴. 같은 약점이 1년 만에 돌아오기도 해서, "
         + "자기 속성 시즌이 아직 안 온 속성 특화 니케는 공백이 길어도 현역으로 둡니다. 안 봄 = 공백만으로.")),
+    h("section", { class: "psec" },
+      h("h3", null, "범용도 · 경로", h("small", null, "범용인가, 자기 속성으로 좁아지나 · 티어와 별개")),
+      field("범용이었던 니케", segmented(range1(GENERALIST_MAX).map((n) => ({ value: n, label: `${n}번` })),
+        p.generalistSeasons, (v) => { app.setParams({ generalistSeasons: v }); buildParams(app, body); },
+        { label: "범용으로 칠 다른 속성 시즌 수" }),
+      "보스 약점이 다른 속성인 시즌에 이만큼 쓰였으면 범용이었던 니케. 그보다 적으면 특화."),
+      field("다른 속성에서 빠짐", segmented(range1(LEFT_MAX).map((n) => ({ value: n, label: `${n}번` })),
+        p.leftAfter, (v) => { app.setParams({ leftAfter: v }); buildParams(app, body); },
+        { label: "다른 속성에서 빠졌다고 볼 연속 시즌 수" }),
+      "범용이었던 니케가 최근 다른 속성 시즌 이만큼에서 내리 안 쓰였으면 다른 속성에서 빠진 것. 그 뒤 자기 속성 "
+        + "시즌에 쓰였으면 속성 전용."),
+      field("범용도 띠", bandRow(), "범용도 = 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균). 0 = 약점이 자기 "
+        + "속성일 때만 쓰임, 0.5 = 약점과 무관. 이 두 값으로 특화 · 속성 우선 · 범용을 나눕니다."),
+      bandError),
   );
 
   renderParamsFoot(app, () => buildParams(app, body));

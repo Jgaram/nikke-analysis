@@ -97,6 +97,7 @@ def test_assign_tier_uses_the_cuts():
     assert tiers.assign_tier(0.5, config) == "A"
     assert tiers.assign_tier(0.0, config) == "B"
     assert tiers.assign_tier(float("nan"), config) == ""
+    assert config.min_tier == "A"  # no D among them: the lowest tier above the bottom one fields a unit
 
 
 def test_config_file_round_trip(tmp_path):
@@ -106,7 +107,8 @@ def test_config_file_round_trip(tmp_path):
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
         "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
         "          include_live: false}\n"
-        "lifespan: {min_usage: 0.25, retire_after_days: 200, retire_after_own_seasons: 2}\n",
+        "lifespan: {min_tier: A, retire_after_days: 200, retire_after_own_seasons: 2}\n"
+        "career: {generalist_seasons: 4, left_after: 2, generality_bands: [0.1, 0.4]}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
@@ -114,7 +116,15 @@ def test_config_file_round_trip(tmp_path):
     assert config.tier_order == ["S", "A", "B"]
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
-    assert config.min_usage == 0.25 and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
+    assert config.min_tier == "A" and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
+    assert config.generalist_seasons == 4 and config.left_after == 2 and config.generality_bands == (0.1, 0.4)
+
+
+def test_the_lifespan_tier_must_be_one_of_the_cuts():
+    with pytest.raises(ValueError, match="min_tier"):
+        tiers.TierConfig(min_tier="E")
+    with pytest.raises(ValueError, match="generality_bands"):
+        tiers.TierConfig(generality_bands=(0.4, 0.1))
 
 
 def test_repo_config_loads():
@@ -388,31 +398,31 @@ def test_tier_changes_have_signed_steps(built):
 # lifespans
 
 
-def seasons_monthly(usage, *, live=False, weak=None):
-    """Hand-made seasons a month apart (a week long each), unit "001" (Fire) fielded by
-    ``usage[i]`` of the rankers in season i + 1; ``weak`` gives the seasons' boss weaknesses
-    (by default every one Fire, the unit's own); with ``live`` the last is in progress."""
+def seasons_monthly(lifts, *, live=False, weak=None):
+    """Hand-made seasons a month apart (a week long each), unit "001" (Fire) at a lift of
+    ``lifts[i]`` in season i + 1 - fielded from season tier D, 0.03; ``weak`` gives the seasons'
+    boss weaknesses (by default every one Fire, the unit's own); with ``live`` the last is in progress."""
     start = pd.Timestamp("2024-01-01T00:00:00Z")
-    weak = weak or ["Fire"] * len(usage)
     seasons, rows = [], []
-    for number, (share, element) in enumerate(zip(usage, weak, strict=True), start=1):
+    weak = weak or ["Fire"] * len(lifts)
+    for number, (lift, element) in enumerate(zip(lifts, weak, strict=True), start=1):
         begin = start + pd.DateOffset(months=number - 1)
         end = begin + pd.Timedelta(days=7)
-        last = number == len(usage)
+        last = number == len(lifts)
         seasons.append({"season": number, "weak_element": element, "start_at": begin, "end_at": end,
                         "final": not (live and last), "collected_on": begin + pd.Timedelta(days=3)})
-        rows.append({"season": number, "unit_id": "001", "usage_rate": share, "element_match": element == "Fire"})
+        rows.append({"season": number, "unit_id": "001", "lift": lift, "element_match": element == "Fire"})
     return pd.DataFrame(rows), pd.DataFrame(seasons)
 
 
-def life_of(usage, moment, *, live=False, weak=None, **config):
-    table, summary = seasons_monthly(usage, live=live, weak=weak)
+def life_of(lifts, moment, *, live=False, weak=None, **config):
+    table, summary = seasons_monthly(lifts, live=live, weak=weak)
     return tiers.lifespans(table, summary, pd.Timestamp(moment), tiers.TierConfig(**config)).iloc[0]
 
 
 def test_a_lifespan_runs_from_the_first_season_that_used_the_unit_to_the_last():
-    # used in seasons 2-5 (10% or more), out but unused in 1 and 6
-    life = life_of([0.05, 0.4, 0.1, 0.02, 0.9, 0.0], "2024-07-01T00:00:00Z")
+    # used in seasons 2-5 (season tier D or better), out but unused in 1 and 6 (and 4, F)
+    life = life_of([0.01, 0.4, 0.1, 0.02, 0.9, 0.0], "2024-07-01T00:00:00Z")
     assert (life["first_used"], life["run_from"], life["last_used"]) == (2, 2, 5)
     assert (life["seasons_used"], life["seasons_out"], life["returns"]) == (3, 6, 0)
     assert life["idle_days"] == pytest.approx(54.0) and life["missed_own"] == 1  # since 2024-05-08; June was Fire
@@ -456,7 +466,84 @@ def test_the_live_season_counts_as_in_use_now():
     assert pd.isna(life_of([0.0, 0.3], "2024-02-05T00:00:00Z", live=True, include_live=False)["last_used"])
 
 
+def test_a_season_counts_from_the_season_tier_the_config_names():
+    lifts = [0.6, 0.4, 0.3, 0.3, 0.3, 0.3]  # B, then C for five months
+    assert not life_of(lifts, "2024-07-01T00:00:00Z")["retired"]  # C is D or better: in use throughout
+    strict = life_of(lifts, "2024-07-01T00:00:00Z", min_tier="B")
+    assert (strict["last_used"], strict["seasons_used"], strict["retired"]) == (1, 1, True)
+
+
 def test_a_unit_no_season_used_has_no_lifespan():
-    life = life_of([0.05, 0.0], "2026-01-01T00:00:00Z")
+    life = life_of([0.02, 0.0], "2026-01-01T00:00:00Z")
     assert pd.isna(life["first_used"]) and life["seasons_used"] == 0 and life["missed_own"] == 0
     assert not life["retired"]
+
+
+# --------------------------------------------------------------------------
+# careers: generality and the path
+
+
+def test_generality_splits_specialists_from_units_that_go_anywhere(world, built):
+    table, summary = built
+    config = tiers.TierConfig()
+    standing = tiers.standings(table, summary, summary["end_at"].max(), config)
+    g = tiers.generality(standing, config).set_index("unit_id")
+    for dealer in world.element_dps.values():  # strong only when the boss is weak to its element
+        assert g.loc[dealer, "generality"] < 0.05 and g.loc[dealer, "generality_band"] == "specialist"
+    for unit in world.universal:  # strong everywhere
+        assert g.loc[unit, "generality"] == pytest.approx(0.5, abs=0.05) and g.loc[unit, "generality_band"] == "generalist"
+    assert g.loc[world.partner, "generality"] > 0.9  # a Water support that only Wind decks field
+    # own and other are the numbers behind the two tiers: overall = (own + 4 x other) / 5
+    overall = standing.overall.set_index("unit_id")["overall"]
+    dealer = world.element_dps["Fire"]
+    assert overall[dealer] == pytest.approx((g.loc[dealer, "own_level"] + 4 * g.loc[dealer, "other_level"]) / 5)
+    wide = tiers.generality(standing, tiers.TierConfig(generality_bands=(0.0, 0.6))).set_index("unit_id")
+    assert wide.loc[world.universal[0], "generality_band"] == "element_first"
+
+
+def careers_of(lifts: dict[str, list[float]], weak: list[str], season: int, **config) -> pd.DataFrame:
+    """The paths at the end of ``season`` of units (all Fire) at a lift of ``lifts[unit][i]`` in
+    season i + 1 of monthly seasons whose boss is weak to ``weak[i]``."""
+    start = pd.Timestamp("2024-01-01T00:00:00Z")
+    seasons = pd.DataFrame([{"season": n, "weak_element": e, "start_at": start + pd.DateOffset(months=n - 1),
+                             "end_at": start + pd.DateOffset(months=n - 1) + pd.Timedelta(days=7), "final": True,
+                             "collected_on": start} for n, e in enumerate(weak, start=1)])
+    table = pd.DataFrame([{"season": n, "unit_id": u, "lift": values[n - 1], "element_match": e == "Fire"}
+                          for u, values in lifts.items() for n, e in enumerate(weak, start=1)])
+    moment = seasons.set_index("season").loc[season, "end_at"]
+    return tiers.careers(table, seasons, moment, tiers.TierConfig(**config)).set_index("unit_id")
+
+
+# Fire every third season: 1, 4, 7, 10, 13, 16
+EVERY_THIRD = ["Fire", "Water", "Wind"] * 6
+
+
+def test_careers_tell_the_two_ways_a_generalist_retires():
+    everywhere = [1.0] * 6
+    lifts = {
+        "narrowed": everywhere + [1.0, 0, 0, 0.8, 0, 0] + [0.5, 0, 0, 0, 0, 0],  # own seasons only from 7, then out
+        "dropped": everywhere + [0.0] * 12,  # out everywhere at once
+        "still": [1.0] * 18,
+        "special": [1.0 if w == "Fire" else 0.0 for w in EVERY_THIRD],  # own seasons only, ever
+        "never": [0.01] * 18,  # season tier F throughout
+    }
+    early = careers_of(lifts, EVERY_THIRD, 12)
+    assert early.loc[["narrowed", "still", "special", "dropped", "never"], "path"].tolist() == [
+        "element_only", "generalist", "specialist", "retired_generalist", "unused"]
+    assert tuple(early.loc["narrowed", ["other_used", "last_other", "other_since", "own_after"]]) == (4, 6, 4, 2)
+    assert tuple(early.loc["special", ["other_used", "other_since", "own_after"]]) == (0, 8, 4)  # all its own seasons
+    late = careers_of(lifts, EVERY_THIRD, 18)  # "narrowed" sat out Fire season 16, over 90 days after season 13
+    assert late.loc["narrowed", "path"] == "retired_element_only" and late.loc["dropped", "path"] == "retired_generalist"
+    assert late.loc["special", "path"] == "specialist"
+    # a stricter bar for "a generalist once", a quicker one for "left the others"
+    assert careers_of(lifts, EVERY_THIRD, 12, generalist_seasons=5).loc["narrowed", "path"] == "specialist"
+    assert careers_of(lifts, EVERY_THIRD, 8, left_after=1).loc["narrowed", "path"] == "element_only"
+    assert careers_of(lifts, EVERY_THIRD, 8).loc["narrowed", "path"] == "generalist"  # left only one behind yet
+
+
+def test_a_generalist_out_of_the_others_waits_for_its_own_season():
+    weak = ["Fire", "Water", "Wind", "Iron", "Water", "Wind"]
+    lifts = {"waiting": [1.0, 1.0, 1.0, 1.0, 0.0, 0.0]}  # out of the last two, and no Fire season since
+    row = careers_of(lifts, weak, 6, left_after=2).loc["waiting"]
+    assert row["path"] == "left_others" and (row["other_since"], row["own_after"]) == (2, 0)
+    assert careers_of(lifts, weak, 6).loc["waiting", "path"] == "generalist"  # three to leave, by default

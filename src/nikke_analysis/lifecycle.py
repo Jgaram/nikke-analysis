@@ -1,24 +1,15 @@
-"""A unit's career across the element rotation - a study beside the tiers, not part of them.
+"""A unit's career across the element rotation - a study beside the tiers.
 
     python -m nikke_analysis.lifecycle     the numbers in docs/lifecycle.md, from the committed tables
 
 Four questions the tiers raise but do not answer (docs/lifecycle.md has the
 answers as of the committed data):
 
-**How general is a unit?** ``generality``: of what the unit is worth in its own
-element's seasons (``O``, its element tier) and in the other elements' seasons
-(``X``, the mean of the other-element slots of its overall tier), the other
-side's part, ``g = X / (O + X)``. 0 is a specialist fielded only when the boss
-is weak to its element, 0.5 a unit the weakness makes no difference to, above
-0.5 one other elements' decks field more than its own. It is a ratio of the two tiers'
-own numbers: with the default ``overall: mean``, overall = (O + 4X) / 5.
-
-**Which way is its career going?** ``careers``: a unit fielded in at least
-``GENERALIST_SEASONS`` other-element seasons has been a generalist. One no
-longer fielded in its last ``LEFT_AFTER`` other-element seasons has left them;
-if it is still fielded in its own element's seasons it has become element-only.
-A retired generalist retired either straight from general use or after such an
-element-only stretch.
+**How general is a unit, and which way is its career going?** The tables
+carry both now (``analyze.tiers.generality`` and ``careers``, the columns
+``generality``, ``generality_band`` and ``path`` of the overall table); the
+study replays them season by season, and counts which path generalists of
+each class took.
 
 **How close is retirement?** ``own_outlook``: every time a unit was fielded in a
 season of its own element, whether the next season of that element fielded it
@@ -35,12 +26,11 @@ is not in the data - the rankings give a deck's damage, not a unit's - and the
 class only mostly follows it. ``class_group`` is the one place to swap a role
 judgement in once there is one.
 
-Nothing here feeds the tiers, the committed tables or the tier site.
+Nothing computed only here feeds the tiers, the committed tables or the tier site.
 """
 
 from __future__ import annotations
 
-from dataclasses import replace
 from typing import Any, Callable
 
 import numpy as np
@@ -49,18 +39,8 @@ import pandas as pd
 from .analyze import tiers
 from .analyze.metrics import ELEMENTS
 
-GENERALIST_SEASONS = 3  # fielded in this many other-element seasons: a generalist once
-LEFT_AFTER = 3  # not fielded in its last this many other-element seasons: it has left them
-MIN_LEVEL = 0.05  # O + X below this: too little use to say how general
-BANDS = [(0.35, "범용"), (0.15, "속성 우선"), (0.0, "특화")]  # generality, highest first
 OUTLOOK_TIERS = ["S 이상", "A", "B", "C", "D 이하"]  # own-season tiers for the outlook: SS and S, ..., D and F together
-PATHS = ["범용", "속성 전용", "다른 속성에서 빠짐", "특화", "범용 → 은퇴", "범용 → 속성 전용 → 은퇴", "특화 → 은퇴", "안 쓰임"]
-
-
-def band(g: float) -> str:
-    if g is None or pd.isna(g):
-        return ""
-    return next(label for floor, label in BANDS if g >= floor)
+USAGE_RULE = 0.10  # the lifespan rule before the season tier: fielded by a tenth of the rankers
 
 
 CLASS_GROUPS = ("화력형", "지원·방어형")
@@ -84,88 +64,14 @@ def _true(values: pd.Series) -> pd.Series:
     return values.eq(True)
 
 
-# --------------------------------------------------------------------------
-# generality
-# --------------------------------------------------------------------------
-
-def generality(standing: tiers.Standings) -> pd.DataFrame:
-    """How general each unit is, from the numbers behind its tiers at one moment.
-
-    ``O``: its element tier's lift (the better one for a unit with two
-    elements), ``X``: the mean of the overall tier's slots of the other
-    elements it was seen in, ``g = X / (O + X)`` and its ``band``. Empty
-    (NaN) until the unit has met both sides, or when it is barely used at all
-    (O + X under ``MIN_LEVEL``)."""
-    columns = ["unit_id", "O", "X", "g", "band"]
-    if standing.overall.empty:
-        return pd.DataFrame(columns=columns)
-    own = standing.elements[standing.elements["element_seasons"] > 0].groupby("unit_id")["element_lift"].max()
-    mine = set(zip(standing.elements["unit_id"], standing.elements["element"]))
-    slots = standing.slots[standing.slots["seasons"] > 0]
-    other = slots[[(u, e) not in mine for u, e in zip(slots["unit_id"], slots["element"])]]
-    frame = pd.DataFrame({"O": own, "X": other.groupby("unit_id")["lift"].mean()})
-    frame = frame.reindex(standing.overall["unit_id"])
-    level = frame["O"] + frame["X"]
-    frame["g"] = (frame["X"] / level).where(level >= MIN_LEVEL)
-    frame["band"] = frame["g"].map(band)
-    return frame.rename_axis("unit_id").reset_index()[columns]
-
-
-# --------------------------------------------------------------------------
-# careers
-# --------------------------------------------------------------------------
-
 def _counted_rows(history: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: tiers.TierConfig) -> pd.DataFrame:
+    """The season rows counted at ``moment``, with ``used`` (``tiers.fielded``), ``own`` and ``live``."""
     counted = tiers.counted_seasons(seasons, moment, config)
     rows = history[history["season"].isin(counted["season"])].copy()
-    rows["used"] = rows["usage_rate"] >= config.min_usage
+    rows["used"] = tiers.fielded(rows, config)
     rows["own"] = _flags(rows, "element_match")
     rows["live"] = rows["season"].isin(counted.loc[counted["live"], "season"])
     return rows.sort_values(["unit_id", "season"])
-
-
-def careers(history: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: tiers.TierConfig | None = None,
-            life: pd.DataFrame | None = None) -> pd.DataFrame:
-    """Each unit's path through general and element-only use, as known at ``moment``.
-
-    ``history`` is the season x unit table (``usage_rate``, ``element_match``),
-    ``life`` its lifespans at ``moment`` (computed when not given). Per unit:
-    other-element seasons fielded in (``other_used``), the last one
-    (``last_other``), other-element seasons since then (``other_since``),
-    own-element seasons fielded in after it (``own_after``), and the ``path``
-    (``PATHS``): 범용 (still fielded in other elements), 속성 전용 (left them,
-    still fielded in its own), 다른 속성에서 빠짐 (left them, no own season
-    since), 특화 (never a generalist), and for a retired unit how it got there.
-    """
-    config = config or tiers.TierConfig()
-    rows = _counted_rows(history, seasons, moment, config)
-    life = tiers.lifespans(history, seasons, moment, config) if life is None else life
-    retired = life.set_index("unit_id")["retired"]
-    out = []
-    for unit_id, group in rows.groupby("unit_id", sort=True):
-        other, own = group[~group["own"]], group[group["own"]]
-        used_other = other[other["used"]]
-        last_other = int(used_other["season"].max()) if len(used_other) else None
-        after = own[own["season"] > (last_other or 0)]
-        record = {"unit_id": unit_id, "other_used": len(used_other), "own_used": int(own["used"].sum()),
-                  "last_other": last_other, "other_since": int((other["season"] > (last_other or 0)).sum()),
-                  "own_after": int(after["used"].sum()) if last_other is not None else 0,
-                  "retired": bool(retired.get(unit_id, False))}
-        general = record["other_used"] >= GENERALIST_SEASONS
-        if not group["used"].any():
-            path = "안 쓰임"
-        elif record["retired"]:
-            path = ("범용 → 속성 전용 → 은퇴" if record["own_after"] else "범용 → 은퇴") if general else "특화 → 은퇴"
-        elif not general:
-            path = "특화"
-        elif record["other_since"] < LEFT_AFTER:
-            path = "범용"
-        else:
-            path = "속성 전용" if record["own_after"] else "다른 속성에서 빠짐"
-        out.append({**record, "path": path})
-    frame = pd.DataFrame(out)
-    frame["last_other"] = frame["last_other"].astype("Int64")
-    return frame
 
 
 # --------------------------------------------------------------------------
@@ -266,14 +172,22 @@ def replay(history: pd.DataFrame, seasons: pd.DataFrame, config: tiers.TierConfi
         if standing.overall.empty:
             continue
         frame = (standing.overall[["unit_id", "overall", "overall_tier", "provisional"]]
-                 .merge(generality(standing), on="unit_id", how="left")
+                 .merge(tiers.generality(standing, config), on="unit_id", how="left")
                  .merge(tiers.lifespans(history, seasons, moment, config), on="unit_id", how="left"))
         parts.append(frame.assign(season=season, moment=moment))
     return pd.concat(parts, ignore_index=True)
 
 
 def _used_matrix(history: pd.DataFrame, config: tiers.TierConfig) -> pd.DataFrame:
-    return history.pivot(index="unit_id", columns="season", values="usage_rate").ge(config.min_usage)
+    """Unit x season: fielded there (``tiers.fielded``); False before its release too."""
+    used = history.assign(used=tiers.fielded(history, config)).pivot(index="unit_id", columns="season", values="used")
+    return used.eq(True)
+
+
+def by_usage(history: pd.DataFrame, share: float = USAGE_RULE) -> pd.DataFrame:
+    """The season table as the lifespan rule saw it before the season tier: a lift of 1 where
+    ``share`` of the rankers fielded the unit, 0 elsewhere - fielded or not by usage alone."""
+    return history.assign(lift=(history["usage_rate"] >= share).astype(float))
 
 
 def score_rule(flags: pd.DataFrame, used: pd.DataFrame, *, horizon: int, done_by: int) -> dict[str, Any]:
@@ -301,7 +215,8 @@ def score_rule(flags: pd.DataFrame, used: pd.DataFrame, *, horizon: int, done_by
 
 def retirement_rules(history: pd.DataFrame, seasons: pd.DataFrame, config: tiers.TierConfig, panel: pd.DataFrame,
                      *, horizon: int | None = None, done_by: int | None = None) -> pd.DataFrame:
-    """The lifespan rule against rules read off the tiers, replayed season by season (``panel``, from ``replay``).
+    """The lifespan rule against the rule it replaced and rules read off the element and overall
+    tiers, replayed season by season (``panel``, from ``replay``).
 
     Scored on what happened after (``score_rule``); ``horizon`` defaults to
     eight seasons before the newest, ``done_by`` to eleven."""
@@ -309,25 +224,23 @@ def retirement_rules(history: pd.DataFrame, seasons: pd.DataFrame, config: tiers
     horizon = newest - 8 if horizon is None else horizon
     done_by = newest - 11 if done_by is None else done_by
     used = _used_matrix(history, config)
-    # The lifespan rule with "fielded" read as season tier D or better instead of 10% usage: the
-    # usage column becomes 1 where the season tier is D or better, and 1 is what counts as used.
-    by_tier = history.assign(usage_rate=(history["lift"] >= config.cut("D")).astype(float))
-    tiered = pd.concat([tiers.lifespans(by_tier, seasons, moment, replace(config, min_usage=1.0)).assign(season=season)
+    old = by_usage(history)
+    before = pd.concat([tiers.lifespans(old, seasons, moment, config).assign(season=season)
                         for season, moment in moments(seasons).items()])
-    panel = panel.merge(tiered[["unit_id", "season", "retired"]].rename(columns={"retired": "by_tier"}),
+    panel = panel.merge(before[["unit_id", "season", "retired"]].rename(columns={"retired": "by_usage"}),
                         on=["unit_id", "season"], how="left")
-    by_tier = _true(panel["by_tier"])
+    now = _true(panel["retired"])
     ever = panel["first_used"].notna()
     f_below = config.overall_cut("D")  # an overall under the D cut is F
     d_below = config.overall_cut("C")  # under the C cut, D or F
     peak = panel.sort_values("season").groupby("unit_id")["overall"].cummax()
     rules = {
-        "지금 규칙 (사용률 10%)": _true(panel["retired"]),
-        "같은 규칙, 시즌 티어 D 이상 = 쓰임": by_tier,
+        f"지금 규칙 (시즌 티어 {config.min_tier} 이상)": now,
+        f"예전 규칙 (사용률 {USAGE_RULE:.0%})": _true(panel["by_usage"]),
         "종합 티어 F": ever & (panel["overall"] < f_below),
         "종합 티어 D 이하": ever & (panel["overall"] < d_below),
         "종합이 전성기의 25% 이하": ever & (panel["overall"] <= 0.25 * peak) & (peak >= d_below),
-        "시즌 티어 규칙 + 종합 D 이하": by_tier & (panel["overall"] < d_below),
+        "지금 규칙 + 종합 D 이하": now & (panel["overall"] < d_below),
     }
     out = [{"rule": name, **score_rule(panel.assign(retired=flag)[["unit_id", "season", "retired"]], used,
                                         horizon=horizon, done_by=done_by)} for name, flag in rules.items()]
@@ -359,8 +272,8 @@ def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -
     Where the damage came from (``own_attacker`` ... ``other_rest``: the
     share of the season's lift from 화력형 units and from the rest, of the
     boss's weak element or not - by class, ``class_group``), how general the units in use were
-    (``generalist``: the share of B-or-better, settled, unretired units with
-    generality 0.35 or more; ``g_median``), and how well a standing held: of
+    (``generalist``: the share of B-or-better, settled, unretired units in the
+    generalist band; ``g_median``), and how well a standing held: of
     the units at A or better in a season, how many were A or better again in
     the next season of the same boss weakness, their own element's
     (``keep_own``) or another (``keep_other``); and of the units at overall A
@@ -380,9 +293,9 @@ def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -
     frame = per_season.groupby(per_season.index.map(era)).mean()
 
     live = panel[(panel["overall"] >= config.overall_cut("B")) & ~_true(panel["provisional"]) & ~_true(panel["retired"])
-                 & panel["g"].notna()]
-    frame["generalist"] = (live["g"] >= BANDS[0][0]).groupby(live["season"].map(era)).mean()
-    frame["g_median"] = live.groupby(live["season"].map(era))["g"].median()
+                 & panel["generality"].notna()]
+    frame["generalist"] = (live["generality_band"] == "generalist").groupby(live["season"].map(era)).mean()
+    frame["g_median"] = live.groupby(live["season"].map(era))["generality"].median()
 
     a = config.cut("A")
     same = rows.sort_values("season")
@@ -426,7 +339,7 @@ def _pct(value: float) -> str:
 
 def report(book=None) -> str:
     """The numbers in docs/lifecycle.md, from the committed tables."""
-    from .tierlist import TierBook
+    from .tierlist import GENERALITY_KO, PATH_KO, TierBook
 
     book = book or TierBook.load()
     history, seasons, config = book.history, book.seasons, book.config
@@ -449,29 +362,29 @@ def report(book=None) -> str:
     retired_now = panel[(panel["season"] == newest) & _true(panel["retired"])]
     counts = retired_now["overall_tier"].value_counts().reindex(config.tier_order).dropna().astype(int)
     lines.append("   지금 은퇴한 니케의 종합 티어: " + " · ".join(f"{k} {v}" for k, v in counts.items()))
-    same = (history["usage_rate"] >= config.min_usage) == (history["lift"] >= config.cut("D"))
-    lines.append(f"   시즌마다 '사용률 10% 이상'과 '시즌 티어 D 이상'이 같게 가른 비율: {_pct(same.mean())} "
-                 f"({int(same.sum())}/{len(same)})")
+    same = (history["usage_rate"] >= USAGE_RULE) == tiers.fielded(history, config)
+    lines.append(f"   시즌마다 '사용률 {USAGE_RULE:.0%} 이상'과 '시즌 티어 {config.min_tier} 이상'이 같게 가른 비율: "
+                 f"{_pct(same.mean())} ({int(same.sum())}/{len(same)})")
     lines.append("")
 
     lines.append("2. 범용도 g = X / (O + X) — O 자기 속성 칸(속성 티어), X 다른 속성 칸 평균")
-    here = panel[(panel["season"] == newest) & panel["g"].notna() & ~_true(panel["retired"])]
-    here = here.assign(name=here["unit_id"].map(label)).sort_values("g")
-    for name, group in here.groupby("band", sort=False):
-        units = " · ".join(f"{r.name} {r.g:.2f}" for r in group.sort_values("g").itertuples())
-        lines.append(f"   {name} ({len(group)}명): {units}")
+    here = panel[(panel["season"] == newest) & panel["generality"].notna() & ~_true(panel["retired"])]
+    here = here.assign(name=here["unit_id"].map(label)).sort_values("generality")
+    for band, group in here.groupby("generality_band", sort=False):
+        units = " · ".join(f"{r.name} {r.generality:.2f}" for r in group.itertuples())
+        lines.append(f"   {GENERALITY_KO[band]} ({len(group)}명): {units}")
     lines.append("")
 
-    lines.append("3. 범용이던 니케의 길 (다른 속성 시즌 3번 이상 쓰인 니케)")
-    paths = careers(history, seasons, now, config, life)
-    general = paths[paths["other_used"] >= GENERALIST_SEASONS].assign(cls=lambda f: f["unit_id"].map(klass))
-    table = pd.crosstab(general["path"], general["cls"]).reindex([p for p in PATHS if p in set(general["path"])])
+    lines.append(f"3. 범용이던 니케의 길 (다른 속성 시즌 {config.generalist_seasons}번 이상 쓰인 니케)")
+    paths = tiers.careers(history, seasons, now, config, life)
+    general = paths[paths["other_used"] >= config.generalist_seasons].assign(cls=lambda f: f["unit_id"].map(klass))
+    table = pd.crosstab(general["path"], general["cls"]).reindex([p for p in tiers.PATHS if p in set(general["path"])])
     for path, row in table.iterrows():
         members = general[general["path"] == path]
-        lines.append(f"   {path:<18} " + " · ".join(f"{c} {n}" for c, n in row.items()) + "  — "
+        lines.append(f"   {PATH_KO[path]:<18} " + " · ".join(f"{c} {n}" for c, n in row.items()) + "  — "
                      + ", ".join(members["unit_id"].map(label)))
-    ended = general[general["path"].isin(["속성 전용", "범용 → 속성 전용 → 은퇴", "범용 → 은퇴"])]
-    went = ended["path"] != "범용 → 은퇴"
+    ended = general[general["path"].isin(["element_only", "retired_element_only", "retired_generalist"])]
+    went = ended["path"] != "retired_generalist"
     for cls, share in went.groupby(ended["cls"]).mean().items():
         lines.append(f"   범용을 끝낸 {cls}: {_pct(share)}가 속성 전용을 거쳤다 ({int(went[ended['cls'] == cls].sum())}/"
                      f"{int((ended['cls'] == cls).sum())})")
@@ -506,7 +419,7 @@ def report(book=None) -> str:
     lines.append("   같은 약점이 돌아오는 간격(중앙값): " + " · ".join(f"{e} {gaps[e]:.0f}일" for e in ELEMENTS if e in gaps))
     risky = at_risk(history, seasons, now, config, rates, life)
     risky = risky[(risky["risk"] >= 0.3) | risky["missed"] | risky["elsewhere"]]
-    phase = paths.set_index("unit_id")["path"]
+    phase = paths.set_index("unit_id")["path"].map(PATH_KO)
     for r in risky.itertuples():
         if r.missed:
             state = f"마지막으로 쓰인 뒤 그 시즌도 놓쳤고 {r.idle_days:.0f}일째 안 쓰임"

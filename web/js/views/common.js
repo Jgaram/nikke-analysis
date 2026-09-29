@@ -1,6 +1,6 @@
 // Pieces the three views share: a unit's card, the tier board, the filter row, tooltips.
 
-import { ELEMENTS, DAY_MS, assignTier, unitElements } from "../model.js";
+import { ELEMENTS, DAY_MS, assignTier, unitElements, fielded } from "../model.js";
 import {
   h, num, pct, int, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, nameLines, unitName, withTip, tierBadge,
   deckSplit, segmented, ELEMENT_KO, CLASS_KO, BURSTS, WEAPON_SHORT, WEAPON_KO, MAKER_KO, shortDay,
@@ -171,9 +171,9 @@ export function duration(days) {
 
 // What retired means, with the parameters in force.
 export function retiredText(params) {
-  const { minUsage, retireAfterDays: days, retireAfterOwnSeasons: own } = params;
+  const { minTier, retireAfterDays: days, retireAfterOwnSeasons: own } = params;
   const since = days > 0 ? `마지막으로 쓰인 시즌이 끝나고 ${duration(days)} 넘게` : "마지막으로 쓰인 뒤";
-  const unused = `상위 랭커 ${Math.round(minUsage * 100)}% 넘게 쓴 시즌이 없음`;
+  const unused = `시즌 티어 ${minTier} 이상인 시즌이 없음`;
   if (!own) return `${since} ${unused}`;
   const seasons = `자기 속성 약점 시즌${own > 1 ? ` ${own}번` : ""}`;
   return `${since}${days > 0 ? ", 그 사이" : ""} 온 ${seasons}까지 ${unused} — 자기 속성 시즌이 아직 안 왔으면 현역`;
@@ -183,10 +183,10 @@ export function retiredText(params) {
 // - the seasons of its own element behind a retirement, or a long idle unit still in use.
 export function lifeText(app, view, u) {
   const a = view.life.get(u);
-  const { minUsage, retireAfterDays, retireAfterOwnSeasons } = app.state.params;
+  const { minTier, retireAfterDays, retireAfterOwnSeasons } = app.state.params;
   if (!a || a.lastUsed == null) {
-    const min = Math.round(minUsage * 100);
-    return { a, state: "never", label: "안 쓰임", main: "쓰인 시즌 없음", sub: `사용 ${min}%를 넘은 시즌이 없음`, length: null };
+    return { a, state: "never", label: "안 쓰임", main: "쓰인 시즌 없음", sub: `시즌 티어 ${minTier} 이상인 시즌이 없음`,
+      length: null };
   }
   const counted = view.standing.counted;
   const latest = counted.length ? counted[counted.length - 1].season : null;
@@ -219,6 +219,36 @@ export function lifeText(app, view, u) {
 // The two lines under the state as one.
 export const lifeSub = (t) => [t.sub, t.why].filter(Boolean).join(" · ");
 
+// ---------------------------------------------------------------------------
+// a unit's career: how general it is, and which way it is going
+
+export const GENERALITY_KO = { specialist: "특화", element_first: "속성 우선", generalist: "범용" };
+export const PATH_KO = {
+  generalist: "범용", element_only: "속성 전용", left_others: "다른 속성에서 빠짐", specialist: "특화",
+  retired_generalist: "범용 → 은퇴", retired_element_only: "범용 → 속성 전용 → 은퇴", retired_specialist: "특화 → 은퇴",
+  unused: "안 쓰임",
+};
+
+// What the view says of unit ``u``'s path, in words (tierlist.py _career_lines says the same).
+export function careerText(app, view, u) {
+  const c = view.careers.get(u);
+  if (!c) return null;
+  const { generalistSeasons: gen, leftAfter: left } = app.state.params;
+  const last = c.lastOther != null ? `S${c.lastOther}` : null;
+  const detail = {
+    generalist: `다른 속성 시즌 ${c.otherUsed}번 쓰임 · 마지막 ${last}`,
+    element_only: `다른 속성은 ${last} 뒤 ${c.otherSince}시즌 내리 안 쓰임, 자기 속성 시즌엔 ${c.ownAfter}번 쓰임`,
+    left_others: `다른 속성은 ${last} 뒤 ${c.otherSince}시즌 내리 안 쓰임, 그 뒤 자기 속성 시즌엔 아직 안 쓰임`,
+    specialist: `다른 속성 시즌엔 ${c.otherUsed}번 쓰임 (범용은 ${gen}번부터)`,
+    retired_generalist: `다른 속성 시즌 ${c.otherUsed}번 쓰이다 ${last} 뒤 자기 속성 시즌에서도 안 쓰이고 은퇴`,
+    retired_element_only: `${last} 뒤 다른 속성에서 빠지고 자기 속성 시즌 ${c.ownAfter}번 더 쓰이다 은퇴`,
+    retired_specialist: `다른 속성 시즌엔 ${c.otherUsed}번 쓰이고 은퇴`,
+    unused: "쓰인 시즌 없음",
+  }[c.path];
+  return { c, label: PATH_KO[c.path], detail,
+    rule: `범용 = 다른 속성 시즌 ${gen}번 이상 쓰임 · 빠짐 = 최근 다른 속성 시즌 ${left}번 내리 안 쓰임` };
+}
+
 export function lifePill(text) {
   return h("span", { class: ["life-pill", text.state] }, text.label);
 }
@@ -231,10 +261,11 @@ export function returnTag(app, a) {
 }
 
 // One cell per season the view counts: blank before the unit was out, faint when out
-// and unused, filled when used - the more rankers used it, the stronger.
+// and unused (a season tier under the one that counts), filled when used - in the colour
+// of its season tier there.
 export function lifeStrip(app, view, u, { width = 150 } = {}) {
   const pop = app.population();
-  const min = app.state.params.minUsage;
+  const { params } = app.state;
   const counted = view.standing.counted;
   const a = view.life.get(u);
   const strip = h("span", {
@@ -246,8 +277,8 @@ export function lifeStrip(app, view, u, { width = 150 } = {}) {
   for (const c of counted) {
     const r = pop.tables.get(c.season)?.byUnit.get(u);
     if (!r) strip.append(h("i", { class: "pre" }));
-    else if (!(r.usageRate >= min)) strip.append(h("i", { class: "idle" }));
-    else strip.append(h("i", { class: "used", style: { opacity: String(0.35 + 0.65 * Math.min(1, r.usageRate)) } }));
+    else if (!fielded(r, params)) strip.append(h("i", { class: "idle" }));
+    else strip.append(h("i", { class: "used", dataset: { tier: assignTier(r.lift, params.cuts) } }));
   }
   return strip;
 }
@@ -266,10 +297,10 @@ export function lifeColumns(app, view) {
     if (!texts.has(row.u)) texts.set(row.u, lifeText(app, view, row.u));
     return texts.get(row.u);
   };
-  const { minUsage } = app.state.params;
+  const { minTier } = app.state.params;
   return [
     { key: "strip", label: lifeHeader(view), class: "life-col", firstDir: "asc",
-      title: `시즌 하나가 칸 하나. 칠한 칸 = 상위 랭커 ${Math.round(minUsage * 100)}% 이상이 쓴 시즌(진할수록 많이), `
+      title: `시즌 하나가 칸 하나. 칠한 칸 = 시즌 티어 ${minTier} 이상인 시즌(색 = 그 시즌 티어), `
         + "옅은 칸 = 나와 있었지만 거의 안 쓴 시즌. 정렬하면 처음 쓰인 시즌 순",
       sort: (row) => of(row).a?.firstUsed, cell: (row) => lifeStrip(app, view, row.u) },
     { key: "state", label: "상태", firstDir: "asc",

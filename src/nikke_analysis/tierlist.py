@@ -63,6 +63,10 @@ OVERALL_KO = {"mean": "보스 약점 다섯 가지 성적의 평균", "frequency
 LIFT_NOTE = ["  숫자 = 기여도. 랭커의 대미지를 덱에 든 니케끼리 나눠 가진 몫이다. 한 사람이 쓰는",
              "  25명(5덱 × 5명)이 똑같이 나누면 모두 1.0 — 1.5 = 그 1.5배, 0 = 아무도 안 씀"]
 CLASS_KO = {"Attacker": "화력형", "Supporter": "지원형", "Defender": "방어형"}
+GENERALITY_KO = {"specialist": "특화", "element_first": "속성 우선", "generalist": "범용"}
+PATH_KO = {"generalist": "범용", "element_only": "속성 전용", "left_others": "다른 속성에서 빠짐", "specialist": "특화",
+           "retired_generalist": "범용 → 은퇴", "retired_element_only": "범용 → 속성 전용 → 은퇴",
+           "retired_specialist": "특화 → 은퇴", "unused": "안 쓰임"}
 
 
 def _utc(value: Any) -> pd.Timestamp:
@@ -245,6 +249,7 @@ class UnitHistory:
     treasure_at: datetime | None = None  # when its treasure came out
     treasured: bool = False  # its treasure was out at ``moment``: the profile stands on the seasons with it
     life: dict[str, Any] | None = None  # its lifespan at ``moment`` (analyze.tiers.lifespans), with the run's days
+    career: dict[str, Any] | None = None  # its generality and path at ``moment`` (analyze.tiers.generality, careers)
 
 
 class TierBook:
@@ -401,7 +406,21 @@ class TierBook:
             listed_elements(info.get("treasure_elements")) if treasured else [])
         elements = tuple(dict.fromkeys(e for e in [info.get("element")] + added if isinstance(e, str) and e))
         return UnitHistory(unit_id, info, rows, profile, moment, self.sample, elements, live, treasure_at, treasured,
-                           self._life(unit_id, instant))
+                           self._life(unit_id, instant), self._career(unit_id, instant, standing))
+
+    def _career(self, unit_id: str, instant: pd.Timestamp, standing: tiering.Standings) -> dict[str, Any] | None:
+        """The unit's generality (from ``standing``, where it stands at ``instant``) and its
+        path at ``instant``, as one record."""
+        paths = tiering.careers(self.history, self.seasons, instant, self.config)
+        mine = paths[paths["unit_id"] == unit_id]
+        if mine.empty:
+            return None
+        record = _records(mine)[0]
+        general = tiering.generality(standing, self.config)
+        general = general[general["unit_id"] == unit_id]
+        empty = {"own_level": None, "other_level": None, "generality": None, "generality_band": ""}
+        record.update(_records(general.drop(columns="unit_id"))[0] if not general.empty else empty)
+        return record
 
     def _life(self, unit_id: str, instant: pd.Timestamp) -> dict[str, Any] | None:
         """The unit's lifespan at ``instant``, with ``run_days``: how long its run in use has
@@ -677,10 +696,10 @@ def _life_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
     life = history.life
     if not life:
         return []
-    usage = f"상위 랭커 {config.min_usage:.0%}"
+    usage = f"시즌 티어 {config.min_tier}"
     head = f"  {pad('수명', 9)}  "
     if life["last_used"] is None:
-        return [head + f"쓰인 시즌 없음 — {usage} 넘게 쓴 시즌이 없음 (출시 뒤 {life['seasons_out']}시즌)"]
+        return [head + f"쓰인 시즌 없음 — {usage} 이상인 시즌이 없음 (출시 뒤 {life['seasons_out']}시즌)"]
     first, last, missed = life["run_from"], life["last_used"], life["missed_own"]
     own = "·".join(_element(e) for e in history.elements)
     if life["retired"]:
@@ -700,7 +719,33 @@ def _life_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
     if life["returns"]:
         again = f"은퇴한 적 {life['returns']}번," if life["returns"] > 1 else "은퇴했다가"
         text += f" · 복귀(S{life['first_used']}부터 쓰이다 {again} S{first}부터 다시)"
-    return [head + text, f"  {pad('', 9)}  쓰임 = {usage} 이상이 쓴 시즌 · 은퇴 = {_retired_rule(config)}"]
+    return [head + text, f"  {pad('', 9)}  쓰임 = {usage} 이상인 시즌 · 은퇴 = {_retired_rule(config)}"]
+
+
+def _career_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
+    """How general the unit is, and which way its career is going (the site's tile says the same)."""
+    c = history.career
+    if not c:
+        return []
+    last = f"S{c['last_other']}" if c["last_other"] is not None else None
+    detail = {
+        "generalist": f"다른 속성 시즌 {c['other_used']}번 쓰임 · 마지막 {last}",
+        "element_only": f"다른 속성은 {last} 뒤 {c['other_since']}시즌 내리 안 쓰임, 자기 속성 시즌엔 {c['own_after']}번 쓰임",
+        "left_others": f"다른 속성은 {last} 뒤 {c['other_since']}시즌 내리 안 쓰임, 그 뒤 자기 속성 시즌엔 아직 안 쓰임",
+        "specialist": f"다른 속성 시즌엔 {c['other_used']}번 쓰임 (범용은 {config.generalist_seasons}번부터)",
+        "retired_generalist": f"다른 속성 시즌 {c['other_used']}번 쓰이다 {last} 뒤 자기 속성 시즌에서도 안 쓰이고 은퇴",
+        "retired_element_only": f"{last} 뒤 다른 속성에서 빠지고 자기 속성 시즌 {c['own_after']}번 더 쓰이다 은퇴",
+        "retired_specialist": f"다른 속성 시즌엔 {c['other_used']}번 쓰이고 은퇴",
+        "unused": "쓰인 시즌 없음",
+    }[c["path"]]
+    g = c.get("generality")
+    general = (f"{GENERALITY_KO[c['generality_band']]} {g:.2f} (다른 속성 칸 평균 {c['other_level']:.2f} ÷ "
+               f"(자기 속성 칸 {c['own_level']:.2f} + {c['other_level']:.2f}))" if g is not None else "없음")
+    low, high = config.generality_bands
+    return [f"  {pad('범용도', 9)}  {general}",
+            f"  {pad('경로', 9)}  {PATH_KO[c['path']]} — {detail}",
+            f"  {pad('', 9)}  범용도 띠 = 특화 < {low:g} ≤ 속성 우선 < {high:g} ≤ 범용 · 범용 = 다른 속성 시즌 "
+            f"{config.generalist_seasons}번 이상 쓰임 · 빠짐 = 최근 다른 속성 시즌 {config.left_after}번 내리 안 쓰임"]
 
 
 def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) -> str:
@@ -722,6 +767,7 @@ def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) 
         out.append(f"표본: {history.sample}")
     out += _unit_tiers(history, config)
     out += _life_lines(history, config)
+    out += _career_lines(history, config)
     out += [
         "",
         f"{rjust('시즌', 4)}  {pad('시작', 10)}  {pad('보스 · 약점', 30)}  {rjust('사용', 5)}  {rjust('덱 몫', 5)}  "

@@ -121,10 +121,10 @@ function viewTabs(app) {
 
 // How the lifespan columns and the grey faces read, with the parameters in force.
 function lifeNote(app, table) {
-  const min = Math.round(app.state.params.minUsage * 100);
+  const { minTier } = app.state.params;
   const retired = retiredText(app.state.params);
   return table
-    ? `시즌별 사용 = 시즌 하나가 칸 하나, 칠한 칸은 상위 랭커 ${min}% 이상이 쓴 시즌(진할수록 많이) · 수명 = 지금 쓰이는 흐름이 `
+    ? `시즌별 사용 = 시즌 하나가 칸 하나, 칠한 칸은 시즌 티어 ${minTier} 이상인 시즌(색 = 그 시즌 티어) · 수명 = 지금 쓰이는 흐름이 `
       + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired} · 복귀 = 은퇴한 뒤 다시 쓰임. `
     : `흑백 얼굴 = 은퇴(${retired}). `;
 }

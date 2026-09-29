@@ -98,7 +98,8 @@ def cmd_tier(args: argparse.Namespace) -> int:
             return 1
         if args.json:
             _emit({"unit": history.info, "sample": history.sample.to_dict() if history.sample else None,
-                   "profile": history.profile, "live_seasons": history.live_seasons,
+                   "profile": history.profile, "life": history.life, "career": history.career,
+                   "live_seasons": history.live_seasons,
                    "seasons": history.rows.to_dict(orient="records")})
         else:
             print(render_unit(history, book.config))

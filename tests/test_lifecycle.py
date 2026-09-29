@@ -1,32 +1,10 @@
-"""The career study (lifecycle.py): generality, career paths, the own-season outlook."""
+"""The career study (lifecycle.py): the own-season outlook, eras."""
 
 import pandas as pd
 import pytest
 
 from nikke_analysis import lifecycle
 from nikke_analysis.analyze import tiers
-from tests.synthetic import make_world
-from tests.test_tiers import build
-
-
-@pytest.fixture(scope="module")
-def world():
-    return make_world()
-
-
-def test_generality_splits_specialists_from_units_that_go_anywhere(world):
-    table, summary = build(world)
-    standing = tiers.standings(table, summary, summary["end_at"].max(), tiers.TierConfig())
-    g = lifecycle.generality(standing).set_index("unit_id")
-    for dealer in world.element_dps.values():  # strong only when the boss is weak to its element
-        assert g.loc[dealer, "g"] < 0.05 and g.loc[dealer, "band"] == "특화"
-    for unit in world.universal:  # strong everywhere
-        assert g.loc[unit, "g"] == pytest.approx(0.5, abs=0.05) and g.loc[unit, "band"] == "범용"
-    assert g.loc[world.partner, "g"] > 0.9  # a Water support that only Wind decks field
-    # O and X are the numbers behind the two tiers: overall = (O + 4X) / 5
-    overall = standing.overall.set_index("unit_id")["overall"]
-    dealer = world.element_dps["Fire"]
-    assert overall[dealer] == pytest.approx((g.loc[dealer, "O"] + 4 * g.loc[dealer, "X"]) / 5)
 
 
 def monthly(usage: dict[str, list[float]], weak: list[str]):
@@ -44,36 +22,15 @@ def monthly(usage: dict[str, list[float]], weak: list[str]):
     return pd.DataFrame(rows), pd.DataFrame(seasons)
 
 
-# Fire every third season: 1, 4, 7, 10, 13, 16
-WEAK = ["Fire", "Water", "Wind"] * 6
-
-
-def test_careers_tell_the_two_ways_a_generalist_retires():
-    everywhere = [0.8] * 6
-    usage = {
-        "narrowed": everywhere + [0.8, 0, 0, 0.5, 0, 0] + [0.3, 0, 0, 0, 0, 0],  # own seasons only from 7, then out
-        "dropped": everywhere + [0.0] * 12,  # out everywhere at once
-        "still": [0.8] * 18,
-        "special": [0.8 if w == "Fire" else 0.0 for w in WEAK],  # own seasons only, ever
-    }
-    table, seasons = monthly(usage, WEAK)
-    config = tiers.TierConfig()
-    at = lambda season: seasons.set_index("season").loc[season, "end_at"]
-    path = lambda season: lifecycle.careers(table, seasons, at(season), config).set_index("unit_id")["path"]
-    early = path(12)
-    assert early["narrowed"] == "속성 전용" and early["still"] == "범용" and early["special"] == "특화"
-    assert early["dropped"] == "범용 → 은퇴"
-    late = path(18)  # "narrowed" sat out Fire season 16, over 90 days after season 13
-    assert late["narrowed"] == "범용 → 속성 전용 → 은퇴" and late["dropped"] == "범용 → 은퇴"
-    row = lifecycle.careers(table, seasons, at(12), config).set_index("unit_id").loc["narrowed"]
-    assert (row["other_used"], row["last_other"], row["other_since"], row["own_after"]) == (4, 6, 4, 2)
+# Fire every third season: 1, 4, 7, 10
+WEAK = ["Fire", "Water", "Wind"] * 4
 
 
 def test_the_outlook_counts_who_the_next_own_season_passed_by():
-    usage = {"fading": [0.8 if w == "Fire" else 0.0 for w in WEAK[:12]],
+    usage = {"fading": [0.8 if w == "Fire" else 0.0 for w in WEAK],
              "gone": [0.8, 0, 0, 0.3, 0, 0, 0, 0, 0, 0, 0, 0]}
     usage["fading"][9] = 0.0  # used in Fire seasons 1, 4, 7, not 10
-    table, seasons = monthly(usage, WEAK[:12])
+    table, seasons = monthly(usage, WEAK)
     outlook = lifecycle.own_outlook(table, seasons, tiers.TierConfig())
     pairs = {(r.unit_id, r.season): (r.tier, r.stopped) for r in outlook.itertuples()}
     assert pairs == {("fading", 1): ("S 이상", False), ("fading", 4): ("S 이상", False), ("fading", 7): ("S 이상", True),

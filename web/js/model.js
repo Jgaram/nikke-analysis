@@ -9,9 +9,11 @@
 //   tiers       cuts (season and element; the overall has its own), recency, prior,
 //               how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
-//   lifespans   what counts as used, how long idle - and through how many seasons of
-//               its own element - means retired
-//               -> since when each unit was in use, and whether it still is
+//   lifespans   the season tier that counts as used, how long idle - and through how
+//               many seasons of its own element - means retired; when a unit was a
+//               generalist, and when it left the other elements
+//               -> since when each unit was in use, whether it still is, its generality
+//                  and the path it is on
 //
 // No DOM here: the same module runs under Node for the tests.
 
@@ -37,9 +39,12 @@ export function defaultParams(model) {
     overall: d.overall,
     minElementsObserved: d.minElementsObserved,
     includeLive: d.includeLive,
-    minUsage: d.minUsage,
+    minTier: d.minTier,
     retireAfterDays: d.retireAfterDays,
     retireAfterOwnSeasons: d.retireAfterOwnSeasons,
+    generalistSeasons: d.generalistSeasons,
+    leftAfter: d.leftAfter,
+    generalityBands: d.generalityBands,
   });
 }
 
@@ -49,7 +54,9 @@ export function normalizeParams(p) {
   const cuts = sortCuts(p.cuts);
   const overallCuts = sortCuts(p.overallCuts || p.cuts);
   if (!OVERALL_MODES.includes(p.overall)) throw new Error(`overall must be one of ${OVERALL_MODES}`);
-  return { ...p, cuts, overallCuts, servers: [...p.servers] };
+  if (!cuts.some(([label]) => label === p.minTier)) throw new Error(`minTier must be one of the cuts' labels`);
+  const generalityBands = p.generalityBands.map(Number);
+  return { ...p, cuts, overallCuts, generalityBands, servers: [...p.servers] };
 }
 
 export function populationKey(p) {
@@ -61,7 +68,8 @@ export function tierKey(p) {
 }
 
 export function lifeKey(p) {
-  return JSON.stringify([p.minUsage, p.retireAfterDays, p.retireAfterOwnSeasons]);
+  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.generalistSeasons, p.leftAfter,
+    p.generalityBands]);
 }
 
 // ---------------------------------------------------------------------------
@@ -384,9 +392,16 @@ export function standings(model, population, moment, params, treasured = null) {
 }
 
 // ---------------------------------------------------------------------------
-// lifespans: when each unit was in use (analyze/tiers.py lifespans)
+// lifespans: when each unit was in use (analyze/tiers.py fielded, lifespans)
 
-// Per unit out by ``moment``: the seasons that used it (usage >= minUsage), the first
+// Whether a season row fielded its unit: its season tier there minTier or better (and
+// some use at all).
+export function fielded(r, params) {
+  const floor = params.cuts.find(([label]) => label === params.minTier)[1];
+  return r.lift > 0 && r.lift >= floor;
+}
+
+// Per unit out by ``moment``: the seasons that used it (``fielded``), the first
 // and last, and whether it is retired: idle for retireAfterDays since the end of the
 // last one, through at least retireAfterOwnSeasons seasons weak to its own element
 // (``missedOwn``). Such a gap between two seasons that used it is a return, and the run
@@ -405,7 +420,7 @@ export function lifespans(model, population, moment, params) {
         out.set(r.u, a);
       }
       a.seasonsOut++;
-      if (!(r.usageRate >= params.minUsage)) {
+      if (!fielded(r, params)) {
         if (a.lastUsed != null && r.elementMatch) a.missedOwn++;
         continue;
       }
@@ -428,6 +443,74 @@ export function lifespans(model, population, moment, params) {
     if (a.lastUsed == null) continue;
     a.idleDays = (moment - a.lastEnd) / DAY_MS;
     a.retired = a.idleDays >= params.retireAfterDays && a.missedOwn >= need;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------------------
+// careers: how general a unit is, and which way it is going (analyze/tiers.py
+// generality, careers)
+
+export const GENERALITY_MIN_LEVEL = 0.05;
+export const GENERALITY_BANDS = ["specialist", "element_first", "generalist"];
+
+export function generalityBand(value, params) {
+  if (value == null || Number.isNaN(value)) return "";
+  const [low, high] = params.generalityBands;
+  return value >= high ? GENERALITY_BANDS[2] : value >= low ? GENERALITY_BANDS[1] : GENERALITY_BANDS[0];
+}
+
+// Per unit of the standing: ownLevel (its element tier's lift, the higher of two), otherLevel
+// (the mean of its other elements' slots seen), generality = other / (own + other) - NaN
+// until both are seen, or with own + other under GENERALITY_MIN_LEVEL.
+export function generality(standing, params) {
+  const own = new Map();
+  for (const r of standing.elements) {
+    if (r.seasons > 0 && !(own.get(r.u) >= r.lift)) own.set(r.u, r.lift);
+  }
+  const out = new Map();
+  for (const o of standing.overall) {
+    const others = (standing.slots.get(o.u) || []).filter((sl) => !sl.own && sl.seasons > 0).map((sl) => sl.lift);
+    const ownLevel = own.has(o.u) ? own.get(o.u) : NaN;
+    const otherLevel = others.length ? others.reduce((a, b) => a + b, 0) / others.length : NaN;
+    const level = ownLevel + otherLevel;
+    const value = level >= GENERALITY_MIN_LEVEL ? otherLevel / level : NaN;
+    out.set(o.u, { ownLevel, otherLevel, generality: value, band: generalityBand(value, params) });
+  }
+  return out;
+}
+
+// Per unit out by ``moment``: other-element seasons that fielded it (otherUsed), the latest
+// (lastOther), the other-element seasons since (otherSince), its own element's that fielded
+// it after that (ownAfter; all of them with no other), and the path: generalist,
+// element_only, left_others, specialist, retired_generalist, retired_element_only,
+// retired_specialist or unused. ``life`` is lifespans() at the same moment.
+export function careers(model, population, moment, params, life) {
+  const seen = new Map();
+  for (const c of countedSeasons(population.summary, moment, params)) {
+    for (const r of population.tables.get(c.season).rows) {
+      if (!seen.has(r.u)) seen.set(r.u, []);
+      seen.get(r.u).push({ season: c.season, used: fielded(r, params), own: r.elementMatch });
+    }
+  }
+  const out = new Map();
+  for (const [u, rows] of seen) {
+    const others = rows.filter((x) => !x.own);
+    const usedOthers = others.filter((x) => x.used);
+    const lastOther = usedOthers.length ? Math.max(...usedOthers.map((x) => x.season)) : null;
+    const after = (x) => lastOther == null || x.season > lastOther;
+    const a = {
+      otherUsed: usedOthers.length, lastOther, otherSince: others.filter(after).length,
+      ownAfter: rows.filter((x) => x.own && x.used && after(x)).length,
+    };
+    const general = a.otherUsed >= params.generalistSeasons;
+    let path;
+    if (!rows.some((x) => x.used)) path = "unused";
+    else if (life.get(u)?.retired) path = general ? (a.ownAfter ? "retired_element_only" : "retired_generalist") : "retired_specialist";
+    else if (!general) path = "specialist";
+    else if (a.otherSince < params.leftAfter) path = "generalist";
+    else path = a.ownAfter ? "element_only" : "left_others";
+    out.set(u, { ...a, path });
   }
   return out;
 }
@@ -499,7 +582,10 @@ export function viewAt(model, population, moment, params) {
   const final = standing.counted.filter((c) => !c.live).map((c) => c.season);
   const live = standing.counted.filter((c) => c.live).map((c) => c.season);
   const life = lifespans(model, population, moment, params);
-  return { moment, standing, final, live, life, around: seasonsAround(model, moment) };
+  return {
+    moment, standing, final, live, life, around: seasonsAround(model, moment),
+    generality: generality(standing, params), careers: careers(model, population, moment, params, life),
+  };
 }
 
 // One unit at ``moment``: its tier in each element it counts as and its overall

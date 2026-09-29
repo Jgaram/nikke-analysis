@@ -80,13 +80,13 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 79,284,사쿠라 : 블룸 인 서머,Sakura: Bloom in Summer,Wind,,,0.068065,D,False,5,27,41,False,III,Attacker,SSR,2024-07-04,15,15,38,4,27,0,83.166667,False
 80,202,도라,Dolla,Wind,,,0.067215,D,False,5,41,41,False,II,Supporter,SSR,2022-11-04,1,1,30,18,41,0,348.166667,False
 81,290,마나,Mana,Wind,,,0.061554,D,False,5,20,41,False,III,Attacker,SSR,2025-01-16,23,23,38,4,20,0,83.166667,False
-82,382,레오나,Leona,Water,,,0.049992,F,False,5,32,41,False,II,Supporter,SSR,2024-01-11,10,10,29,9,32,0,371.166667,True
-83,412,트리나,Trina,Electric,,,0.049134,F,False,5,18,41,False,II,Supporter,SSR,2025-03-13,30,30,36,2,18,0,145.166667,False
-84,023,델타 : 닌자 시프,Delta: Ninja Thief,Water,,,0.046015,F,False,5,11,41,False,II,Defender,SSR,2025-10-16,31,31,31,1,11,0,313.166667,False
-85,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,Electric,,,0.043801,F,False,5,32,41,False,III,Attacker,SSR,2024-02-05,10,10,30,9,32,0,348.166667,False
-86,830,아스카,Asuka,Fire,,,0.035225,F,False,5,25,41,False,III,Attacker,SSR,2024-08-22,17,17,32,8,25,0,285.166667,False
-87,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,Water,,,0.034394,F,False,5,22,41,False,III,Attacker,SSR,2024-12-12,22,22,33,4,22,0,257.166667,False
-88,841,질,Jill,Electric,,,0.031978,F,False,5,12,41,False,III,Attacker,SSR,2025-10-02,30,30,36,2,12,0,145.166667,False
+82,382,레오나,Leona,Water,,,0.049992,D,False,5,32,41,False,II,Supporter,SSR,2024-01-11,10,10,29,9,32,0,371.166667,True
+83,412,트리나,Trina,Electric,,,0.049134,D,False,5,18,41,False,II,Supporter,SSR,2025-03-13,30,30,36,2,18,0,145.166667,False
+84,023,델타 : 닌자 시프,Delta: Ninja Thief,Water,,,0.046015,D,False,5,11,41,False,II,Defender,SSR,2025-10-16,31,31,31,1,11,0,313.166667,False
+85,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,Electric,,,0.043801,D,False,5,32,41,False,III,Attacker,SSR,2024-02-05,10,10,30,9,32,0,348.166667,False
+86,830,아스카,Asuka,Fire,,,0.035225,D,False,5,25,41,False,III,Attacker,SSR,2024-08-22,17,17,32,8,25,0,285.166667,False
+87,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,Water,,,0.034394,D,False,5,22,41,False,III,Attacker,SSR,2024-12-12,22,22,33,4,22,0,257.166667,False
+88,841,질,Jill,Electric,,,0.031978,D,False,5,12,41,False,III,Attacker,SSR,2025-10-02,30,30,36,2,12,0,145.166667,False
 89,810,2B,2B,Fire,,,0.026635,F,False,5,37,41,False,III,Defender,SSR,2023-09-01,5,5,28,13,37,0,393.166667,True
 90,100,라플라스,Laplace,Iron,,,0.022234,F,False,5,28,41,True,III,Attacker,SSR,2022-11-24,1,34,39,7,41,1,68.166667,False
 91,112,바이퍼,Viper,Water,,,0.020744,F,False,5,27,41,True,II,Attacker,SSR,2023-01-19,1,18,27,7,41,1,425.166667,True

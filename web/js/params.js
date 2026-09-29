@@ -136,7 +136,7 @@ export function buildParams(app, body) {
       h("span", { class: "tb", dataset: { tier: label } }, h("b", null, label)),
       h("span", { class: "cut-ge", "aria-hidden": "true" }, "≥"),
       h("input", {
-        type: "number", min: 0, max: 10, step: 0.05, value: p.cuts[i][1], inputMode: "decimal",
+        type: "number", min: 0, max: 10, step: 0.01, value: p.cuts[i][1], inputMode: "decimal",
         "aria-label": `${label} 티어 최소 기여도`,
         onchange: () => {
           const values = readCuts();

@@ -13,11 +13,11 @@ Fire,11,514,그레이브,Grave,own,0.755143,B,6,False,C,0.410455,29,False
 Fire,12,831,레이,Rei,own,0.698625,B,7,False,D,0.144536,65,False
 Fire,13,032,미란다,Miranda,own,0.608142,B,5,True,B,0.62563,15,False
 Fire,14,043,D : 킬러 와이프,D: Killer Wife,own,0.473767,C,8,False,C,0.269769,42,False
-Fire,15,830,아스카,Asuka,own,0.126345,D,7,False,F,0.035225,86,False
+Fire,15,830,아스카,Asuka,own,0.126345,D,7,False,D,0.035225,86,False
 Fire,16,810,2B,2B,own,0.099852,D,9,False,F,0.026635,89,False
 Fire,17,095,은화 : 택티컬 업,Eunhwa: Tactical Upgrade,own,0.071579,D,4,False,F,0.014568,96,False
 Fire,18,093,엠마 : 택티컬 업,Emma: Tactical Upgrade,own,0.06399,D,4,False,F,0.013051,99,False
-Fire,19,094,베스티 : 택티컬 업,Vesti: Tactical Upgrade,own,0.049795,F,4,False,F,0.009959,102,False
+Fire,19,094,베스티 : 택티컬 업,Vesti: Tactical Upgrade,own,0.049795,D,4,False,F,0.009959,102,False
 Fire,20,811,A2,A2,own,0.028428,F,9,False,F,0.007743,104,False
 Fire,21,261,니힐리스타,Nihilister,own,0.008336,F,9,False,F,0.001749,115,False
 Fire,22,282,사쿠라,Sakura,own,0.0082,F,9,False,F,0.00237,114,False
@@ -57,19 +57,19 @@ Water,14,403,퀀시 : 이스케이프 퀸,Quency: Escape Queen,own,0.60587,B,7,F
 Water,15,404,길티 : 마이티 바니,Guilty: Mighty Bunny,own,0.573171,B,1,False,B,0.573171,19,True
 Water,16,405,신 : 스위프트 바니,Sin: Swift Bunny,own,0.496235,C,1,False,C,0.496235,22,True
 Water,17,601,프리카,Prika,own,0.297852,C,2,False,B,0.651704,14,False
-Water,18,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,own,0.171971,D,6,False,F,0.034394,87,False
+Water,18,182,길로틴 : 윈터 슬레이어,Guillotine: Winter Slayer,own,0.171971,D,6,False,D,0.034394,87,False
 Water,19,233,도로시,Dorothy,own,0.117618,D,11,False,D,0.06846,78,False
 Water,20,112,바이퍼,Viper,own,0.103098,D,7,True,F,0.020744,91,False
-Water,21,382,레오나,Leona,own,0.085464,D,8,False,F,0.049992,82,False
-Water,22,195,앨리스 : 원더랜드 바니,Alice: Wonderland Bunny,own,0.045651,F,7,False,F,0.014643,95,False
-Water,23,820,렘,Rem,own,0.032829,F,8,False,F,0.00722,105,False
+Water,21,382,레오나,Leona,own,0.085464,D,8,False,D,0.049992,82,False
+Water,22,195,앨리스 : 원더랜드 바니,Alice: Wonderland Bunny,own,0.045651,D,7,False,F,0.014643,95,False
+Water,23,820,렘,Rem,own,0.032829,D,8,False,F,0.00722,105,False
 Water,24,821,에밀리아,Emilia,own,0.014592,F,8,False,F,0.002939,111,False
 Water,25,132,메어리 : 베이 갓데스,Mary: Bay Goddess,own,0.004455,F,10,False,F,0.004629,107,False
 Water,26,091,베스티,Vesti,own,0.003711,F,11,False,F,0.000961,120,False
 Water,27,432,아리아,Aria,own,0.003488,F,11,False,F,0.000839,123,False
 Water,28,070,브리드,Brid,own,0.002314,F,11,False,F,0.000488,130,False
 Water,29,014,네온 : 블루 오션,Neon: Blue Ocean,own,0.001619,F,10,False,F,0.000338,134,False
-Water,30,023,델타 : 닌자 시프,Delta: Ninja Thief,own,0.000999,F,3,False,F,0.046015,84,False
+Water,30,023,델타 : 닌자 시프,Delta: Ninja Thief,own,0.000999,F,3,False,D,0.046015,84,False
 Water,31,190,루드밀라,Ludmilla,own,0.000997,F,11,False,F,0.000807,124,False
 Water,32,193,네베,Neve,own,0.000728,F,11,False,F,0.000146,146,False
 Water,33,242,폴크방,Folkwang,own,0.000531,F,11,False,F,0.000147,145,False
@@ -99,7 +99,7 @@ Wind,12,271,누아르,Noir,own,0.241898,C,6,False,D,0.137827,68,False
 Wind,13,270,블랑,Blanc,own,0.234699,C,6,False,D,0.172908,61,False
 Wind,14,283,로산나 : 시크 오션,Rosanna: Chic Ocean,own,0.186429,D,4,False,D,0.126218,69,False
 Wind,15,400,길티,Guilty,own,0.066723,D,6,False,F,0.014378,97,False
-Wind,16,202,도라,Dolla,own,0.043423,F,6,False,D,0.067215,80,False
+Wind,16,202,도라,Dolla,own,0.043423,D,6,False,D,0.067215,80,False
 Wind,17,131,페퍼,Pepper,own,0.011186,F,6,False,F,0.004468,108,False
 Wind,18,113,E.H.,E.H.,own,0.008739,F,1,False,F,0.001748,116,False
 Wind,19,040,D,D,own,0.001759,F,6,False,F,0.000423,131,False
@@ -178,13 +178,13 @@ Electric,11,840,에이다,Ada,own,0.762761,B,2,False,C,0.398221,31,False
 Electric,12,222,홍련,Scarlet,own,0.417905,C,8,False,D,0.102348,75,False
 Electric,13,210,엑시아,Exia,own,0.386273,C,5,True,D,0.07924,77,False
 Electric,14,832,마리,Mari,own,0.302715,C,4,False,D,0.163133,62,False
-Electric,15,412,트리나,Trina,own,0.245434,C,2,False,F,0.049134,83,False
+Electric,15,412,트리나,Trina,own,0.245434,C,2,False,D,0.049134,83,False
 Electric,16,450,나가,Naga,own,0.188858,D,6,False,C,0.277174,40,False
-Electric,17,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,own,0.176571,D,6,False,F,0.043801,85,False
-Electric,18,841,질,Jill,own,0.15989,D,2,False,F,0.031978,88,False
+Electric,17,313,프리바티 : 언카인드 메이드,Privaty: Unkind Maid,own,0.176571,D,6,False,D,0.043801,85,False
+Electric,18,841,질,Jill,own,0.15989,D,2,False,D,0.031978,88,False
 Electric,19,180,길로틴,Guillotine,own,0.060406,D,8,False,F,0.015683,94,False
-Electric,20,350,마스트,Mast,own,0.038286,F,7,False,F,0.012428,100,False
-Electric,21,381,비스킷,Biscuit,own,0.035603,F,8,False,F,0.014122,98,False
+Electric,20,350,마스트,Mast,own,0.038286,D,7,False,F,0.012428,100,False
+Electric,21,381,비스킷,Biscuit,own,0.035603,D,8,False,F,0.014122,98,False
 Electric,22,430,노이즈,Noise,own,0.02035,F,8,False,F,0.006774,106,False
 Electric,23,390,츠바이,Zwei,own,0.009485,F,1,True,D,0.142726,66,False
 Electric,24,041,K,K,own,0.008457,F,2,False,F,0.001691,117,False

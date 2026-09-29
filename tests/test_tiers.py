@@ -368,6 +368,8 @@ def test_history_carries_where_each_unit_stood(world, built):
     own = (dealer["weak_element"] == "Water").to_numpy()
     assert dealer.loc[own, "element_tier"].eq("SS").all()  # after each Water season
     assert dealer.loc[~own, "element_tier"].isna().all()  # nothing to say in the others
+    # its generality once each season was over: a specialist throughout, once it has met both sides
+    assert dealer["generality"].dropna().lt(0.1).all() and dealer["generality"].notna().any()
 
 
 def test_history_gives_a_skill_element_its_seasons_too(world, skilled):
@@ -491,14 +493,15 @@ def test_generality_splits_specialists_from_units_that_go_anywhere(world, built)
     for dealer in world.element_dps.values():  # strong only when the boss is weak to its element
         assert g.loc[dealer, "generality"] < 0.05 and g.loc[dealer, "generality_band"] == "specialist"
     for unit in world.universal:  # strong everywhere
-        assert g.loc[unit, "generality"] == pytest.approx(0.5, abs=0.05) and g.loc[unit, "generality_band"] == "generalist"
-    assert g.loc[world.partner, "generality"] > 0.9  # a Water support that only Wind decks field
+        assert g.loc[unit, "generality"] == pytest.approx(1.0, abs=0.1) and g.loc[unit, "generality_band"] == "generalist"
+    assert g.loc[world.partner, "generality"] == 1.0  # a Water support that only Wind decks field: capped at 1
+    assert g["generality"].dropna().between(0, 1).all()
     # own and other are the numbers behind the two tiers: overall = (own + 4 x other) / 5
     overall = standing.overall.set_index("unit_id")["overall"]
     dealer = world.element_dps["Fire"]
     assert overall[dealer] == pytest.approx((g.loc[dealer, "own_level"] + 4 * g.loc[dealer, "other_level"]) / 5)
-    wide = tiers.generality(standing, tiers.TierConfig(generality_bands=(0.0, 0.6))).set_index("unit_id")
-    assert wide.loc[world.universal[0], "generality_band"] == "element_first"
+    wide = tiers.generality(standing, tiers.TierConfig(generality_bands=(0.0, 0.5))).set_index("unit_id")
+    assert wide.loc[dealer, "generality_band"] == "element_first"
 
 
 def careers_of(lifts: dict[str, list[float]], weak: list[str], season: int, **config) -> pd.DataFrame:

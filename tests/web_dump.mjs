@@ -32,7 +32,7 @@ for (const s of population.summary) {
       lift: r.lift, tier: M.assignTier(r.lift, params.cuts), treasure: r.treasure, element_match: r.elementMatch,
       overall: h.overall, overall_tier: h.overallTier, provisional: h.provisional,
       elements_observed: h.elementsObserved, element_lift: h.elementLift, element_tier: h.elementTier,
-      element_seasons: h.elementSeasons,
+      element_seasons: h.elementSeasons, generality: h.generality,
     });
   }
 }

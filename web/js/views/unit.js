@@ -3,10 +3,11 @@
 import { assignTier, unitSeasons, ELEMENTS } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
-  WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented,
+  WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst, segmented, infoButton,
 } from "../ui.js";
 import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, fold, careerText, GENERALITY_KO } from "./common.js";
-import { trajectoryChart } from "../chart.js";
+import { dateBar } from "./date.js";
+import { trajectoryChart, generalityChart } from "../chart.js";
 
 export function unitView(app) {
   const { model, state } = app;
@@ -19,8 +20,12 @@ export function unitView(app) {
   const prof = app.profile(u, moment);
   const own = prof.members.map((m) => m.element);
 
+  // the chosen day, marked on the charts (today marks nothing)
+  const at = state.date && state.date !== todayKst() ? moment : null;
+
   const root = h("div", { class: "view view-unit" });
   root.append(picker(app, u));
+  root.append(dateBar(app));
   root.append(profile(app, u, prof, moment));
   if (!all.length) {
     root.append(h("div", { class: "panel empty" }, "아직 치른 시즌이 없습니다. 출시 뒤 첫 시즌이 열리면 여기에 나옵니다."));
@@ -34,8 +39,16 @@ export function unitView(app) {
     weakSwitch(app, all, own),
     h("span", { class: "muted small" }, "막대에 마우스를 올리거나 눌러 보세요 · 선의 값은 그 시즌이 끝났을 때의 티어"));
   root.append(h("section", { class: "panel chart-panel" }, head,
-    records.length ? trajectoryChart(app, u, records, { own, treasureAt: unit.treasure })
+    records.length ? trajectoryChart(app, u, records, { own, treasureAt: unit.treasure, at })
       : h("p", { class: "empty-note muted" }, `출시 뒤 ${ELEMENT_KO[weak]} 약점 시즌이 아직 없습니다.`)));
+  // generality is not about one weakness: every season, whatever the switch above says
+  if (all.some((r) => r.hist && !Number.isNaN(r.hist.generality))) {
+    root.append(h("section", { class: "panel chart-panel" },
+      h("div", { class: "panel-head" },
+        h("h3", null, "범용도 변화"), infoButton("범용도", () => generalityHelp(app)),
+        h("span", { class: "muted small" }, "각 시즌이 끝났을 때의 범용도 · 위로 갈수록 약점과 무관하게 쓰임")),
+      generalityChart(app, u, all, { treasureAt: unit.treasure, at })));
+  }
   if (records.length) root.append(seasonTable(app, u, records));
   return root;
 }
@@ -166,22 +179,49 @@ function lifeTile(app, u, view) {
     h("div", { class: "tile-sub" }, used ? `${lifeSub(t)} · 출시 뒤 ${t.a.seasonsOut}시즌 중 ${t.a.seasonsUsed}번 쓰임` : t.sub));
 }
 
-// How general the unit is, and which way its career is going.
+// What generality is and how it is banded - for the "i" beside it; with ``g``, this unit's numbers.
+function generalityHelp(app, g = null, career = null) {
+  const [low, high] = app.state.params.generalityBands;
+  return h("div", { class: "tip tip-help" },
+    h("div", { class: "tip-name" }, "범용도"),
+    h("p", null, "보스 약점이 이 니케의 속성이 ", h("b", null, "아닐"), " 때도 얼마나 쓰이나. 0 = 약점이 자기 속성일 때만 쓰임, "
+      + "1 = 약점과 무관하게 쓰임 (다른 속성 덱에서 더 쓰여도 1)."),
+    h("p", { class: "muted" }, "= 2 × 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균), 1 에서 멈춤. "
+      + "칸은 종합 티어를 이루는 보스 약점별 값이고, 자기 속성 칸은 속성 티어의 값이다."),
+    h("div", { class: "gauge-legend" },
+      h("span", { class: "z0" }, h("b", null, "특화"), ` 0 – ${num(low)}`),
+      h("span", { class: "z1" }, h("b", null, "속성 우선"), ` ${num(low)} – ${num(high)}`),
+      h("span", { class: "z2" }, h("b", null, "범용"), ` ${num(high)} – 1`)),
+    g ? h("p", null, !Number.isNaN(g.generality)
+      ? `이 니케: 2 × ${num(g.otherLevel)} ÷ (${num(g.ownLevel)} + ${num(g.otherLevel)}) → ${num(g.generality)}`
+      : "이 니케: 아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임") : null,
+    career ? h("p", { class: "muted" }, h("b", null, `최근 흐름 · ${career.label}`), ` — ${career.detail}. ${career.rule}.`) : null,
+    h("p", { class: "muted" }, "띠의 경계는 인자에서 바꿀 수 있다. 티어에는 들어가지 않는다."));
+}
+
+// 0-1 as a bar over the three bands, the unit's value marked.
+function gauge(app, value) {
+  const [low, high] = app.state.params.generalityBands;
+  return h("div", { class: "gauge", "aria-hidden": "true" },
+    h("span", { class: "gz z0", style: { width: `${low * 100}%` } }),
+    h("span", { class: "gz z1", style: { width: `${(high - low) * 100}%` } }),
+    h("span", { class: "gz z2", style: { width: `${(1 - high) * 100}%` } }),
+    value != null ? h("span", { class: "gauge-mark", style: { left: `${value * 100}%` } }) : null);
+}
+
+// How general the unit is, with its recent turn in the words under it.
 function careerTile(app, u, view) {
   const t = careerText(app, view, u);
   if (!t) return null;
   const g = view.generality.get(u);
   const value = g && !Number.isNaN(g.generality) ? g.generality : null;
-  const why = g && value != null
-    ? `범용도 = 다른 속성 칸 평균 ${num(g.otherLevel)} ÷ (자기 속성 칸 ${num(g.ownLevel)} + ${num(g.otherLevel)}). `
-      + "0 = 약점이 자기 속성일 때만 쓰임, 0.5 = 약점과 무관, 0.5 넘음 = 다른 속성 덱에서 더 쓰임"
-    : "범용도 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임";
-  return h("div", { class: "tile tile-career", dataset: { tier: "none" }, title: `${why}\n${t.rule}` },
-    h("div", { class: "tile-label" }, "범용도 · 경로"),
+  return h("div", { class: "tile tile-career", dataset: { tier: "none", band: value != null ? g.band : "none" } },
+    h("div", { class: "tile-label" }, "범용도", infoButton("범용도", () => generalityHelp(app, g, t))),
     h("div", { class: "tile-value" },
       h("span", { class: "tile-state" }, value != null ? GENERALITY_KO[g.band] : "–"),
       value != null ? h("span", { class: "tile-num" }, num(value)) : null),
-    h("div", { class: "tile-sub" }, h("b", null, t.label), ` · ${t.detail}`));
+    gauge(app, value),
+    h("div", { class: "tile-sub" }, value != null ? t.detail : "아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 못 겪었거나 거의 안 쓰임"));
 }
 
 function profile(app, u, prof, moment) {
@@ -213,8 +253,7 @@ function profile(app, u, prof, moment) {
     h("div", { class: "pf-main" },
       h("div", { class: "pf-when muted small" }, `${t.y}-${t.m}-${t.d}${now ? " 지금" : " 정오"} 기준`,
         prof.treasured ? " · 애장품을 낀 시즌만으로" : "",
-        prof.view.live.length ? ` · 진행 중 시즌 ${prof.view.live.join("·")} 잠정 반영` : "",
-        !now ? h("a", { class: "link", href: app.href("unit", unit.id, { d: "" }), onclick: (e) => { e.preventDefault(); app.go({ date: null }, { replace: true }); } }, " 오늘로") : null),
+        prof.view.live.length ? ` · 진행 중 시즌 ${prof.view.live.join("·")} 잠정 반영` : ""),
       h("h2", { class: "pf-name" }, unitName(unit), unit.en && unit.ko ? h("span", { class: "pf-en" }, unit.en) : null),
       h("div", { class: "pf-attrs" },
         h("span", { class: "attr" }, elementIcon(unit.element, 16), ELEMENT_KO[unit.element] || "?",

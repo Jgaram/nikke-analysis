@@ -739,8 +739,8 @@ def _career_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]
         "unused": "쓰인 시즌 없음",
     }[c["path"]]
     g = c.get("generality")
-    general = (f"{GENERALITY_KO[c['generality_band']]} {g:.2f} (다른 속성 칸 평균 {c['other_level']:.2f} ÷ "
-               f"(자기 속성 칸 {c['own_level']:.2f} + {c['other_level']:.2f}))" if g is not None else "없음")
+    general = (f"{GENERALITY_KO[c['generality_band']]} {g:.2f} (2 × 다른 속성 칸 평균 {c['other_level']:.2f} ÷ "
+               f"(자기 속성 칸 {c['own_level']:.2f} + {c['other_level']:.2f}), 1 이 최대)" if g is not None else "없음")
     low, high = config.generality_bands
     return [f"  {pad('범용도', 9)}  {general}",
             f"  {pad('경로', 9)}  {PATH_KO[c['path']]} — {detail}",

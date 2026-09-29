@@ -69,9 +69,10 @@ is retired, and one fielded again after that came back (``lifespans``). The
 own-element season is what keeps the window short without retiring a
 specialist whose element has not come round: an element can take a year to.
 
-And its **career** across the element rotation: how general it is - the
-other elements' part of what it is worth, ``X / (O + X)`` from its element
-tier's slot O and the mean X of its other-element slots (``generality``) - and
+And its **career** across the element rotation: how general it is - from 0,
+fielded only in its own element's seasons, to 1, fielded whatever the
+weakness: ``min(1, 2X / (O + X))`` from its element tier's slot O and the
+mean X of its other-element slots (``generality``) - and
 which way it is going: fielded in the other elements' seasons still, only in
 its own element's by now, or retired from either (``careers``).
 
@@ -154,7 +155,7 @@ class TierConfig:
     # its last ``left_after`` of them, it has left them. Generality bands, low to high.
     generalist_seasons: int = 3
     left_after: int = 3
-    generality_bands: tuple[float, float] = (0.15, 0.35)
+    generality_bands: tuple[float, float] = (0.3, 0.7)
     # diagnostics
     deck_effect_ridge: float = 20.0
     synergy_min_decks: int = 20
@@ -569,12 +570,13 @@ def generality(standing: Standings, config: TierConfig | None = None) -> pd.Data
 
     ``own_level``: its element tier's lift (the higher, for a unit with two
     elements); ``other_level``: the mean of its overall's slots for the other
-    elements it was seen in. ``generality = other / (own + other)``: 0 for a
-    unit fielded only when the boss is weak to its element, 0.5 for one the
-    weakness makes no difference to, above 0.5 for one other elements' decks
-    field more than its own. With the default overall (the slots' mean) the
-    overall is (own + 4 x other) / 5, so this is the ratio the two tiers already
-    carry, taken out. Empty until the unit has met both sides, and when it is
+    elements it was seen in. ``generality = min(1, 2 x other / (own + other))``:
+    0 for a unit fielded only when the boss is weak to its element, 1 for one
+    the weakness makes no difference to (other = own) - and for one other
+    elements' decks field more than its own, which is at least as general.
+    With the default overall (the slots' mean) the overall is (own + 4 x other)
+    / 5, so this is the ratio the two tiers already carry, taken out and scaled
+    to 0-1. Empty until the unit has met both sides, and when it is
     barely used at all (own + other under ``GENERALITY_MIN_LEVEL``). It shares
     the tiers' memory: see ``careers`` for a unit's recent turn.
     """
@@ -589,7 +591,7 @@ def generality(standing: Standings, config: TierConfig | None = None) -> pd.Data
     frame = pd.DataFrame({"own_level": own, "other_level": other.groupby("unit_id")["lift"].mean()})
     frame = frame.reindex(standing.overall["unit_id"])
     level = frame["own_level"] + frame["other_level"]
-    frame["generality"] = (frame["other_level"] / level).where(level >= GENERALITY_MIN_LEVEL)
+    frame["generality"] = (2 * frame["other_level"] / level).clip(upper=1.0).where(level >= GENERALITY_MIN_LEVEL)
     frame["generality_band"] = frame["generality"].map(lambda g: generality_band(g, config))
     return frame.rename_axis("unit_id").reset_index()[GENERALITY_COLUMNS]
 
@@ -672,7 +674,7 @@ def tier_history(table: pd.DataFrame, seasons: pd.DataFrame, config: TierConfig 
     overall tier once s was over. When s's boss was weak to an element u counts
     as, the row also carries u's tier in that element once s was over
     (``element_lift``, ``element_tier``, ``element_seasons``); in other seasons
-    those are empty. For the season still in progress it is where u stands with
+    those are empty. ``generality`` is u's generality once s was over. For the season still in progress it is where u stands with
     that season so far (``include_live``; without it, where u stood after the
     last finished season): provisional, like the live season's own numbers.
     A unit that played s with its treasure is tiered there on its seasons with
@@ -692,7 +694,8 @@ def tier_history(table: pd.DataFrame, seasons: pd.DataFrame, config: TierConfig 
         overall = standing.overall.drop(columns=["overall_rank", "seasons_observed", "last_season", "treasure"])
         element = (standing.elements.drop(columns=["source", "element_rank", "treasure"])
                    .rename(columns={"element": "weak_element"}))
-        rows = here.merge(overall, on="unit_id", how="left")
+        general = generality(standing, config)[["unit_id", "generality"]]
+        rows = here.merge(overall, on="unit_id", how="left").merge(general, on="unit_id", how="left")
         parts.append(rows.merge(element, on=["unit_id", "weak_element"], how="left"))
     history = pd.concat(parts, ignore_index=True) if parts else table.copy()
     history["final"] = history["season"].map(by_season["final"]).astype(bool)

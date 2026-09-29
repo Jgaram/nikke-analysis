@@ -367,7 +367,7 @@ def report(book=None) -> str:
                  f"{_pct(same.mean())} ({int(same.sum())}/{len(same)})")
     lines.append("")
 
-    lines.append("2. 범용도 g = X / (O + X) — O 자기 속성 칸(속성 티어), X 다른 속성 칸 평균")
+    lines.append("2. 범용도 g = min(1, 2X / (O + X)) — O 자기 속성 칸(속성 티어), X 다른 속성 칸 평균. 1 = 약점과 무관")
     here = panel[(panel["season"] == newest) & panel["generality"].notna() & ~_true(panel["retired"])]
     here = here.assign(name=here["unit_id"].map(label)).sort_values("generality")
     for band, group in here.groupby("generality_band", sort=False):

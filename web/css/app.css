@@ -34,6 +34,7 @@
   --accent-2: #e36927;
   --accent-soft: rgba(52, 150, 239, .15);
   --glow: rgba(52, 150, 239, .5);
+  --gen-0: rgba(52, 150, 239, .07); --gen-1: rgba(52, 150, 239, .17); --gen-2: rgba(52, 150, 239, .32);
   --grid: #1d2536;
   --axis: #34405a;
   --bar: #3a4459;
@@ -65,6 +66,7 @@
   --accent-2: #eb6834;
   --accent-soft: rgba(42, 120, 214, .11);
   --glow: rgba(42, 120, 214, .35);
+  --gen-0: rgba(42, 120, 214, .06); --gen-1: rgba(42, 120, 214, .15); --gen-2: rgba(42, 120, 214, .28);
   --grid: #e4e8ef;
   --axis: #c3cad8;
   --bar: #c5ccd9;
@@ -669,6 +671,31 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .tile-state.active { color: var(--accent); }
 .tile-life-main { font-size: 14px; font-weight: 700; }
 .tile-career .tile-state { color: var(--ink); }
+.tile-career { min-width: 200px; }
+.tile-career[data-band="generalist"]::before { background: var(--gen-2); }
+.tile-career[data-band="element_first"]::before { background: var(--gen-1); }
+.gauge { position: relative; display: flex; height: 8px; border-radius: 4px; overflow: visible; margin: 2px 0 1px; }
+.gz { height: 100%; }
+.gz:first-child { border-radius: 4px 0 0 4px; }
+.gz:nth-child(3) { border-radius: 0 4px 4px 0; }
+.gz.z0, .zone.z0, .sw.zone.z0 { background: var(--gen-0); fill: var(--gen-0); }
+.gz.z1, .zone.z1, .sw.zone.z1 { background: var(--gen-1); fill: var(--gen-1); }
+.gz.z2, .zone.z2, .sw.zone.z2 { background: var(--gen-2); fill: var(--gen-2); }
+.gauge-mark { position: absolute; top: -4px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 2px var(--surface); }
+.info-btn {
+  display: inline-grid; place-items: center; width: 16px; height: 16px; padding: 0; border-radius: 50%; flex: none;
+  border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink-3); cursor: help;
+  font: italic 700 10.5px/1 Georgia, "Times New Roman", serif;
+}
+.info-btn:hover, .info-btn:focus-visible { color: var(--ink); border-color: var(--accent); }
+.panel-head .info-btn { align-self: center; }
+.tip-help { max-width: 320px; gap: 6px; }
+.tip-help p { margin: 0; font-size: 12px; line-height: 1.55; }
+.gauge-legend { display: flex; gap: 4px; flex-wrap: wrap; font-size: 11.5px; }
+.gauge-legend span { padding: 1px 6px; border-radius: 5px; color: var(--ink); }
+.gauge-legend .z0 { background: var(--gen-0); }
+.gauge-legend .z1 { background: var(--gen-1); }
+.gauge-legend .z2 { background: var(--gen-2); }
 .cut .band-label { white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--ink-2); }
 .tile-career .tile-sub b { color: var(--ink-2); }
 .mini-bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; height: 104px; align-items: end; padding-top: 4px; }
@@ -693,6 +720,7 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .sw.line.own2 { background: var(--accent-2); }
 .sw.line.step::after { content: ""; position: absolute; left: 6px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: inherit; box-shadow: 0 0 0 2px var(--surface); }
 .sw.heart { color: var(--heart); font-style: normal; font-size: 13px; }
+.sw.zone { width: 12px; height: 10px; border-radius: 2px; }
 .chart-host { position: relative; width: 100%; min-height: 260px; touch-action: pan-y; border-radius: 8px; }
 .chart-host:focus-visible { outline-offset: 4px; }
 svg.traj { display: block; overflow: visible; }
@@ -723,6 +751,13 @@ svg.traj { display: block; overflow: visible; }
 .traj .cross { stroke: var(--ink-3); stroke-width: 1; pointer-events: none; }
 .traj .wash { fill: var(--ink); fill-opacity: .05; pointer-events: none; }
 .traj .hit { fill: transparent; cursor: crosshair; }
+.traj .after-day { fill: var(--ink); fill-opacity: .045; pointer-events: none; }
+.traj .day-line { stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 4 3; pointer-events: none; }
+.traj .ax.day-mark { fill: var(--accent); font-weight: 700; }
+.gen .zone { fill-opacity: 1; }
+.gen .zone-label { font-size: 11px; font-weight: 700; fill: var(--ink-2); }
+.chart-host.short { min-height: 190px; }
+.view-unit .datebar, .view-pick .datebar { margin: 2px 0 4px; }
 
 /* ------------------------------------------------------------------------ drawer */
 

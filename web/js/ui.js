@@ -216,6 +216,19 @@ export function withTip(node, build) {
   return node;
 }
 
+// A small "i" that explains the thing beside it: on hover, on focus, and on a tap (Safari
+// does not focus a pressed button, so the press shows it too).
+export function infoButton(label, build) {
+  const button = h("button", { type: "button", class: "info-btn", "aria-label": `${label} 설명` }, "i");
+  button.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (tipOwner === button && tip && !tip.hidden) hideTip(button);
+    else showTip(button, build());
+  });
+  return withTip(button, build);
+}
+
 // ---------------------------------------------------------------------------
 // controls
 

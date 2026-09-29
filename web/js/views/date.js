@@ -49,7 +49,9 @@ export function dateView(app) {
   return root;
 }
 
-function dateBar(app) {
+// The day a view is read at: a date field, today, the half anniversaries and the days a
+// season ended. The date tab and the unit tab share it (and the day, through the address).
+export function dateBar(app) {
   const today = todayKst();
   const value = app.state.date || today;
   const presets = anniversaries(app.model.launch, today);

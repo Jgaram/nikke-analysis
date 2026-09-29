@@ -414,13 +414,13 @@ PMI(i,j) = log₂( P(i,j) / (P(i)·P(j)) )      (덱 단위, 함께 쓴 덱이 s
 
 ### 범용도와 경로 — 범용인가, 자기 속성으로 좁아지나 (티어에는 안 들어감)
 
-`analyze.tiers.generality` · `careers`. 사이트 니케 추이 탭의 "범용도 · 경로", `nikke tier --unit` 의 두 줄.
+`analyze.tiers.generality` · `careers`. 사이트 니케 추이 탭의 "범용도"(경로는 그 설명에), `nikke tier --unit` 의 두 줄.
 근거와 시즌 1–41 의 결과는 [lifecycle.md](lifecycle.md) 2·3절.
 
-- **범용도** = X / (O + X). O 는 자기 속성 칸(속성 티어의 값, 우월 코드가 둘이면 높은 쪽), X 는 겪은 다른 속성
-  칸들의 평균. 종합(`mean`) = (O + 4X) / 5 이므로 두 티어가 이미 갖고 있는 비율을 꺼낸 것이다. 0 = 약점이 자기
-  속성일 때만 쓰임, 0.5 = 약점과 무관, 0.5 넘음 = 다른 속성 덱에서 더 쓰임. 띠는 `career.generality_bands`
-  (기본 0.15 · 0.35)로 특화 · 속성 우선 · 범용. 한쪽을 아직 못 겪었거나 O + X 가 0.05 미만이면 비어 있다.
+- **범용도** = min(1, 2X / (O + X)). O 는 자기 속성 칸(속성 티어의 값, 우월 코드가 둘이면 높은 쪽), X 는 겪은 다른 속성
+  칸들의 평균. 종합(`mean`) = (O + 4X) / 5 이므로 두 티어가 이미 갖고 있는 비율을 꺼내 0–1 로 맞춘 것이다. 0 = 약점이 자기
+  속성일 때만 쓰임, 1 = 약점과 무관(X = O. 다른 속성 덱에서 더 쓰여도 1). 띠는 `career.generality_bands`
+  (기본 0.3 · 0.7)로 특화 · 속성 우선 · 범용. `metrics_unit_season.csv` 의 `generality` 는 그 시즌이 끝났을 때의 값. 한쪽을 아직 못 겪었거나 O + X 가 0.05 미만이면 비어 있다.
   티어의 칸을 쓰므로 같은 기억(반감기)을 가진다.
 - **경로**는 수명과 같은 "쓰인 시즌"(시즌 티어 D 이상)으로 센다. 다른 속성이 약점인 시즌에
   `career.generalist_seasons`(기본 3)번 이상 쓰였으면 범용이었던 니케다.
@@ -521,7 +521,7 @@ nikke raid 40 --json
 | `lifespan.retire_after_own_seasons` | 1 | 그 사이 자기 속성 약점 시즌도 이만큼 놓쳤으면 은퇴, 그 뒤 다시 쓰이면 복귀. 0 = 날짜만 |
 | `career.generalist_seasons` | 3 | 다른 속성 약점 시즌에 이만큼 쓰였으면 범용이었던 니케 (경로, 10절) |
 | `career.left_after` | 3 | 범용이었던 니케가 최근 다른 속성 시즌 이만큼 내리 안 쓰였으면 다른 속성에서 빠짐 |
-| `career.generality_bands` | 0.15 · 0.35 | 범용도 띠: 특화 < 첫째 ≤ 속성 우선 < 둘째 ≤ 범용 |
+| `career.generality_bands` | 0.3 · 0.7 | 범용도 띠: 특화 < 첫째 ≤ 속성 우선 < 둘째 ≤ 범용 |
 | `diagnostics.deck_effect_ridge` | 20 | 덱 효과 회귀의 릿지 세기 |
 | `diagnostics.synergy_min_decks` | 20 | 시너지 쌍의 최소 동시 등장 덱 수 |
 

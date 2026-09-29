@@ -37,7 +37,7 @@ CONFIGS = {
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
                              "min_elements_observed": 2, "min_tier": "B", "retire_after_days": 40.0,
                              "retire_after_own_seasons": 0, "generalist_seasons": 2, "left_after": 1,
-                             "generality_bands": (0.2, 0.45)},
+                             "generality_bands": (0.4, 0.9)},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
                                "overall_cuts": [("SS", 1.0), ("S", 0.7), ("A", 0.4), ("B", 0.2), ("C", 0.1),
@@ -206,7 +206,7 @@ def compare(tables: Path, page: dict) -> None:
     both = usage.merge(rows, on=["season", "unit_id"], how="outer", suffixes=("_py", "_js"), indicator=True)
     assert (both["_merge"] == "both").all(), both.loc[both["_merge"] != "both", ["season", "unit_id", "_merge"]]
     for column in ("lift", "presence", "credit", "deck_share", "main_deck_rate", "avg_deck", "usage_rate", "overall",
-                   "element_lift"):
+                   "element_lift", "generality"):
         _close(both[f"{column}_py"], both[f"{column}_js"], f"season rows: {column}")
     for column in ("rankers", "best_rank", "usage_rank", "in_deck_1", "in_deck_2", "in_deck_3", "in_deck_4",
                    "in_deck_5", "tier", "overall_tier", "element_tier", "element_seasons", "elements_observed"):

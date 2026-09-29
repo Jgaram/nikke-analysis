@@ -3,6 +3,7 @@
 
 import { h, hideTip, kst, todayKst } from "../ui.js";
 import { unitCard, filterGroups, standingTip, fold } from "./common.js";
+import { dateBar } from "./date.js";
 
 const FOLD = "pick:bottom";
 
@@ -80,17 +81,14 @@ export function pickView(app) {
   const t = kst(view.moment);
   const now = !state.date || state.date === todayKst();
   return h("div", { class: "view view-pick" },
+    dateBar(app),
     h("div", { class: "pick-bar" },
       h("div", { class: "picker" }, h("span", { class: "picker-icon", "aria-hidden": "true" }, "⌕"), input),
       filters(groups.slice(0, 2))),
     filters(groups.slice(2), clear),
     h("section", { class: "panel pick-panel", "aria-label": "니케 목록" },
       h("div", { class: "panel-head" }, h("h3", null, "니케 고르기"),
-        h("span", { class: "muted small" }, `종합 티어 순 · ${t.y}-${t.m}-${t.d}${now ? " 지금" : " 정오"} 기준`,
-          !now ? h("a", {
-            class: "link", href: app.href("unit", null, { d: "" }),
-            onclick: (e) => { e.preventDefault(); app.go({ date: null }, { replace: true }); },
-          }, " 오늘로") : null, " · ", count)),
+        h("span", { class: "muted small" }, `종합 티어 순 · ${t.y}-${t.m}-${t.d}${now ? " 지금" : " 정오"} 기준 · `, count)),
       grid,
       h("p", { class: "note" },
         "종합 티어가 높은 니케부터 왼쪽 위에서 채운다. 숫자 = 종합 티어의 값 · * = 잠정 · ",

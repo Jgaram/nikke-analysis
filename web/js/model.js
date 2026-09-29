@@ -461,8 +461,9 @@ export function generalityBand(value, params) {
 }
 
 // Per unit of the standing: ownLevel (its element tier's lift, the higher of two), otherLevel
-// (the mean of its other elements' slots seen), generality = other / (own + other) - NaN
-// until both are seen, or with own + other under GENERALITY_MIN_LEVEL.
+// (the mean of its other elements' slots seen), generality = min(1, 2 x other / (own + other)):
+// 0 = fielded only in its own element's seasons, 1 = whatever the weakness - NaN until both
+// are seen, or with own + other under GENERALITY_MIN_LEVEL.
 export function generality(standing, params) {
   const own = new Map();
   for (const r of standing.elements) {
@@ -474,7 +475,7 @@ export function generality(standing, params) {
     const ownLevel = own.has(o.u) ? own.get(o.u) : NaN;
     const otherLevel = others.length ? others.reduce((a, b) => a + b, 0) / others.length : NaN;
     const level = ownLevel + otherLevel;
-    const value = level >= GENERALITY_MIN_LEVEL ? otherLevel / level : NaN;
+    const value = level >= GENERALITY_MIN_LEVEL ? Math.min(1, (2 * otherLevel) / level) : NaN;
     out.set(o.u, { ownLevel, otherLevel, generality: value, band: generalityBand(value, params) });
   }
   return out;
@@ -527,9 +528,11 @@ export function tierHistory(model, population, params) {
     const standing = standings(model, population, moment, params, treasured);
     const here = new Map();
     const elementOf = new Map(standing.elements.filter((r) => r.element === s.weak).map((r) => [r.u, r]));
+    const general = generality(standing, params);
     for (const r of s.rows) {
       const o = standing.overallByUnit.get(r.u);
       const e = elementOf.get(r.u);
+      const g = general.get(r.u);
       here.set(r.u, {
         overall: o ? o.overall : NaN,
         overallTier: o ? o.tier : "",
@@ -539,6 +542,8 @@ export function tierHistory(model, population, params) {
         elementTier: e ? e.tier : "",
         elementSeasons: e ? e.seasons : null,
         counted: !!e,
+        generality: g ? g.generality : NaN,
+        generalityBand: g ? g.band : "",
       });
     }
     history.set(s.season, here);

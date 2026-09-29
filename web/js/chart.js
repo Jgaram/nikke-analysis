@@ -5,7 +5,7 @@
 // are the season/element cuts; the overall line is tiered by the overall's own, lower cuts.
 
 import { assignTier } from "./model.js";
-import { h, s, num, pct, elementIcon, ELEMENT_KO, day, shortDay, showTip, moveTip, hideTip, tierBadge, unitName } from "./ui.js";
+import { h, s, num, pct, elementIcon, ELEMENT_KO, day, shortDay, showTip, moveTip, hideTip, tierBadge, unitName, kst } from "./ui.js";
 
 const HEIGHT = 300;
 const MARGIN = { l: 40, r: 34, t: 24, b: 44 };
@@ -21,7 +21,20 @@ function barPath(x0, base, w, height, r) {
 }
 
 // records: [{season (summary entry), row, hist}] in season order; own: the elements the unit counts as.
-export function trajectoryChart(app, u, records, { own, treasureAt = null }) {
+// The chosen day on a season axis: a dashed line after the last season begun by then, the
+// seasons after it washed out. ``at`` null (today) draws nothing.
+function dayMarker(svg, records, at, { m, band, top, bottom }) {
+  if (at == null) return;
+  const k = records.filter((r) => r.season.start != null && r.season.start <= at).length;
+  if (k >= records.length) return;
+  const x = m.l + band * k;
+  svg.append(s("rect", { class: "after-day", x, y: top, width: band * (records.length - k), height: bottom - top }));
+  svg.append(s("line", { class: "day-line", x1: x, x2: x, y1: top - 6, y2: bottom }));
+  const t = kst(at);
+  svg.append(s("text", { class: "ax day-mark", x: x + 4, y: top + 10 }, `기준일 ${t.m}-${t.d}`));
+}
+
+export function trajectoryChart(app, u, records, { own, treasureAt = null, at = null }) {
   const cuts = app.state.params.cuts;
   const unit = app.model.units[u];
   const firstTreasure = records.findIndex((r) => r.row.treasure);
@@ -196,6 +209,8 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null }) {
       return { element, cls, updates };
     });
 
+    dayMarker(svg, records, at, { m, band, top: m.t, bottom: base });
+
     // the treasure
     if (firstTreasure > 0) {
       const tx = m.l + band * firstTreasure;
@@ -271,5 +286,164 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null }) {
     if (w && w !== lastWidth) { lastWidth = w; draw(); }
   });
   observer.observe(host);
+  return root;
+}
+
+// ---------------------------------------------------------------------------
+// One unit's generality once each season was over: a line on 0-1 over the bands
+// (특화 · 속성 우선 · 범용), broken at the treasure and where there is no value.
+
+const G_HEIGHT = 190;
+const G_MARGIN = { l: 40, r: 64, t: 16, b: 30 };
+export const BAND_KO = ["특화", "속성 우선", "범용"];
+
+export function generalityChart(app, u, records, { treasureAt = null, at = null } = {}) {
+  const [low, high] = app.state.params.generalityBands;
+  const unit = app.model.units[u];
+  const firstTreasure = records.findIndex((r) => r.row.treasure);
+  const value = (rec) => {
+    const g = rec.hist?.generality;
+    return g == null || Number.isNaN(g) ? null : g;
+  };
+  const bandOf = (g) => (g >= high ? 2 : g >= low ? 1 : 0);
+  const host = h("div", { class: "chart-host short", tabindex: "0", role: "img",
+    "aria-label": `${unitName(unit)} 시즌별 범용도, 시즌 ${records[0]?.season.season}부터 ${records[records.length - 1]?.season.season}까지` });
+  const root = h("div", { class: "chart" }, h("div", { class: "legend" },
+    h("span", { class: "lg" }, h("i", { class: "sw line ink" }), "범용도 (그 시즌이 끝났을 때)"),
+    h("span", { class: "lg" }, h("i", { class: "sw zone z0" }), `특화 < ${num(low)}`),
+    h("span", { class: "lg" }, h("i", { class: "sw zone z1" }), "속성 우선"),
+    h("span", { class: "lg" }, h("i", { class: "sw zone z2" }), `범용 ≥ ${num(high)}`),
+    firstTreasure > 0 ? h("span", { class: "lg" }, h("i", { class: "sw heart" }, "♥"), "애장품") : null), host);
+
+  let hover = -1;
+  let geometry = null;
+
+  function tipFor(i) {
+    const rec = records[i];
+    const info = rec.season.info;
+    const g = value(rec);
+    return h("div", { class: "tip" },
+      h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
+      h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
+        rec.row.elementMatch ? h("span", { class: "pill" }, "▶ 자기 속성") : null,
+        !rec.season.final ? h("span", { class: "muted" }, " · 진행 중") : null),
+      h("dl", { class: "tip-list" },
+        h("dt", null, "범용도"), h("dd", null, g != null ? h("b", null, `${BAND_KO[bandOf(g)]} ${num(g)}`)
+          : h("span", { class: "muted" }, "없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임"))),
+      i === firstTreasure && treasureAt != null ? h("div", { class: "tip-notes" },
+        h("span", { class: "pill heart" }, `♥ 애장품 ${day(treasureAt)} — 여기부터 애장품을 낀 시즌만으로`)) : null);
+  }
+
+  function setHover(i, pointer = null) {
+    if (i === hover && i >= 0 && pointer && geometry) { moveTip(host, pointer); return; }
+    hover = i;
+    if (!geometry) return;
+    const { svg, x, y } = geometry;
+    const cross = svg.querySelector(".cross");
+    for (const dot of svg.querySelectorAll(".hover-dot")) dot.remove();
+    if (i < 0) { cross.setAttribute("visibility", "hidden"); hideTip(host); return; }
+    const cx = x(i);
+    cross.setAttribute("x1", cx);
+    cross.setAttribute("x2", cx);
+    cross.setAttribute("visibility", "visible");
+    const g = value(records[i]);
+    if (g != null) svg.append(s("circle", { class: "hover-dot ink", cx, cy: y(g), r: 4.5 }));
+    const box = host.getBoundingClientRect();
+    showTip(host, tipFor(i), pointer || { x: box.left + cx, y: box.top + y(g ?? 0.5) });
+  }
+
+  function draw() {
+    const width = Math.max(300, Math.floor(host.clientWidth));
+    const narrow = width < 560;
+    const m = { ...G_MARGIN, l: narrow ? 34 : G_MARGIN.l, r: narrow ? 56 : G_MARGIN.r };
+    const H = G_HEIGHT;
+    const iw = width - m.l - m.r;
+    const ih = H - m.t - m.b;
+    const n = records.length;
+    const band = iw / Math.max(n, 1);
+    const x = (i) => m.l + band * (i + 0.5);
+    const y = (v) => m.t + ih * (1 - v);
+    const base = y(0);
+    const svg = s("svg", { width, height: H, viewBox: `0 0 ${width} ${H}`, class: "traj gen" });
+
+    const zones = s("g", { class: "bands" });
+    [[0, low], [low, high], [high, 1]].forEach(([a, b], k) => {
+      if (b > a) zones.append(s("rect", { class: `zone z${k}`, x: m.l, y: y(b), width: iw, height: y(a) - y(b) }));
+      if (b - a >= 0.12) zones.append(s("text", { class: `ax zone-label z${k}`, x: m.l + iw + 8, y: (y(a) + y(b)) / 2 + 4 }, BAND_KO[k]));
+    });
+    for (const v of [0, low, high, 1]) {
+      zones.append(s("line", { class: v === 0 ? "axis" : "grid", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }));
+      zones.append(s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, v === 0 || v === 1 ? String(v) : num(v)));
+    }
+    svg.append(zones);
+
+    // the line, broken at the treasure and at seasons with no value
+    const parts = [];
+    let cur = [];
+    records.forEach((rec, i) => {
+      if (i === firstTreasure && firstTreasure > 0) { if (cur.length) parts.push(cur); cur = []; }
+      const g = value(rec);
+      if (g == null) { if (cur.length) parts.push(cur); cur = []; return; }
+      cur.push([i, g]);
+    });
+    if (cur.length) parts.push(cur);
+    for (const part of parts) {
+      if (part.length > 1) svg.append(s("path", { class: "line ink", d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
+      else svg.append(s("circle", { class: "dot ink", cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
+    }
+    const lastPart = parts[parts.length - 1];
+    if (lastPart) {
+      const [i, v] = lastPart[lastPart.length - 1];
+      svg.append(s("circle", { class: "dot ink", cx: x(i), cy: y(v), r: 4 }));
+    }
+
+    dayMarker(svg, records, at, { m, band, top: m.t, bottom: base });
+    if (firstTreasure > 0) {
+      const tx = m.l + band * firstTreasure;
+      svg.append(s("line", { class: "treasure", x1: tx, x2: tx, y1: m.t - 4, y2: base }));
+      svg.append(s("text", { class: "treasure-mark", x: tx, y: m.t - 5, "text-anchor": "middle" }, "♥"));
+    }
+
+    // season numbers, as on the chart above
+    const every = Math.max(1, Math.ceil(26 / band));
+    const axis = s("g", { class: "xaxis" });
+    let lastX = -1e9;
+    records.forEach((rec, i) => {
+      const edge = i === 0 || i === n - 1;
+      if (!edge && rec.season.season % every !== 0) return;
+      if (x(i) - lastX < 24 && i !== n - 1) return;
+      lastX = x(i);
+      axis.append(s("text", { class: "ax", x: x(i), y: base + 18, "text-anchor": "middle" }, rec.season.season));
+    });
+    axis.append(s("text", { class: "ax", x: m.l - 8, y: base + 18, "text-anchor": "end" }, "시즌"));
+    svg.append(axis);
+
+    svg.append(s("line", { class: "cross", x1: 0, x2: 0, y1: m.t, y2: base, visibility: "hidden" }));
+    const hit = s("rect", { class: "hit", x: m.l, y: 0, width: iw, height: H });
+    svg.append(hit);
+    const index = (clientX) => {
+      const box = svg.getBoundingClientRect();
+      return Math.max(0, Math.min(n - 1, Math.floor((clientX - box.left - m.l) / band)));
+    };
+    hit.addEventListener("pointermove", (e) => setHover(index(e.clientX), { x: e.clientX, y: e.clientY }));
+    hit.addEventListener("pointerdown", (e) => setHover(index(e.clientX), { x: e.clientX, y: e.clientY }));
+    hit.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") setHover(-1); });
+    geometry = { svg, x, y };
+    host.replaceChildren(svg);
+    if (hover >= 0) setHover(hover);
+  }
+
+  host.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      setHover(Math.max(0, Math.min(records.length - 1, (hover < 0 ? records.length : hover) + (e.key === "ArrowRight" ? 1 : -1))));
+    } else if (e.key === "Escape") setHover(-1);
+  });
+  host.addEventListener("blur", () => setHover(-1));
+  let lastWidth = 0;
+  new ResizeObserver(() => {
+    const w = Math.floor(host.clientWidth);
+    if (w && w !== lastWidth) { lastWidth = w; draw(); }
+  }).observe(host);
   return root;
 }

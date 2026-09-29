@@ -56,6 +56,8 @@ function debutHelp(app) {
     h("p", null, `니케마다 처음 쓰인 시즌(시즌 티어 ${p.minTier} 이상)부터 ${p.metaWindowDays}일 동안의 자기 속성·다른 속성 기여도 평균과 범용도.`),
     h("p", { class: "muted" }, `그 기간이 끝났고, 그 기간의 자기 속성이나 다른 속성 기여도가 시즌 티어 ${p.curveMinTier} 이상인 니케만 점으로 찍습니다. `
       + "한쪽 시즌만 겪었으면 범용도가 없어 빠집니다."),
+    h("p", { class: "muted" }, "제곱근 눈금은 0 근처(특화)를 넓게 펼칩니다 — 0.3 이 세로축의 약 40% 높이. 로그 눈금은 쓰지 않습니다: "
+      + "다른 속성 시즌에 한 번도 안 쓰인 니케(범용도 0)를 찍을 수 없고, 0.002 와 0.02 처럼 뜻이 같은 차이를 크게 벌려서."),
     paramsNote([
       [PARAM.used, "처음 쓰인 시즌"],
       [PARAM.window, "첫 기간의 길이"],
@@ -205,25 +207,33 @@ function debutPanel(app) {
   const host = h("div", { class: "chart-host lc-host", style: { minHeight: "260px" }, role: "img",
     "aria-label": "니케마다 첫 1년의 범용도, 처음 쓰인 시즌 순" });
   const [low, high] = params.generalityBands;
+  // square root by default: most debuts sit near 0 or near 1, and the root gives the specialists
+  // room without the log's trouble with 0 (a unit never fielded in another element's seasons)
+  const scale = state.debutScale || "sqrt";
+  const f = scale === "sqrt" ? Math.sqrt : (v) => v;
   let lastWidth = 0;
   function draw() {
     const width = Math.max(300, Math.floor(host.clientWidth));
-    const height = 260;
+    const height = scale === "sqrt" ? 300 : 260;
     const m = { l: 40, r: 70, t: 14, b: 30 };
     const iw = width - m.l - m.r, ih = height - m.t - m.b;
     const n = seasons.length;
     const step = iw / Math.max(n, 1);
     const pos = new Map(seasons.map((s0, i) => [s0.season, i]));
     const x = (season) => m.l + step * ((pos.get(season) ?? 0) + 0.5);
-    const y = (v) => m.t + ih * (1 - Math.min(v, GENERALITY_MAX) / GENERALITY_MAX);
+    const y = (v) => m.t + ih * (1 - f(Math.min(v, GENERALITY_MAX)) / f(GENERALITY_MAX));
     const svg = s("svg", { width, height, viewBox: `0 0 ${width} ${height}`, class: "traj gen debut-dots" });
     [[0, low, "특화"], [low, high, "속성 우선"], [high, GENERALITY_MAX, "범용"]].forEach(([a, b, name], k) => {
       svg.append(s("rect", { class: `zone z${k}`, x: m.l, y: y(b), width: iw, height: y(a) - y(b) }));
       if (y(a) - y(b) >= 16) svg.append(s("text", { class: `ax zone-label z${k}`, x: m.l + iw + 8, y: (y(a) + y(b)) / 2 + 4 }, name));
     });
-    for (const v of [0, 1, GENERALITY_MAX]) {
+    const marks = [...new Set([0, ...(scale === "sqrt" ? [0.05] : []), low, high, 1, GENERALITY_MAX])].sort((a, b) => a - b);
+    let lastY = Infinity;
+    for (const v of marks) {
       svg.append(s("line", { class: v === 0 ? "axis" : "grid", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }));
-      svg.append(s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, String(v)));
+      if (lastY - y(v) < 11) continue; // a label right on top of the one below stays off
+      lastY = y(v);
+      svg.append(s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, Number.isInteger(v) ? String(v) : num(v)));
     }
     // several units in one season spread sideways a little
     const bySeason = new Map();
@@ -262,6 +272,9 @@ function debutPanel(app) {
   }).observe(host);
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "새 니케의 첫 1년"), infoButton("새 니케의 첫 1년", () => debutHelp(app))),
+      segmented([{ value: "sqrt", label: "제곱근 눈금", title: "0 근처를 넓게 — 특화 니케가 겹치지 않게" },
+        { value: "linear", label: "보통 눈금", title: "범용도 그대로" }], scale,
+      (v) => { state.debutScale = v; app.rerender(); }, { label: "세로축 눈금" }),
       h("span", { class: "muted small" }, `점 하나가 니케 하나(색 = 속성) · 처음 쓰인 시즌부터 ${params.metaWindowDays}일 동안의 범용도 · `
         + `그 기간이 끝났고 시즌 티어 ${params.curveMinTier} 이상으로 쓰인 니케 ${list.length}명 · 누르면 그 니케로`)),
     host);

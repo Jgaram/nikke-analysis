@@ -79,6 +79,7 @@ def build_timeline(*, out_dir: Path | None = None) -> dict[str, Any]:
         notice_list,
         enikk_meta.load_seasons(),
         releases=availability(_roster_rows(directory)),
+        bosses=soloraid.announced_bosses(notices.load_raid_posts()),
         out_dir=directory,
     )
 

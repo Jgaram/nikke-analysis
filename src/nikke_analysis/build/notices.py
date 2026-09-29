@@ -22,7 +22,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
-from ..collect.notices import NAVER_SOURCE, OFFICIAL_SOURCE
+from ..collect.notices import NAVER_RAID_SOURCE, NAVER_SOURCE, OFFICIAL_SOURCE
 from ..paths import processed_dir
 from ..util.kdate import KST
 from ..util.snapshot import list_runs
@@ -188,10 +188,10 @@ def parse_naver(payload: bytes, url: str = "") -> Notice | None:
     )
 
 
-def load_notices(root: Path | None = None) -> list[Notice]:
+def load_notices(root: Path | None = None, sources: Iterable[tuple[str, Any]] | None = None) -> list[Notice]:
     """The newest stored copy of every notice, oldest publication first."""
     latest: dict[str, Notice] = {}
-    for source, parser in ((OFFICIAL_SOURCE, parse_official), (NAVER_SOURCE, parse_naver)):
+    for source, parser in sources or ((OFFICIAL_SOURCE, parse_official), (NAVER_SOURCE, parse_naver)):
         for run in list_runs(source, root=root):  # oldest run first, so later copies win
             for entry in run.entries:
                 try:
@@ -202,6 +202,15 @@ def load_notices(root: Path | None = None) -> list[Notice]:
                 if notice is not None:
                     latest[notice.notice_id] = notice
     return sorted(latest.values(), key=lambda n: (n.published_at, n.notice_id))
+
+
+def load_raid_posts(root: Path | None = None) -> list[Notice]:
+    """The lounge's Solo Raid posts (one or two a season, naming its boss), oldest first.
+
+    Kept apart from the notices: they repeat the schedule the notices already
+    give, and only their boss names are read.
+    """
+    return load_notices(root, ((NAVER_RAID_SOURCE, parse_naver),))
 
 
 def build(*, notices: list[Notice] | None = None, out_dir: Path | None = None) -> dict[str, Any]:

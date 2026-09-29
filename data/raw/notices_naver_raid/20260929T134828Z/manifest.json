@@ -1,0 +1,783 @@
+{
+  "source": "notices_naver_raid",
+  "run_id": "20260929T134828Z",
+  "sealed_at": "2026-09-29T13:49:11+00:00",
+  "entry_count": 48,
+  "entries": [
+    {
+      "filename": "feed/8207413.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8207413",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "c391e4eaf37ba985ad429699bb0e15246aea3c06e66ca71fa951d060d1a1b68b",
+      "bytes": 8714,
+      "fetched_at": "2026-09-29T13:48:31+00:00",
+      "meta": {
+        "feed_id": "8207413",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260918170036",
+        "updated": "20260918170036",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/8060044.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8060044",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "9c76860467fb36abd32d5c12db90a19dcf7600b99a4f6e912f37117b126698d6",
+      "bytes": 8861,
+      "fetched_at": "2026-09-29T13:48:31+00:00",
+      "meta": {
+        "feed_id": "8060044",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260814170042",
+        "updated": "20260819100153",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7911818.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7911818",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "0243e206d03519ed610401347d83d4c0247d3a79da3accb63b050962edacd73e",
+      "bytes": 8958,
+      "fetched_at": "2026-09-29T13:48:32+00:00",
+      "meta": {
+        "feed_id": "7911818",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260710170035",
+        "updated": "20260710170035",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7877359.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7877359",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "42880819a8f5abba328508ef459d353f4d703bd72509edbfae4eca5d7a586325",
+      "bytes": 8842,
+      "fetched_at": "2026-09-29T13:48:33+00:00",
+      "meta": {
+        "feed_id": "7877359",
+        "title": "솔로 레이드 재오픈 안내",
+        "created": "20260703120040",
+        "updated": "20260703120040",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7817596.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7817596",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "05ffb996464d854291d7cb8bd1a6765abad71e0a9332e68a2fc6dec3a0207d57",
+      "bytes": 8343,
+      "fetched_at": "2026-09-29T13:48:33+00:00",
+      "meta": {
+        "feed_id": "7817596",
+        "title": "솔로 레이드 오픈 안내",
+        "created": "20260618203028",
+        "updated": "20260618203028",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7699562.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7699562",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "b6ead004eaf2d9fbace22a5730d542de0eac112b98218b3a305dd295128481d7",
+      "bytes": 10248,
+      "fetched_at": "2026-09-29T13:48:33+00:00",
+      "meta": {
+        "feed_id": "7699562",
+        "title": "솔로 레이드 오픈 예정(5/28 내용 수정)",
+        "created": "20260522170039",
+        "updated": "20260528162742",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7576019.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7576019",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "9750d41580b42e82bba48d80d343da34d53bd61c0df6395b7377d1803aec6519",
+      "bytes": 8753,
+      "fetched_at": "2026-09-29T13:48:34+00:00",
+      "meta": {
+        "feed_id": "7576019",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260424170039",
+        "updated": "20260424170039",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7409051.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7409051",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "0c076ae1e5f3121bde0360bd2fa2fbae09e5a666c75343f6b3267b4341d26eb3",
+      "bytes": 8413,
+      "fetched_at": "2026-09-29T13:48:35+00:00",
+      "meta": {
+        "feed_id": "7409051",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260313170032",
+        "updated": "20260313170032",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7298679.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7298679",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "ff32a409f782d89c787d0c5fea7edbe44f809bf783bebee273b66eb694f80770",
+      "bytes": 8281,
+      "fetched_at": "2026-09-29T13:48:35+00:00",
+      "meta": {
+        "feed_id": "7298679",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260213170039",
+        "updated": "20260213170039",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7138616.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7138616",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "117199680440e3a7deeee0b35ea955476612367002e495fc3c2ec25f2708b6e9",
+      "bytes": 8704,
+      "fetched_at": "2026-09-29T13:48:36+00:00",
+      "meta": {
+        "feed_id": "7138616",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20260102170033",
+        "updated": "20260102170033",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/7034442.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/7034442",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "682417f26296576a39847bd2f413adb84f4e21e45d0a5c3227fb963dc691d7f6",
+      "bytes": 8767,
+      "fetched_at": "2026-09-29T13:48:37+00:00",
+      "meta": {
+        "feed_id": "7034442",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20251205170032",
+        "updated": "20251205170032",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/6916387.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/6916387",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "dc2715ce872fbe0547d6a04461f2e5562f07a928123445129cc087c77bdccc93",
+      "bytes": 8671,
+      "fetched_at": "2026-09-29T13:48:38+00:00",
+      "meta": {
+        "feed_id": "6916387",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20251107170129",
+        "updated": "20251107170129",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/6748668.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/6748668",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "767770b5bc4e22afcde38d0123f02891e003787b9acc5a5e16e0eabd603231ae",
+      "bytes": 8978,
+      "fetched_at": "2026-09-29T13:48:39+00:00",
+      "meta": {
+        "feed_id": "6748668",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20251003170031",
+        "updated": "20251003170031",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/6674249.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/6674249",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "21d262b71e97d6e49f70e8c30438e3a9eb7ddf55d7a2c230cd4ed5b9290924e3",
+      "bytes": 8593,
+      "fetched_at": "2026-09-29T13:48:39+00:00",
+      "meta": {
+        "feed_id": "6674249",
+        "title": "솔로 레이드 오픈 안내",
+        "created": "20250916120030",
+        "updated": "20250916120057",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/6533571.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/6533571",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "37cd7bc1dbb09761fddea33d2752fd587550e108e28faefa0a631bd2d9917276",
+      "bytes": 8718,
+      "fetched_at": "2026-09-29T13:48:40+00:00",
+      "meta": {
+        "feed_id": "6533571",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250815170037",
+        "updated": "20250815170037",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/6383981.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/6383981",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "ca417f73575bda3c5781af367d5ec1b70f690f50d32785cafc3445a52720d195",
+      "bytes": 8268,
+      "fetched_at": "2026-09-29T13:48:41+00:00",
+      "meta": {
+        "feed_id": "6383981",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250718170036",
+        "updated": "20250724172606",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/6193554.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/6193554",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "9de1a221c1d25fc3c3051f82ab7129fbb887de4b62c16917d324b56ca00d6ad9",
+      "bytes": 9281,
+      "fetched_at": "2026-09-29T13:48:42+00:00",
+      "meta": {
+        "feed_id": "6193554",
+        "title": "솔로 레이드 오픈 안내",
+        "created": "20250613170031",
+        "updated": "20250619120805",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5968589.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5968589",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "700f8f660134110be0aa3fe015fe22733a64084775973ce52e4140185e665332",
+      "bytes": 8608,
+      "fetched_at": "2026-09-29T13:48:43+00:00",
+      "meta": {
+        "feed_id": "5968589",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250501170032",
+        "updated": "20250501170032",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5815120.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5815120",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1a586ed9d2dc8a7ab83579736652e33c5381f93989986c3cbada143c7a87e0d9",
+      "bytes": 8723,
+      "fetched_at": "2026-09-29T13:48:44+00:00",
+      "meta": {
+        "feed_id": "5815120",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250328170057",
+        "updated": "20250328170057",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5689969.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5689969",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "f2757ddf8895c2371f93f3b5bc0e1eff01d2d719784a2b79f4d72add5e27b805",
+      "bytes": 10781,
+      "fetched_at": "2026-09-29T13:48:45+00:00",
+      "meta": {
+        "feed_id": "5689969",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250228170054",
+        "updated": "20250228170054",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5558577.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5558577",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "92a372f999276232950f3ceb5d2c95e2b19abeb1496b4971525d6ffa75e53de4",
+      "bytes": 8729,
+      "fetched_at": "2026-09-29T13:48:45+00:00",
+      "meta": {
+        "feed_id": "5558577",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250131170048",
+        "updated": "20250131170048",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5414775.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5414775",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "d57f98eb72e69a03cc453e1da9b17fa7ae63af97cb1668f2d40aed82ec51cc5d",
+      "bytes": 8777,
+      "fetched_at": "2026-09-29T13:48:46+00:00",
+      "meta": {
+        "feed_id": "5414775",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20250103203028",
+        "updated": "20250103203028",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5250302.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5250302",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1a01acf233dd81bf3052d2056450390636d416f32755c73dba4e394020f47a10",
+      "bytes": 8403,
+      "fetched_at": "2026-09-29T13:48:47+00:00",
+      "meta": {
+        "feed_id": "5250302",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20241206170038",
+        "updated": "20241206170038",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/5058745.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/5058745",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "fe07bcb442a0aaabf81946a7397ccbf8025499bfca763313664539c67acea3d8",
+      "bytes": 8357,
+      "fetched_at": "2026-09-29T13:48:48+00:00",
+      "meta": {
+        "feed_id": "5058745",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20241107120039",
+        "updated": "20241107120039",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/4989013.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/4989013",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "5132f7d52a329122c8005171bbb951d6366f453723ca728c0c20276845855770",
+      "bytes": 8340,
+      "fetched_at": "2026-09-29T13:48:48+00:00",
+      "meta": {
+        "feed_id": "4989013",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20241028191815",
+        "updated": "20241028191815",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/4823662.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/4823662",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "2de6330782a6ad90a85ff155403bf20610c8505ec7b55a42b9fe6cbc0bccc8b9",
+      "bytes": 8729,
+      "fetched_at": "2026-09-29T13:48:49+00:00",
+      "meta": {
+        "feed_id": "4823662",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20240927170037",
+        "updated": "20240927170037",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/4691557.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/4691557",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1d2e6ddeed4a413e68da26ba49458c7ad1f1db9f3e9345e49b7f8b78ca68402a",
+      "bytes": 11059,
+      "fetched_at": "2026-09-29T13:48:50+00:00",
+      "meta": {
+        "feed_id": "4691557",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20240830170041",
+        "updated": "20240830170041",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/4514386.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/4514386",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "a080a2ac488ed0c587b081737afb5a813de527eb95cdf22811ed4543005c43be",
+      "bytes": 8445,
+      "fetched_at": "2026-09-29T13:48:51+00:00",
+      "meta": {
+        "feed_id": "4514386",
+        "title": "솔로 레이드 오픈 예정",
+        "created": "20240726170035",
+        "updated": "20240726170035",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/4375422.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/4375422",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1b12d9997d8c4d2844eb1145e60addb906284929cd558c6988d5dcc8cb7f6c13",
+      "bytes": 8752,
+      "fetched_at": "2026-09-29T13:48:52+00:00",
+      "meta": {
+        "feed_id": "4375422",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20240705170033",
+        "updated": "20240705170033",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/4191267.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/4191267",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "695b8091ab5b6b446fdb4f60c0104741c2216cf56d40e49c544f71fdfeacdbff",
+      "bytes": 9005,
+      "fetched_at": "2026-09-29T13:48:53+00:00",
+      "meta": {
+        "feed_id": "4191267",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20240605210013",
+        "updated": "20240605210013",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3975245.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3975245",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "e1dfef27328127529134943f09756b9c75da673c4c57a646b170521178b79a50",
+      "bytes": 8835,
+      "fetched_at": "2026-09-29T13:48:54+00:00",
+      "meta": {
+        "feed_id": "3975245",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20240426160036",
+        "updated": "20240426160036",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3841536.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3841536",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "c898aa2ae1c993d69efb139233053b74c31e90bd52011a9f6eb41ca50f2798b3",
+      "bytes": 7847,
+      "fetched_at": "2026-09-29T13:48:56+00:00",
+      "meta": {
+        "feed_id": "3841536",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20240329160037",
+        "updated": "20240403174424",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3668690.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3668690",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "d066474fa55daac9b18988a9c631bcd610dc352ead43e7bce8c22b8affdaaa21",
+      "bytes": 8100,
+      "fetched_at": "2026-09-29T13:48:57+00:00",
+      "meta": {
+        "feed_id": "3668690",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20240301180037",
+        "updated": "20240301180037",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3523796.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3523796",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1a46b62d025edc3bbde304b905b72e67cd62e07019034dc2265b0f1edc2afb56",
+      "bytes": 7724,
+      "fetched_at": "2026-09-29T13:48:58+00:00",
+      "meta": {
+        "feed_id": "3523796",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20240202160034",
+        "updated": "20240202160034",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3354291.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3354291",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1fe2d21a7e4f2e78e51789cd70ef4ee478a6b1436c7a6a2df332a5c1f8943bb5",
+      "bytes": 7524,
+      "fetched_at": "2026-09-29T13:48:59+00:00",
+      "meta": {
+        "feed_id": "3354291",
+        "title": "【솔로 레이드 오픈 예정】",
+        "created": "20231229161035",
+        "updated": "20231229161035",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3276396.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3276396",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "bd21cd2f292906a98df25dd69b797c6e67f9db01839fb7634a2ca5c957c9f7db",
+      "bytes": 7724,
+      "fetched_at": "2026-09-29T13:48:59+00:00",
+      "meta": {
+        "feed_id": "3276396",
+        "title": "﻿【솔로 레이드 오픈 안내】",
+        "created": "20231214120552",
+        "updated": "20231214120552",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3198911.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3198911",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "de5e7e19fca90271786cfad2c48df85e03f3b88a1b8fa0718d84b2644291a46c",
+      "bytes": 7422,
+      "fetched_at": "2026-09-29T13:49:00+00:00",
+      "meta": {
+        "feed_id": "3198911",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20231201110037",
+        "updated": "20231201110037",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/3022731.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/3022731",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "c4b54743d3a5382cc49b36d6ccea18e7201d0817018beea2bc0e7bd6b4a426c7",
+      "bytes": 7292,
+      "fetched_at": "2026-09-29T13:49:00+00:00",
+      "meta": {
+        "feed_id": "3022731",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20231103180038",
+        "updated": "20231103180038",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2878411.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2878411",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "93f83b9a5f10defb2b0a8c89683b55912574936781ea90c3b9f9a282ea6ca531",
+      "bytes": 7330,
+      "fetched_at": "2026-09-29T13:49:01+00:00",
+      "meta": {
+        "feed_id": "2878411",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20231006110238",
+        "updated": "20231006110238",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2769457.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2769457",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "fe5b941f93d66cb244e7891931565433bce795cd99adef23222e0700ef27c12a",
+      "bytes": 8332,
+      "fetched_at": "2026-09-29T13:49:02+00:00",
+      "meta": {
+        "feed_id": "2769457",
+        "title": "【솔로 레이드 오픈 안내】",
+        "created": "20230914120035",
+        "updated": "20230914120035",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2744161.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2744161",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "d867b7ce952f28440826d125e9948f044131c7e3035ffe2f12a922691d3d84f4",
+      "bytes": 7122,
+      "fetched_at": "2026-09-29T13:49:02+00:00",
+      "meta": {
+        "feed_id": "2744161",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20230908180032",
+        "updated": "20230908180032",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2570361.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2570361",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "6ddc39ef02935f63bd1f92ab793c97069971d5c618058816dff2855ad7214054",
+      "bytes": 6698,
+      "fetched_at": "2026-09-29T13:49:03+00:00",
+      "meta": {
+        "feed_id": "2570361",
+        "title": "﻿【솔로 레이드 오픈 안내】",
+        "created": "20230810120036",
+        "updated": "20230810120036",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2501590.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2501590",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1a4574f1b431325ca870d04b721898dec3ffdd4932d0bc1f3b9b090c4147f6f3",
+      "bytes": 9367,
+      "fetched_at": "2026-09-29T13:49:03+00:00",
+      "meta": {
+        "feed_id": "2501590",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20230804110034",
+        "updated": "20230804110034",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2363849.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2363849",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "360ab49890ac59a400770894a722501278732b5c28f6abfd7a3fa378a9058c0d",
+      "bytes": 6148,
+      "fetched_at": "2026-09-29T13:49:04+00:00",
+      "meta": {
+        "feed_id": "2363849",
+        "title": "﻿【솔로 레이드 오픈 안내】",
+        "created": "20230713122043",
+        "updated": "20230713122148",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2336639.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2336639",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "af98b584e72c7e07c043f80fc42d04cfbacc253a05dfb3fd9435684add2517c3",
+      "bytes": 10614,
+      "fetched_at": "2026-09-29T13:49:04+00:00",
+      "meta": {
+        "feed_id": "2336639",
+        "title": "﻿【솔로 레이드 오픈 예정】(7/7 내용 추가)",
+        "created": "20230707110038",
+        "updated": "20230713122114",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2101271.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2101271",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "1fad6ed97111c328197bf4850fdbd3914012f227ddcef6e3fae9021177c70dc8",
+      "bytes": 5855,
+      "fetched_at": "2026-09-29T13:49:05+00:00",
+      "meta": {
+        "feed_id": "2101271",
+        "title": "﻿【솔로 레이드 오픈 안내】",
+        "created": "20230608120035",
+        "updated": "20230608120035",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/2055448.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/2055448",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "ace0cd0965cf0bbebc948cd5183768d1495f1993973ea255a85e08a9bce63c4e",
+      "bytes": 5340,
+      "fetched_at": "2026-09-29T13:49:05+00:00",
+      "meta": {
+        "feed_id": "2055448",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20230602120036",
+        "updated": "20230602120116",
+        "board_id": 56
+      }
+    },
+    {
+      "filename": "feed/1950871.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/1950871",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "55e8fb645c3a1df640a433ebaafce95ebd4a804faf4480f88e3ec8e34944f10a",
+      "bytes": 5836,
+      "fetched_at": "2026-09-29T13:49:06+00:00",
+      "meta": {
+        "feed_id": "1950871",
+        "title": "﻿【솔로 레이드 오픈 예정】",
+        "created": "20230510190035",
+        "updated": "20230510190035",
+        "board_id": 56
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 56,
+    "listed": 48,
+    "written": 48,
+    "full": false
+  }
+}

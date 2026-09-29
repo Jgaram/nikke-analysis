@@ -75,6 +75,20 @@ def test_the_lounge_is_read_until_nothing_is_new():
     assert edited.written == 1
 
 
+def test_the_lounge_raid_posts_are_the_event_boards_solo_raid_posts_only():
+    """A board mostly of other events: pages without a raid post say nothing about what is new, so the first run
+    reads past them, and a later one stops at the first page whose raid posts it already has."""
+    posts = [feed(i, "솔로 레이드 오픈 예정" if i % 30 == 0 else f"이벤트 {i}", "20260901120000") for i in range(90, 0, -1)]
+    lounge = FakeLounge(posts)
+    first = notices.collect_naver_raid(fetcher=lounge)
+    assert (first.source, first.written) == (notices.NAVER_RAID_SOURCE, 3)
+    assert notices.collect_naver_raid(fetcher=lounge).written == 0
+    assert list_runs(notices.NAVER_SOURCE) == []
+
+    lounge.feeds.insert(0, feed(91, "솔로 레이드 재오픈 안내", "20260902090000"))
+    assert notices.collect_naver_raid(fetcher=lounge).written == 1
+
+
 def test_official_notices_are_refetched_only_when_new_edited_or_recent():
     now = datetime(2026, 9, 24, tzinfo=timezone.utc)
     old, recent = 1_700_000_000, int(now.timestamp()) - 86_400

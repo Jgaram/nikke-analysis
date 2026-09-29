@@ -13,7 +13,7 @@
     nikke check                      does the timeline need a human? (exit 1 if so)
 
     nikke collect roster             fetch the roster sources
-    nikke collect notices            fetch new/edited official notices (site + Naver lounge)
+    nikke collect notices            fetch new/edited official notices (site + Naver lounge, its Solo Raid posts too)
     nikke collect enikk-meta         fetch Solo Raid season metadata, boss pictures and the unit table from enikk
     nikke probe enikk                reconnaissance on the ranking site's API
     nikke collect enikk              fetch Solo Raid rankings (new and changed seasons)
@@ -217,6 +217,8 @@ def cmd_collect_notices(args: argparse.Namespace) -> int:
         results["official"] = notices.collect_official(full=args.full).__dict__
     if args.source in ("all", "naver"):
         results["naver"] = notices.collect_naver(full=args.full).__dict__
+    if args.source in ("all", "naver-raid"):
+        results["naver_raid"] = notices.collect_naver_raid(full=args.full).__dict__
     _emit(results)
     return 0
 
@@ -337,6 +339,7 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         _attempt(steps, failures, "collect.roster.nikkeutils", lambda: str(roster_collector.collect_nikkeutils()))
         _attempt(steps, failures, "collect.notices.official", lambda: notices.collect_official())
         _attempt(steps, failures, "collect.notices.naver", lambda: notices.collect_naver())
+        _attempt(steps, failures, "collect.notices.naver_raid", lambda: notices.collect_naver_raid())
         _attempt(steps, failures, "collect.enikk.seasons", lambda: enikk.collect_seasons())
         _attempt(steps, failures, "collect.enikk.boss_images", lambda: enikk.collect_boss_images())
         _attempt(steps, failures, "collect.enikk.characters", lambda: enikk.collect_characters())
@@ -458,6 +461,7 @@ def cmd_status(args: argparse.Namespace) -> int:
         "roster_nikkeutils",
         "notices_official",
         "notices_naver",
+        "notices_naver_raid",
         "enikk_seasons",
         "enikk_characters",
         "enikk_probe",
@@ -541,7 +545,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_collect_roster)
 
     p = collect.add_parser("notices", help="official notices: nikke-kr.com and the Naver lounge")
-    p.add_argument("--source", choices=["all", "official", "naver"], default="all")
+    p.add_argument("--source", choices=["all", "official", "naver", "naver-raid"], default="all")
     p.add_argument("--full", action="store_true", help="re-read every notice, not just new or recent ones")
     p.set_defaults(func=cmd_collect_notices)
 

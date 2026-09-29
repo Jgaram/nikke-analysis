@@ -99,6 +99,7 @@ def test_refresh_ends_red_when_a_source_could_not_be_collected(tmp_path, monkeyp
     monkeypatch.setattr(roster_collector, "collect_nikkeutils", lambda: "ok")
     monkeypatch.setattr(notices, "collect_official", broken)
     monkeypatch.setattr(notices, "collect_naver", lambda: {"written": 0})
+    monkeypatch.setattr(notices, "collect_naver_raid", lambda: {"written": 0})
     monkeypatch.setattr(enikk, "collect_seasons", lambda: {"refreshed": []})
     monkeypatch.setattr(enikk, "collect_characters", lambda: {"changed": False})
     monkeypatch.setattr(enikk, "collect_rankings", lambda **kwargs: {"fetched": []})

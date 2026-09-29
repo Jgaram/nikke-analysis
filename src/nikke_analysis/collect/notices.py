@@ -17,6 +17,12 @@ for the ``name_ko`` column, so unit names in a notice match the roster verbatim.
               reopening on different dates, a postponement. Those are exactly the
               cases where the schedule in a patch note stops being true.
 
+``naver_raid`` the lounge's in-game event board, its Solo Raid posts only. Every
+              season since the second has one ("솔로 레이드 시즌 41이 곧 오픈될
+              예정입니다 ... 랩쳐는 「리버렐리오 바디」입니다"), and it is the one
+              place that names each season's boss in Korean: the update notices
+              leave the boss to a picture.
+
 Both collectors are incremental. Notices are edited after publication (titles
 grow a "(9월 23일 공지 수정)" suffix), so a run re-reads anything new, anything
 whose title changed and anything recent, and writes a notice only when its
@@ -29,9 +35,10 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
 
 from ..util.http import Fetcher
 from ..util.snapshot import SnapshotWriter, list_runs
@@ -41,6 +48,7 @@ log = logging.getLogger(__name__)
 
 OFFICIAL_SOURCE = "notices_official"
 NAVER_SOURCE = "notices_naver"
+NAVER_RAID_SOURCE = "notices_naver_raid"
 
 OFFICIAL_API = "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr"
 OFFICIAL_ORIGIN = "https://www.nikke-kr.com"
@@ -58,6 +66,8 @@ OFFICIAL_PAGE_SIZE = 50
 
 NAVER_FEED_API = "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed"
 NAVER_NOTICE_BOARD = 11
+NAVER_EVENT_BOARD = 56
+NAVER_RAID_TITLE_RE = re.compile(r"솔로\s*레이드")
 NAVER_PAGE_SIZE = 25
 NAVER_MAX_PAGES = 200
 
@@ -304,26 +314,31 @@ def collect_naver(
     *,
     full: bool = False,
     board_id: int = NAVER_NOTICE_BOARD,
+    source: str = NAVER_SOURCE,
+    keep: Callable[[dict[str, Any]], bool] | None = None,
     fetcher: Fetcher | None = None,
 ) -> NoticeCollectResult:
-    """Snapshot every new or edited post on the official lounge's notice board.
+    """Snapshot every new or edited post on one lounge board (the notice board by default).
 
     Paging stops at the first page with nothing new, unless ``full`` is set. Posts
     carry an ``updatedDate``, so an edit shows up as a new version rather than
-    being missed.
+    being missed. ``keep`` (a post's ``feed`` -> bool) stores only some of a
+    board's posts; a page with none of them says nothing about what is new, so
+    paging goes on past it.
     """
     fetcher = fetcher or Fetcher(delay=1.0)
-    known = _known_versions(NAVER_SOURCE, "feed_id")
-    writer = SnapshotWriter(NAVER_SOURCE)
+    known = _known_versions(source, "feed_id")
+    writer = SnapshotWriter(source)
     listed = written = 0
 
     for feeds in iter_naver_pages(fetcher, board_id=board_id):
-        fresh_on_page = 0
+        fresh_on_page = kept_on_page = 0
         for item in feeds:
             feed = item.get("feed") or {}
             feed_id = str(feed.get("feedId", ""))
-            if not feed_id:
+            if not feed_id or (keep is not None and not keep(feed)):
                 continue
+            kept_on_page += 1
             listed += 1
             updated = str(feed.get("updatedDate") or feed.get("createdDate") or "")
             previous = known.get(feed_id)
@@ -345,14 +360,25 @@ def collect_naver(
             )
             known[feed_id] = {"updated": updated}
             written += 1
-        if not full and fresh_on_page == 0:
+        if not full and kept_on_page and fresh_on_page == 0:
             break
 
     if written == 0:
         writer.discard()
-        log.info("naver notices: %s listed, nothing new", listed)
-        return NoticeCollectResult(NAVER_SOURCE, "", listed, listed, 0)
+        log.info("%s: %s listed, nothing new", source, listed)
+        return NoticeCollectResult(source, "", listed, listed, 0)
 
     writer.seal({"api": NAVER_FEED_API, "board_id": board_id, "listed": listed, "written": written, "full": full})
-    log.info("naver notices: %s listed, %s new/changed -> %s", listed, written, writer.dir)
-    return NoticeCollectResult(NAVER_SOURCE, str(writer.dir), listed, listed, written)
+    log.info("%s: %s listed, %s new/changed -> %s", source, listed, written, writer.dir)
+    return NoticeCollectResult(source, str(writer.dir), listed, listed, written)
+
+
+def collect_naver_raid(*, full: bool = False, fetcher: Fetcher | None = None) -> NoticeCollectResult:
+    """Snapshot the Solo Raid posts of the lounge's in-game event board: each season's boss, by its Korean name."""
+    return collect_naver(
+        full=full,
+        board_id=NAVER_EVENT_BOARD,
+        source=NAVER_RAID_SOURCE,
+        keep=lambda feed: bool(NAVER_RAID_TITLE_RE.search(str(feed.get("title") or ""))),
+        fetcher=fetcher,
+    )

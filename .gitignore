@@ -20,7 +20,8 @@ __pycache__/
 #   top-50; the snapshot taken during the season may be the only copy left.
 # * Official notices (site and Naver lounge). Every release date and every
 #   Solo Raid schedule traces back to one; a notice deleted upstream must not
-#   take a unit's release date with it. Collection is incremental, so a run adds
+#   take a unit's release date with it. The lounge's Solo Raid posts name
+#   each season's boss. Collection is incremental, so a run adds
 #   only the notices that are new or were edited.
 # * enikk's season metadata, the record of when each season was actually played.
 data/raw/**
@@ -31,6 +32,8 @@ data/raw/**
 !data/raw/notices_official/**
 !data/raw/notices_naver/
 !data/raw/notices_naver/**
+!data/raw/notices_naver_raid/
+!data/raw/notices_naver_raid/**
 !data/raw/enikk_seasons/
 !data/raw/enikk_seasons/**
 data/interim/**

@@ -31,11 +31,14 @@ Outputs: ``soloraid_seasons.csv`` (one row per season), ``soloraid_periods.csv``
 (one row per open interval) and ``soloraid_events.csv`` (the evidence, one row
 per statement).
 
-The boss's Korean name comes from the notices only - enikk has English names
-only. A season's own notices give it now and then (recent ones name it in the
-opening line); a boss named for one season is named for every other season
-with the same enikk name (Altruia, 34 and 42). The rest keep ``boss_ko`` empty
-and show the English name.
+The boss's Korean name comes from the lounge - enikk has English names only,
+and the update notices leave the boss to a picture. Every season since the
+second has a post on the lounge's in-game event board that names it ("이번에
+등장할 예정인 랩쳐는 「리버렐리오 바디」입니다"); a notice about the season
+names it now and then too. A boss named for one season is named for every
+other season with the same enikk name (the first season's post names no boss;
+29, the same Mother Whale, does). The rest keep ``boss_ko`` empty and show the
+English name: season 5, whose post gives the boss as a number puzzle.
 """
 
 from __future__ import annotations
@@ -90,6 +93,9 @@ BOSS_TITLE_RE = re.compile(r"솔로\s*레이드\s*-\s*(?P<boss>[^\s(（][^(（]*
 # "라벨: 값" - the colon must follow a non-digit, or "00:00" would read as a label.
 FIELD_RE = re.compile(r"^(?P<label>.{1,60}?[^\d\s])\s*[:：]\s+(?P<value>.+)$")
 BOSS_INLINE_RE = re.compile(r"솔로\s*레이드\s*(?:시즌\s*\d{1,3}\s*)?-\s*(?P<boss>[^\s,.()（）]+(?:\s[^\s,.()（）0-9]+){0,2})")
+# A season's lounge post: "... 랩쳐는\n「리버렐리오 바디」입니다", at times a phrase between.
+ANNOUNCED_BOSS_RE = re.compile(r"랩쳐는[^「」]{0,80}「(?P<boss>[^「」]{1,30})」")
+HANGUL_RE = re.compile(r"[가-힣]")
 BOSS_PARTICLES = ("에서", "와", "과", "가", "이", "을", "를", "은", "는", "의", "에", "로")
 # Words that follow a boss name without a particle: "애니힐리오 재오픈 기간은".
 BOSS_STOP_WORDS = ("관련", "이슈", "재오픈", "오픈", "중단", "비정상", "진행", "전투", "기간", "안내", "결과", "시즌")
@@ -221,6 +227,24 @@ def _boss_inline(line: str) -> str:
             if word.endswith(particle) and len(word) > len(particle):
                 return " ".join(words[:index] + [word[: -len(particle)]])
     return " ".join(words)
+
+
+def announced_bosses(posts: Iterable[Notice]) -> dict[int, str]:
+    """Season -> the boss its lounge post names (a later post, an edit or a reopening, wins).
+
+    A post with no season number (the first season's) names nothing, and neither
+    does a name without Hangul in it (season 5's "9810811510911663", a puzzle).
+    """
+    named: dict[int, str] = {}
+    for post in posts:
+        season = _season_of(post.text)
+        match = ANNOUNCED_BOSS_RE.search(post.text)
+        if season is None or match is None:
+            continue
+        boss = match.group("boss").strip()
+        if HANGUL_RE.search(boss):
+            named[season] = boss
+    return named
 
 
 def extract_events(notice: Notice) -> list[RaidEvent]:
@@ -613,9 +637,12 @@ def build(
     enikk: dict[int, EnikkSeason],
     *,
     releases: dict[str, str] | None = None,
+    bosses: dict[int, str] | None = None,
     out_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Write the season tables. ``releases`` maps unit id -> release instant (ISO)."""
+    """Write the season tables. ``releases`` maps unit id -> release instant (ISO); ``bosses``
+    season -> the boss's Korean name its lounge post gives (announced_bosses)."""
+    bosses = bosses or {}
     events = extract_all(notices)
     seasons = group_seasons(events)
     for season in seasons:
@@ -640,7 +667,7 @@ def build(
         row: dict[str, Any] = {
             "season": number,
             "boss_en": meta.boss_en if meta else "",
-            "boss_ko": "",
+            "boss_ko": bosses.get(number, ""),
             "boss_image": meta.boss_image if meta else "",
             "element": meta.boss_element if meta else "",
             "weak_element": meta.weak_element if meta else "",
@@ -663,7 +690,7 @@ def build(
         if season is not None:
             original = min(season.openings, key=lambda e: (e.notice.published_at, e.start.at))
             row.update(
-                boss_ko=next((e.boss_ko for e in season.events if e.boss_ko), ""),
+                boss_ko=row["boss_ko"] or next((e.boss_ko for e in season.events if e.boss_ko), ""),
                 scheduled_start=_iso(original.start),
                 scheduled_end=_iso(original.end),
                 periods=len(season.periods),

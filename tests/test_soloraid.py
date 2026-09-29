@@ -266,3 +266,49 @@ def test_a_boss_named_by_a_notice_is_named_wherever_enikk_has_it(tmp_path):
     assert (rows[41]["boss_ko"], rows[41]["boss_image"]) == ("리버렐리오 바디", "full_eba002_hsta")
     assert rows[12]["boss_ko"] == "리버렐리오 바디"
     assert (rows[42]["boss_ko"], rows[42]["boss_image"]) == ("", "full_xbg004_psid")
+
+
+def test_the_lounge_raid_posts_name_each_seasons_boss(tmp_path):
+    """The in-game event board's post for a season names its boss, a phrase between at times. The first season's
+    post has no number and season 5's name is a number puzzle: neither names anything. The name reaches the season
+    table, and every season enikk gives the same English name."""
+    import csv
+
+    posts = [
+        lounge("【솔로 레이드 오픈 예정】", at(2023, 5, 10, 19), """
+            솔로 레이드가 곧 오픈될 예정입니다.
+            ✅ 진행 기간
+            - 5/11(목) 12:00 ~ 5/18(목) 4:59
+        """),
+        lounge("【솔로 레이드 오픈 안내】", at(2023, 9, 14, 12), """
+            솔로 레이드 시즌 5가 오픈됩니다.
+            이번 시즌에 등장하는 랩쳐는
+            「9810811510911663」입니다.
+        """),
+        lounge("【솔로 레이드 오픈 안내】", at(2023, 12, 14, 12), """
+            솔로 레이드 시즌 8이 오픈되었습니다!
+            이번 시즌에 등장하는 랩쳐는
+            인간과 같이 사고하고 말을 할 수 있는
+            「토커티브」입니다.
+        """),
+        lounge("솔로 레이드 오픈 예정", at(2025, 9, 16, 12), """
+            솔로 레이드 시즌 29가 곧 오픈될 예정입니다.
+            이번에 등장할 예정인 랩쳐는
+            「마더 웨일」입니다.
+            ✅ 진행 기간
+            - 9/16(화) 12:00 ~ 9/23(화) 4:59
+        """),
+    ]
+    named = soloraid.announced_bosses(posts)
+    assert named == {8: "토커티브", 29: "마더 웨일"}
+
+    enikk = {
+        1: EnikkSeason(1, boss_en="Mother Whale"),
+        5: EnikkSeason(5, boss_en="", boss_element="Wind"),
+        8: EnikkSeason(8, boss_en="Chatterbox"),
+        29: EnikkSeason(29, boss_en="Mother Whale"),
+    }
+    soloraid.build([], enikk, bosses=named, out_dir=tmp_path)
+    with (tmp_path / soloraid.SEASONS_CSV).open(encoding="utf-8") as handle:
+        rows = {int(r["season"]): r["boss_ko"] for r in csv.DictReader(handle)}
+    assert rows == {1: "마더 웨일", 5: "", 8: "토커티브", 29: "마더 웨일"}

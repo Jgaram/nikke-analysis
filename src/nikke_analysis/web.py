@@ -173,7 +173,6 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
         "minTier": config.min_tier,
         "retireAfterDays": config.retire_after_days,
         "retireAfterOwnSeasons": config.retire_after_own_seasons,
-        "leftAfter": config.left_after,
         "generalityBands": list(config.generality_bands),
     }
 

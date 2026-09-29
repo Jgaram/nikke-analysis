@@ -10,10 +10,8 @@
 //               how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
 //   lifespans   the season tier that counts as used, how long idle - and through how
-//               many seasons of its own element - means retired; when a unit was a
-//               generalist, and when it left the other elements
+//               many seasons of its own element - means retired; the generality bands
 //               -> since when each unit was in use, whether it still is, its generality
-//                  and the path it is on
 //
 // No DOM here: the same module runs under Node for the tests.
 
@@ -42,7 +40,6 @@ export function defaultParams(model) {
     minTier: d.minTier,
     retireAfterDays: d.retireAfterDays,
     retireAfterOwnSeasons: d.retireAfterOwnSeasons,
-    leftAfter: d.leftAfter,
     generalityBands: d.generalityBands,
   });
 }
@@ -67,7 +64,7 @@ export function tierKey(p) {
 }
 
 export function lifeKey(p) {
-  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.leftAfter, p.generalityBands]);
+  return JSON.stringify([p.minTier, p.retireAfterDays, p.retireAfterOwnSeasons, p.generalityBands]);
 }
 
 // ---------------------------------------------------------------------------
@@ -452,8 +449,7 @@ export function lifespans(model, population, moment, params) {
 }
 
 // ---------------------------------------------------------------------------
-// careers: how general a unit is, and which way it is going (analyze/tiers.py
-// generality, careers)
+// generality: how general a unit is (analyze/tiers.py generality)
 
 export const GENERALITY_MIN_LEVEL = 0.05;
 // Fielded only when the weakness is another element's (own = 0): the most generality can be.
@@ -483,41 +479,6 @@ export function generality(standing, params) {
     const level = ownLevel + otherLevel;
     const value = level >= GENERALITY_MIN_LEVEL ? (2 * otherLevel) / level : NaN;
     out.set(o.u, { ownLevel, otherLevel, generality: value, band: generalityBand(value, params) });
-  }
-  return out;
-}
-
-// Per unit out by ``moment``: other-element seasons that fielded it (otherUsed), the latest
-// (lastOther), the other-element seasons since (otherSince), its own element's that fielded
-// it after that (ownAfter; all of them with no other), and the path: generalist,
-// element_only, left_others, specialist, retired_generalist, retired_element_only,
-// retired_specialist or unused. ``life`` is lifespans() at the same moment.
-export function careers(model, population, moment, params, life) {
-  const seen = new Map();
-  for (const c of countedSeasons(population.summary, moment, params)) {
-    for (const r of population.tables.get(c.season).rows) {
-      if (!seen.has(r.u)) seen.set(r.u, []);
-      seen.get(r.u).push({ season: c.season, used: fielded(r, params), own: r.elementMatch });
-    }
-  }
-  const out = new Map();
-  for (const [u, rows] of seen) {
-    const others = rows.filter((x) => !x.own);
-    const usedOthers = others.filter((x) => x.used);
-    const lastOther = usedOthers.length ? Math.max(...usedOthers.map((x) => x.season)) : null;
-    const after = (x) => lastOther == null || x.season > lastOther;
-    const a = {
-      otherUsed: usedOthers.length, lastOther, otherSince: others.filter(after).length,
-      ownAfter: rows.filter((x) => x.own && x.used && after(x)).length,
-    };
-    const general = a.otherUsed > 0;
-    let path;
-    if (!rows.some((x) => x.used)) path = "unused";
-    else if (life.get(u)?.retired) path = general ? (a.ownAfter ? "retired_element_only" : "retired_generalist") : "retired_specialist";
-    else if (!general) path = "specialist";
-    else if (a.otherSince < params.leftAfter) path = "generalist";
-    else path = a.ownAfter ? "element_only" : "left_others";
-    out.set(u, { ...a, path });
   }
   return out;
 }
@@ -595,7 +556,7 @@ export function viewAt(model, population, moment, params) {
   const life = lifespans(model, population, moment, params);
   return {
     moment, standing, final, live, life, around: seasonsAround(model, moment),
-    generality: generality(standing, params), careers: careers(model, population, moment, params, life),
+    generality: generality(standing, params),
   };
 }
 

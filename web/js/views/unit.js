@@ -5,7 +5,7 @@ import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, tierBadge, deckSplit, sortableTable, unitName, segmented, infoButton,
 } from "../ui.js";
-import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, careerText, GENERALITY_KO, trendTabs, unitSearch } from "./common.js";
+import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, GENERALITY_KO, trendTabs, unitSearch } from "./common.js";
 import { timeStrip, whenLabel } from "./when.js";
 import { trajectoryChart, generalityChart } from "../chart.js";
 
@@ -130,7 +130,7 @@ function lifeTile(app, u, view) {
 }
 
 // What generality is and how it is banded - for the "i" beside it; with ``g``, this unit's numbers.
-function generalityHelp(app, g = null, career = null) {
+function generalityHelp(app, g = null) {
   const [low, high] = app.state.params.generalityBands;
   return h("div", { class: "tip tip-help" },
     h("div", { class: "tip-name" }, "범용도"),
@@ -145,7 +145,6 @@ function generalityHelp(app, g = null, career = null) {
     g ? h("p", null, !Number.isNaN(g.generality)
       ? `이 니케: 2 × ${num(g.otherLevel)} ÷ (${num(g.ownLevel)} + ${num(g.otherLevel)}) → ${num(g.generality)}`
       : "이 니케: 아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임") : null,
-    career ? h("p", { class: "muted" }, h("b", null, `최근 흐름 · ${career.label}`), ` — ${career.detail}. ${career.rule}.`) : null,
     h("p", { class: "muted" }, "띠의 경계는 인자에서 바꿀 수 있다. 티어에는 들어가지 않는다."));
 }
 
@@ -160,19 +159,19 @@ function gauge(app, value) {
     value != null ? h("span", { class: "gauge-mark", style: { left: at(value) } }) : null);
 }
 
-// How general the unit is, with its recent turn in the words under it.
-function careerTile(app, u, view) {
-  const t = careerText(app, view, u);
-  if (!t) return null;
+// How general the unit is, with the two numbers it comes from under it.
+function generalityTile(app, u, view) {
   const g = view.generality.get(u);
-  const value = g && !Number.isNaN(g.generality) ? g.generality : null;
-  return h("div", { class: "tile tile-career", dataset: { tier: "none", band: value != null ? g.band : "none" } },
-    h("div", { class: "tile-label" }, "범용도", infoButton("범용도", () => generalityHelp(app, g, t))),
+  if (!g) return null;
+  const value = !Number.isNaN(g.generality) ? g.generality : null;
+  return h("div", { class: "tile tile-general", dataset: { tier: "none", band: value != null ? g.band : "none" } },
+    h("div", { class: "tile-label" }, "범용도", infoButton("범용도", () => generalityHelp(app, g))),
     h("div", { class: "tile-value" },
       h("span", { class: "tile-state" }, value != null ? GENERALITY_KO[g.band] : "–"),
       value != null ? h("span", { class: "tile-num" }, num(value)) : null),
     gauge(app, value),
-    h("div", { class: "tile-sub" }, value != null ? t.detail : "아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 못 겪었거나 거의 안 쓰임"));
+    h("div", { class: "tile-sub" }, value != null ? `자기 속성 칸 ${num(g.ownLevel)} · 다른 속성 칸 평균 ${num(g.otherLevel)}`
+      : "아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 못 겪었거나 거의 안 쓰임"));
 }
 
 function profile(app, u, prof, moment) {
@@ -190,11 +189,11 @@ function profile(app, u, prof, moment) {
       { mark: o.provisional ? "*" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 시점의 종합 티어표로" }),
     ...elementTiles,
     lifeTile(app, u, prof.view),
-    careerTile(app, u, prof.view),
+    generalityTile(app, u, prof.view),
     prof.slots ? slotChart(app, prof.slots, state.params.overall) : null,
   ] : [h("div", { class: "tile tile-none" }, prof.treasured
     ? "애장품을 낀 시즌 기록이 아직 없어 티어가 없습니다 (애장품 전 기록은 아래 차트·표)."
-    : "이때까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), careerTile(app, u, prof.view)];
+    : "이때까지 치른 시즌이 없어 티어가 없습니다."), lifeTile(app, u, prof.view), generalityTile(app, u, prof.view)];
   const added = unit.extra.map((e) => ELEMENT_KO[e]);
   const byTreasure = unit.treasureElements.map((e) => ELEMENT_KO[e]);
   return h("section", { class: "profile" },

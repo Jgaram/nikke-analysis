@@ -108,7 +108,7 @@ def test_config_file_round_trip(tmp_path):
         "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
         "          include_live: false}\n"
         "lifespan: {min_tier: A, retire_after_days: 200, retire_after_own_seasons: 2}\n"
-        "career: {left_after: 2, generality_bands: [0.1, 1.5]}\n",
+        "career: {generality_bands: [0.1, 1.5]}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
@@ -117,7 +117,7 @@ def test_config_file_round_trip(tmp_path):
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
     assert config.min_tier == "A" and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
-    assert config.left_after == 2 and config.generality_bands == (0.1, 1.5)
+    assert config.generality_bands == (0.1, 1.5)
 
 
 def test_the_lifespan_tier_must_be_one_of_the_cuts():
@@ -484,7 +484,7 @@ def test_a_unit_no_season_used_has_no_lifespan():
 
 
 # --------------------------------------------------------------------------
-# careers: generality and the path
+# generality
 
 
 def test_generality_splits_specialists_from_units_that_go_anywhere(world, built):
@@ -504,52 +504,3 @@ def test_generality_splits_specialists_from_units_that_go_anywhere(world, built)
     assert overall[dealer] == pytest.approx((g.loc[dealer, "own_level"] + 4 * g.loc[dealer, "other_level"]) / 5)
     wide = tiers.generality(standing, tiers.TierConfig(generality_bands=(0.0, 0.5))).set_index("unit_id")
     assert wide.loc[dealer, "generality_band"] == "element_first"
-
-
-def careers_of(lifts: dict[str, list[float]], weak: list[str], season: int, **config) -> pd.DataFrame:
-    """The paths at the end of ``season`` of units (all Fire) at a lift of ``lifts[unit][i]`` in
-    season i + 1 of monthly seasons whose boss is weak to ``weak[i]``."""
-    start = pd.Timestamp("2024-01-01T00:00:00Z")
-    seasons = pd.DataFrame([{"season": n, "weak_element": e, "start_at": start + pd.DateOffset(months=n - 1),
-                             "end_at": start + pd.DateOffset(months=n - 1) + pd.Timedelta(days=7), "final": True,
-                             "collected_on": start} for n, e in enumerate(weak, start=1)])
-    table = pd.DataFrame([{"season": n, "unit_id": u, "lift": values[n - 1], "element_match": e == "Fire"}
-                          for u, values in lifts.items() for n, e in enumerate(weak, start=1)])
-    moment = seasons.set_index("season").loc[season, "end_at"]
-    return tiers.careers(table, seasons, moment, tiers.TierConfig(**config)).set_index("unit_id")
-
-
-# Fire every third season: 1, 4, 7, 10, 13, 16
-EVERY_THIRD = ["Fire", "Water", "Wind"] * 6
-
-
-def test_careers_tell_the_two_ways_a_generalist_retires():
-    everywhere = [1.0] * 6
-    lifts = {
-        "narrowed": everywhere + [1.0, 0, 0, 0.8, 0, 0] + [0.5, 0, 0, 0, 0, 0],  # own seasons only from 7, then out
-        "dropped": everywhere + [0.0] * 12,  # out everywhere at once
-        "still": [1.0] * 18,
-        "special": [1.0 if w == "Fire" else 0.0 for w in EVERY_THIRD],  # own seasons only, ever
-        "never": [0.01] * 18,  # season tier F throughout
-    }
-    early = careers_of(lifts, EVERY_THIRD, 12)
-    assert early.loc[["narrowed", "still", "special", "dropped", "never"], "path"].tolist() == [
-        "element_only", "generalist", "specialist", "retired_generalist", "unused"]
-    assert tuple(early.loc["narrowed", ["other_used", "last_other", "other_since", "own_after"]]) == (4, 6, 4, 2)
-    assert tuple(early.loc["special", ["other_used", "other_since", "own_after"]]) == (0, 8, 4)  # all its own seasons
-    late = careers_of(lifts, EVERY_THIRD, 18)  # "narrowed" sat out Fire season 16, over 90 days after season 13
-    assert late.loc["narrowed", "path"] == "retired_element_only" and late.loc["dropped", "path"] == "retired_generalist"
-    assert late.loc["special", "path"] == "specialist"
-    # one other-element season makes a generalist; a quicker bar for "left the others"
-    once = {"once": [1.0 if w == "Fire" else 0.0 for w in EVERY_THIRD[:4]] + [1.0] + [0.0] * 13}
-    assert careers_of(once, EVERY_THIRD, 6).loc["once", ["path", "other_used"]].tolist() == ["generalist", 1]
-    assert careers_of(lifts, EVERY_THIRD, 8, left_after=1).loc["narrowed", "path"] == "element_only"
-    assert careers_of(lifts, EVERY_THIRD, 8).loc["narrowed", "path"] == "generalist"  # left only one behind yet
-
-
-def test_a_generalist_out_of_the_others_waits_for_its_own_season():
-    weak = ["Fire", "Water", "Wind", "Iron", "Water", "Wind"]
-    lifts = {"waiting": [1.0, 1.0, 1.0, 1.0, 0.0, 0.0]}  # out of the last two, and no Fire season since
-    row = careers_of(lifts, weak, 6, left_after=2).loc["waiting"]
-    assert row["path"] == "left_others" and (row["other_since"], row["own_after"]) == (2, 0)
-    assert careers_of(lifts, weak, 6).loc["waiting", "path"] == "generalist"  # three to leave, by default

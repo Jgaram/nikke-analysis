@@ -6,10 +6,10 @@ Four questions the tiers raise but do not answer (docs/lifecycle.md has the
 answers as of the committed data):
 
 **How general is a unit, and which way is its career going?** The tables
-carry both now (``analyze.tiers.generality`` and ``careers``, the columns
-``generality``, ``generality_band`` and ``path`` of the overall table); the
-study replays them season by season, and counts which path generalists of
-each class took.
+carry how general (``analyze.tiers.generality``, the columns ``generality``
+and ``generality_band`` of the overall table); the study replays it season by
+season. Which way a career went is the study's own (``careers``): it counts
+which path generalists of each class took.
 
 **How close is retirement?** ``own_outlook``: every time a unit was fielded in a
 season of its own element, whether the next season of that element fielded it
@@ -330,6 +330,78 @@ def eras(history: pd.DataFrame, panel: pd.DataFrame, config: tiers.TierConfig) -
 
 
 # --------------------------------------------------------------------------
+# which way a career went
+# --------------------------------------------------------------------------
+
+LEFT_AFTER = 3  # other-element seasons in a row without it: it has left them
+CAREER_COLUMNS = ["unit_id", "other_used", "last_other", "other_since", "own_after", "path"]
+PATHS = ("generalist", "element_only", "left_others", "specialist",
+         "retired_generalist", "retired_element_only", "retired_specialist", "unused")
+PATH_KO = {"generalist": "범용", "element_only": "속성 전용", "left_others": "다른 속성에서 빠짐", "specialist": "특화",
+           "retired_generalist": "범용 → 은퇴", "retired_element_only": "범용 → 속성 전용 → 은퇴",
+           "retired_specialist": "특화 → 은퇴", "unused": "안 쓰임"}
+
+
+def careers(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: tiers.TierConfig | None = None,
+            life: pd.DataFrame | None = None, left_after: int = LEFT_AFTER) -> pd.DataFrame:
+    """Which way each unit's career went, as known at ``moment`` - one row per unit out by then.
+
+    Same seasons and same *fielded* as ``tiers.lifespans`` (``life``, its result
+    at ``moment``, computed when not given). Per unit: the seasons of other
+    elements' weakness that fielded it (``other_used``), the latest
+    (``last_other``), the other-element seasons since (``other_since``), and its
+    own element's seasons that fielded it after that (``own_after``; all of them
+    when no other-element season did). Its ``path``:
+
+    * ``generalist`` - fielded in an other-element season, and in one of its
+      latest ``left_after``;
+    * ``element_only`` - a generalist once, not fielded in its latest
+      ``left_after`` other-element seasons, fielded in its own since;
+    * ``left_others`` - the same, with no own-element season fielding it since
+      (none may have come round yet);
+    * ``specialist`` - never fielded in an other-element season (a new unit
+      too, until it is);
+    * ``retired_generalist`` / ``retired_element_only`` - retired straight from
+      general use, or after fielded only in its own element's seasons for a
+      while; ``retired_specialist`` - retired, never a generalist;
+    * ``unused`` - no season fielded it.
+    """
+    config = config or tiers.TierConfig()
+    counted = tiers.counted_seasons(seasons, moment, config)
+    if counted.empty or table.empty:
+        return pd.DataFrame(columns=CAREER_COLUMNS)
+    rows = table.loc[table["season"].isin(counted["season"])]
+    rows = (rows.assign(used=tiers.fielded(rows, config), own=_flags(rows, "element_match"))[["season", "unit_id", "used", "own"]]
+            .sort_values(["unit_id", "season"]))
+    life = tiers.lifespans(table, seasons, moment, config) if life is None else life
+    retired = life.set_index("unit_id")["retired"]
+    out = []
+    for unit_id, group in rows.groupby("unit_id", sort=True):
+        other, own = group[~group["own"]], group[group["own"]]
+        other_used = other.loc[other["used"], "season"]
+        last_other = int(other_used.max()) if len(other_used) else None
+        after = (lambda frame: frame) if last_other is None else (lambda frame: frame[frame["season"] > last_other])
+        record = {"unit_id": unit_id, "other_used": len(other_used), "last_other": last_other,
+                  "other_since": len(after(other)), "own_after": int(after(own)["used"].sum())}
+        general = record["other_used"] > 0
+        if not group["used"].any():
+            path = "unused"
+        elif bool(retired.get(unit_id, False)):
+            path = ("retired_element_only" if record["own_after"] else "retired_generalist") if general \
+                else "retired_specialist"
+        elif not general:
+            path = "specialist"
+        elif record["other_since"] < left_after:
+            path = "generalist"
+        else:
+            path = "element_only" if record["own_after"] else "left_others"
+        out.append({**record, "path": path})
+    frame = pd.DataFrame(out, columns=CAREER_COLUMNS)
+    frame["last_other"] = frame["last_other"].astype("Int64")
+    return frame
+
+
+# --------------------------------------------------------------------------
 # the report
 # --------------------------------------------------------------------------
 
@@ -339,7 +411,7 @@ def _pct(value: float) -> str:
 
 def report(book=None) -> str:
     """The numbers in docs/lifecycle.md, from the committed tables."""
-    from .tierlist import GENERALITY_KO, PATH_KO, TierBook
+    from .tierlist import GENERALITY_KO, TierBook
 
     book = book or TierBook.load()
     history, seasons, config = book.history, book.seasons, book.config
@@ -377,9 +449,9 @@ def report(book=None) -> str:
     lines.append("")
 
     lines.append("3. 범용이던 니케의 길 (다른 속성 시즌에 쓰인 적 있는 니케)")
-    paths = tiers.careers(history, seasons, now, config, life)
+    paths = careers(history, seasons, now, config, life)
     general = paths[paths["other_used"] > 0].assign(cls=lambda f: f["unit_id"].map(klass))
-    table = pd.crosstab(general["path"], general["cls"]).reindex([p for p in tiers.PATHS if p in set(general["path"])])
+    table = pd.crosstab(general["path"], general["cls"]).reindex([p for p in PATHS if p in set(general["path"])])
     for path, row in table.iterrows():
         members = general[general["path"] == path]
         lines.append(f"   {PATH_KO[path]:<18} " + " · ".join(f"{c} {n}" for c, n in row.items()) + "  — "

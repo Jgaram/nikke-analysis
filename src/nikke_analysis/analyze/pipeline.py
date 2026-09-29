@@ -21,8 +21,8 @@ Outputs:
                                and rank - the overall comparison table; a unit with
                                its treasure (``treasure``) on its seasons with it.
                                Beside it the unit's lifespan: first and last season
-                               in use, seasons used, retired or not; and its career:
-                               generality, and the path it is on
+                               in use, seasons used, retired or not; and its
+                               generality
 ``metrics_element_tiers.csv``  per element and unit of it, as of the newest data:
                                the tier and rank in that element, with the overall
                                tier beside - the element comparison tables. A unit
@@ -175,14 +175,14 @@ def patch_impact(
 
 
 def comparison_tables(standing: tiers.Standings, info: pd.DataFrame, life: pd.DataFrame | None = None,
-                      career: pd.DataFrame | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+                      general: pd.DataFrame | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """The two comparison tables: every unit by overall tier (with its lifespan,
-    ``life``, and its generality and career path, ``career``, beside), and each
+    ``life``, and its generality, ``general``, beside), and each
     element's units by their tier in it (with the overall tier beside). ``info``
     is the roster's unit columns, by unit id."""
     names = [c for c in ("name_ko", "name_en") if c in info.columns]
     overall = standing.overall.join(info, on="unit_id")
-    for beside in (life, career):
+    for beside in (life, general):
         if beside is not None:
             overall = overall.merge(beside, on="unit_id", how="left")
     first = ["overall_rank", "unit_id"] + names + [c for c in ("element", "extra_elements", "treasure_elements")
@@ -255,9 +255,8 @@ def run(
     treasure = metrics.treasure_instants(roster)
     standing = tiers.standings(table, summary_table, newest, config, treasured=treasure.index[treasure <= newest])
     life = tiers.lifespans(table, summary_table, newest, config)
-    career = (tiers.generality(standing, config)[["unit_id", "generality", "generality_band"]]
-              .merge(tiers.careers(table, summary_table, newest, config, life), on="unit_id", how="outer"))
-    overall, elements = comparison_tables(standing, info, life, career)
+    general = tiers.generality(standing, config)[["unit_id", "generality", "generality_band"]]
+    overall, elements = comparison_tables(standing, info, life, general)
     changes = tiers.tier_changes(history, config)
     shift = metrics.meta_shift(table)
     pairs = metrics.synergy(entries, min_decks=config.synergy_min_decks)

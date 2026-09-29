@@ -761,10 +761,10 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .tile-state { font: 800 24px/1 var(--font); color: var(--ink-3); white-space: nowrap; flex: none; }
 .tile-state.active { color: var(--accent); }
 .tile-life-main { font-size: 14px; font-weight: 700; }
-.tile-career .tile-state { color: var(--ink); }
-.tile-career { min-width: 200px; }
-.tile-career[data-band="generalist"]::before { background: var(--gen-2); }
-.tile-career[data-band="element_first"]::before { background: var(--gen-1); }
+.tile-general .tile-state { color: var(--ink); }
+.tile-general { min-width: 200px; }
+.tile-general[data-band="generalist"]::before { background: var(--gen-2); }
+.tile-general[data-band="element_first"]::before { background: var(--gen-1); }
 .gauge { position: relative; display: flex; height: 8px; border-radius: 4px; overflow: visible; margin: 2px 0 1px; }
 .gz { height: 100%; }
 .gz:first-child { border-radius: 4px 0 0 4px; }
@@ -788,7 +788,7 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .gauge-legend .z1 { background: var(--gen-1); }
 .gauge-legend .z2 { background: var(--gen-2); }
 .cut .band-label { white-space: nowrap; font-size: 12px; font-weight: 700; color: var(--ink-2); }
-.tile-career .tile-sub b { color: var(--ink-2); }
+.tile-general .tile-sub b { color: var(--ink-2); }
 .mini-bars { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; height: 104px; align-items: end; padding-top: 4px; }
 .mb { display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; }
 .mb-val { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }

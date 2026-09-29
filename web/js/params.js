@@ -16,7 +16,6 @@ const cutLabels = (d) => d.cuts.slice(0, -1).map(([label]) => label);
 // retired, and for the other-element seasons that mean it left them - more when the defaults
 // or the address ask for more.
 const RETIRE_OWN_MAX = 3;
-const LEFT_MAX = 5;
 const upTo = (max, ...values) => Math.max(max, ...values.map((v) => Math.round(v)));
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
@@ -38,7 +37,6 @@ export function encodeParams(p, d) {
   if (p.minTier !== d.minTier) q.use = p.minTier;
   if (p.retireAfterDays !== d.retireAfterDays) q.ret = String(p.retireAfterDays);
   if (p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) q.rown = String(p.retireAfterOwnSeasons);
-  if (p.leftAfter !== d.leftAfter) q.left = String(p.leftAfter);
   if (!same(p.generalityBands, d.generalityBands)) q.band = p.generalityBands.join(",");
   return q;
 }
@@ -74,8 +72,6 @@ export function decodeParams(q, d, model) {
   if (ret != null) p.retireAfterDays = Math.round(ret);
   const own = number(q.get("rown"), 0, 50);
   if (own != null) p.retireAfterOwnSeasons = Math.round(own);
-  const left = number(q.get("left"), 1, 50);
-  if (left != null) p.leftAfter = Math.round(left);
   if (q.has("band")) {
     const bands = q.get("band").split(",").map((v) => number(v, 0, GENERALITY_MAX));
     if (bands.length === 2 && bands.every((v) => v != null) && bands[0] <= bands[1]) p.generalityBands = bands;
@@ -108,7 +104,6 @@ export function changedParams(p, d) {
   if (p.includeLive !== d.includeLive) out.push("진행 중 시즌");
   if (p.minTier !== d.minTier) out.push("쓰인 기준");
   if (p.retireAfterDays !== d.retireAfterDays || p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) out.push("은퇴 기준");
-  if (p.leftAfter !== d.leftAfter) out.push("다른 속성에서 빠짐");
   if (!same(p.generalityBands, d.generalityBands)) out.push("범용도 띠");
   return out;
 }
@@ -272,12 +267,7 @@ export function buildParams(app, body) {
       "그 공백 동안 자기 속성이 약점인 시즌이 이만큼 지나가도록 안 쓰여야 은퇴. 같은 약점이 오래 걸려 돌아오기도 해서, "
         + "자기 속성 시즌이 아직 안 온 속성 특화 니케는 공백이 길어도 현역으로 둡니다. 안 봄 = 공백만으로.")),
     h("section", { class: "psec" },
-      h("h3", null, "범용도", h("small", null, "범용인가, 자기 속성으로 좁아지나 · 티어와 별개")),
-      field("다른 속성에서 빠짐", segmented(range1(upTo(LEFT_MAX, d.leftAfter, p.leftAfter)).map((n) => ({ value: n, label: `${n}번` })),
-        p.leftAfter, (v) => { app.setParams({ leftAfter: v }); buildParams(app, body); },
-        { label: "다른 속성에서 빠졌다고 볼 연속 시즌 수" }),
-      "보스 약점이 다른 속성인 시즌에 한 번이라도 쓰였으면 범용이었던 니케(없으면 특화). 그런 니케가 최근 다른 속성 "
-        + "시즌 이만큼에서 내리 안 쓰였으면 다른 속성에서 빠진 것. 그 뒤 자기 속성 시즌에 쓰였으면 속성 전용."),
+      h("h3", null, "범용도", h("small", null, "약점을 얼마나 타나 · 티어와 별개")),
       field("범용도 띠", bandRow(), "범용도 = 2 × 다른 속성 칸 평균 ÷ (자기 속성 칸 + 다른 속성 칸 평균). 0 = 약점이 자기 "
         + `속성일 때만 쓰임, 1 = 약점과 무관, ${GENERALITY_MAX} = 약점이 다른 속성일 때만 쓰임. `
         + "이 두 값으로 특화 · 속성 우선 · 범용을 나눕니다."),

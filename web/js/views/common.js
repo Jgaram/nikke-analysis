@@ -319,11 +319,6 @@ export const lifeSub = (t) => [t.sub, t.why].filter(Boolean).join(" · ");
 // a unit's career: how general it is, and which way it is going
 
 export const GENERALITY_KO = { specialist: "특화", element_first: "속성 우선", generalist: "범용" };
-export const PATH_KO = {
-  generalist: "범용", element_only: "속성 전용", left_others: "다른 속성에서 빠짐", specialist: "특화",
-  retired_generalist: "범용 → 은퇴", retired_element_only: "범용 → 속성 전용 → 은퇴", retired_specialist: "특화 → 은퇴",
-  unused: "안 쓰임",
-};
 
 // A generality band in the colours of the unit's element (its primary): 특화 all of it,
 // 속성 우선 half, 범용 none - grey. As a tag with the words (the tables), or a bare bar (the cards).
@@ -359,26 +354,6 @@ export function generalityColumn(app, view) {
     sort: (row) => of(row)?.generality,
     cell: (row) => generalityTag(of(row)?.band, app.model.units[row.u].element) || h("span", { class: "muted" }, "–"),
   };
-}
-
-// What the view says of unit ``u``'s path, in words (tierlist.py _career_lines says the same).
-export function careerText(app, view, u) {
-  const c = view.careers.get(u);
-  if (!c) return null;
-  const { leftAfter: left } = app.state.params;
-  const last = c.lastOther != null ? `S${c.lastOther}` : null;
-  const detail = {
-    generalist: `다른 속성 시즌 ${c.otherUsed}번 쓰임 · 마지막 ${last}`,
-    element_only: `다른 속성은 ${last} 뒤 ${c.otherSince}시즌 내리 안 쓰임, 자기 속성 시즌엔 ${c.ownAfter}번 쓰임`,
-    left_others: `다른 속성은 ${last} 뒤 ${c.otherSince}시즌 내리 안 쓰임, 그 뒤 자기 속성 시즌엔 아직 안 쓰임`,
-    specialist: "다른 속성 시즌엔 안 쓰임",
-    retired_generalist: `다른 속성 시즌 ${c.otherUsed}번 쓰이다 ${last} 뒤 자기 속성 시즌에서도 안 쓰이고 은퇴`,
-    retired_element_only: `${last} 뒤 다른 속성에서 빠지고 자기 속성 시즌 ${c.ownAfter}번 더 쓰이다 은퇴`,
-    retired_specialist: `다른 속성 시즌엔 ${c.otherUsed}번 쓰이고 은퇴`,
-    unused: "쓰인 시즌 없음",
-  }[c.path];
-  return { c, label: PATH_KO[c.path], detail,
-    rule: `범용 = 다른 속성 시즌에 쓰인 적 있음 · 빠짐 = 최근 다른 속성 시즌 ${left}번 내리 안 쓰임` };
 }
 
 export function lifePill(text) {

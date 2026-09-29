@@ -8,11 +8,11 @@
 4. 예전 솔로 레이드와 요즘 솔로 레이드는 속성 니케의 비중도, 티어를 지키는 정도도 다른가
 5. 3번을 지표로 만들고, 이미 내리막인 니케의 은퇴 시기를 내다볼 수 있나
 
-1·2·3번의 결과는 이제 표와 사이트에 들어가 있다. 수명의 "쓰인 시즌"은 시즌 티어로 세고(`lifespan.min_tier`),
-비교표(`metrics_overall_tiers.csv`)에 범용도(`generality` · `generality_band`)와 흐름(`path`, 그 근거
-`other_used` · `last_other` · `other_since` · `own_after`)가 붙고, 사이트 티어 변화 탭과 `nikke tier --unit` 에
-나온다. 정의는 [metrics.md 10절](metrics.md#10-궤적). 이 문서는 그렇게 정한 근거와, 표에 넣지 않은 나머지
-(예전과 요즘, 은퇴 위험)다.
+1·2번의 결과는 이제 표와 사이트에 들어가 있다. 수명의 "쓰인 시즌"은 시즌 티어로 세고(`lifespan.min_tier`),
+비교표(`metrics_overall_tiers.csv`)에 범용도(`generality` · `generality_band`)가 붙고, 사이트 티어표·티어 변화
+탭과 `nikke tier --unit` 에 나온다. 정의는 [metrics.md 10절](metrics.md#10-궤적). 3번의 흐름(`path`)은 한때
+표와 사이트에도 있었지만 범용도와 겹쳐서 뺐고, 이 연구 안에서만 센다. 이 문서는 그렇게 정한 근거와, 표에 넣지
+않은 나머지(흐름, 예전과 요즘, 은퇴 위험)다.
 
 숫자는 전부 커밋된 표(`metrics_unit_season.csv`, `metrics_seasons.csv`)에서 다시 낼 수 있다.
 이 문서는 시즌 1–41(41은 진행 중, 09/28 수집분) 기준이다.
@@ -21,8 +21,8 @@
 python -m nikke_analysis.lifecycle     # 아래 숫자를 전부 다시 계산해서 보여 준다 (15초 남짓)
 ```
 
-계산은 [`src/nikke_analysis/lifecycle.py`](../src/nikke_analysis/lifecycle.py) 에 있고, 범용도와 흐름은
-[`analyze/tiers.py`](../src/nikke_analysis/analyze/tiers.py) 의 `generality` · `careers` 를 그대로 쓴다.
+계산은 [`src/nikke_analysis/lifecycle.py`](../src/nikke_analysis/lifecycle.py) 에 있다(흐름 `careers` 도 여기).
+범용도는 [`analyze/tiers.py`](../src/nikke_analysis/analyze/tiers.py) 의 `generality` 를 그대로 쓴다.
 
 **클래스는 역할이 아니다.** 3·4·5절에서 니케를 두 무리로 나눌 때는 클래스(화력형 / 지원·방어형)로 나눴고,
 결과도 클래스로만 읽는다. 누가 딜러이고 누가 서포터인지는 니케별 딜량이 있어야 판정할 수 있는데, 랭킹은 덱의
@@ -138,7 +138,7 @@ O, 종합에서 X 가 나온다. 그 둘의 비율을 이름 붙여 꺼내 0–2
 | 흐름 | 뜻 | 화력형 | 지원·방어형 |
 |---|---|---|---|
 | 범용 (`generalist`) | 최근 다른 속성 시즌 3번 중 한 번 이상 쓰임 | 16 | 19 |
-| **속성 전용** (`element_only`) | 최근 다른 속성 시즌 3번 내리 안 쓰였고(`career.left_after`) 그 뒤 자기 속성 시즌에서는 쓰임 | **17** | 5 |
+| **속성 전용** (`element_only`) | 최근 다른 속성 시즌 3번 내리 안 쓰였고(`LEFT_AFTER`) 그 뒤 자기 속성 시즌에서는 쓰임 | **17** | 5 |
 | 다른 속성에서 빠짐 (`left_others`) | 다른 속성에서 빠졌고 그 뒤 자기 속성 시즌에서는 아직 안 쓰임 | 1 (네온 : 비전 아이) | 2 (루주, 신데렐라) |
 | **범용 → 은퇴** (`retired_generalist`) | 다른 속성에서 빠진 뒤 자기 속성 시즌에서도 한 번도 안 쓰이고 은퇴 | 8 | **22** |
 | **범용 → 속성 전용 → 은퇴** (`retired_element_only`) | 자기 속성 시즌에서 몇 번 더 쓰이다 은퇴 | 8 | 16 |

@@ -36,7 +36,7 @@ CONFIGS = {
     "servers-top-uniform": {"exclude_servers": ("S2",), "top_n": 8, "rank_weighting": "uniform"},
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
                              "min_elements_observed": 2, "min_tier": "B", "retire_after_days": 40.0,
-                             "retire_after_own_seasons": 0, "left_after": 1,
+                             "retire_after_own_seasons": 0,
                              "generality_bands": (0.4, 1.2)},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
                                "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
@@ -172,7 +172,7 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
         "minTier": config.min_tier, "retireAfterDays": config.retire_after_days,
         "retireAfterOwnSeasons": config.retire_after_own_seasons,
-        "leftAfter": config.left_after, "generalityBands": list(config.generality_bands),
+        "generalityBands": list(config.generality_bands),
     }
 
 
@@ -233,7 +233,7 @@ def compare(tables: Path, page: dict) -> None:
     _close(overall["overall"], theirs["overall"], "overall table: overall")
     _close(overall["generality"], theirs["generality"], "overall table: generality")
     for column in ("overall_rank", "overall_tier", "elements_observed", "seasons_observed", "last_season",
-                   "generality_band", "other_used", "last_other", "other_since", "own_after", "path"):
+                   "generality_band"):
         _same(overall[column], theirs[column], f"overall table: {column}")
     for column in ("provisional", "treasure"):
         _flags(overall[column], theirs[column], f"overall table: {column}")
@@ -294,4 +294,3 @@ def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_pat
         overall = pd.DataFrame(page["overall"]).set_index("unit_id")
         assert set(overall.loc[list(world.element_dps.values()), "generality_band"]) == {"specialist"}
         assert set(overall.loc[world.universal, "generality_band"]) == {"generalist"}
-        assert set(overall.loc[world.universal, "path"]) == {"generalist"}

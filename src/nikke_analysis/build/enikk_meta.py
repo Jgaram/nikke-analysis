@@ -3,9 +3,9 @@
 Two readers over what ``collect.enikk.collect_seasons`` and
 ``collect.enikk.collect_characters`` stored:
 
-``load_seasons``     per Solo Raid season: the boss, its element, the element it
-                     is weak to, and the window in which enikk actually collected
-                     rankings (first and last point of the damage chart).
+``load_seasons``     per Solo Raid season: the boss, its picture, its element, the
+                     element it is weak to, and the window in which enikk actually
+                     collected rankings (first and last point of the damage chart).
 ``load_characters``  per unit: attributes from enikk's copy of the game tables,
                      mapped onto the roster's vocabulary.
 
@@ -18,6 +18,7 @@ what the notices are checked against.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -53,6 +54,7 @@ WEAPONS = {
 class EnikkSeason:
     season: int
     boss_en: str = ""
+    boss_image: str = ""  # enikk's name for the boss picture, ``full_eba002_hsta`` (/bosses/<name>.png)
     boss_element: str = ""
     weak_element: str = ""
     last_updated: str = ""
@@ -65,6 +67,15 @@ def _boss_name(value: Any) -> str:
     """enikk's name for the boss; a bare number (season 5 has one) is not a name."""
     name = str(value or "").strip()
     return "" if name.isdigit() else name
+
+
+_IMAGE_RE = re.compile(r"^[a-z0-9_]+$")
+
+
+def boss_image(value: Any) -> str:
+    """enikk's name for a boss picture, or "" when it is not a plain file name."""
+    name = str(value or "").strip()
+    return name if _IMAGE_RE.fullmatch(name) else ""
 
 
 def _kst_iso(value: str) -> str:
@@ -98,6 +109,7 @@ def load_seasons(root: Path | None = None) -> dict[int, EnikkSeason]:
                         continue
                     record = season(number)
                     record.boss_en = _boss_name(row.get("wave_name")) or record.boss_en
+                    record.boss_image = boss_image(row.get("monster_image")) or record.boss_image
                     record.weak_element = ELEMENTS.get(str(row.get("weakness") or ""), record.weak_element)
                     record.last_updated = _kst_iso(str((row.get("data") or {}).get("lastupdated") or "")) or record.last_updated
             elif kind == "season":
@@ -107,6 +119,7 @@ def load_seasons(root: Path | None = None) -> dict[int, EnikkSeason]:
                     continue
                 record = season(number)
                 record.boss_en = _boss_name(raid.get("wave_name")) or record.boss_en
+                record.boss_image = boss_image(raid.get("monster_image")) or record.boss_image
                 element = ((raid.get("monster_obj") or {}).get("element_id")) or {}
                 record.boss_element = ELEMENTS.get(str(element.get("element") or ""), record.boss_element)
                 weak = element.get("weak_element_id")

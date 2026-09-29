@@ -50,8 +50,11 @@ export function seasonView(app) {
   return root;
 }
 
+// The season strip. With a weakness chosen (``state.weak``) it holds that weakness's seasons only,
+// and the steps go from one of them to the next.
 function strip(app, selected, pop) {
-  const seasons = app.model.seasons;
+  const weak = app.state.weak;
+  const seasons = weak ? app.model.seasons.filter((s) => s.weak === weak || s.season === selected) : app.model.seasons;
   const index = seasons.findIndex((s) => s.season === selected);
   const list = h("div", { class: "strip-list" }, seasons.map((s) => {
     const entry = pop.tables.get(s.season);
@@ -79,7 +82,16 @@ function strip(app, selected, pop) {
     return target ? h("a", { class: "strip-step", href: app.href("season", target.season), "aria-label": label }, d < 0 ? "‹" : "›")
       : h("span", { class: "strip-step off", "aria-hidden": "true" }, d < 0 ? "‹" : "›");
   };
-  return h("nav", { class: "strip", "aria-label": "시즌 고르기" }, step(-1, "이전 시즌"), list, step(1, "다음 시즌"));
+  const only = weak ? h("button", {
+    type: "button", class: "strip-only", title: `${ELEMENT_KO[weak]} 약점 시즌만 보는 중 · 누르면 전체 시즌`,
+    "aria-label": `${ELEMENT_KO[weak]} 약점 시즌만 보는 중, 누르면 전체 시즌`,
+    onclick: () => app.go({ weak: null }, { replace: true }),
+  }, elementIcon(weak, 15, { title: "" }), h("span", { class: "strip-only-n" }, `${seasons.length}`), h("span", { "aria-hidden": "true" }, "×"))
+    : null;
+  const label = weak ? `${ELEMENT_KO[weak]} 약점 시즌 고르기` : "시즌 고르기";
+  return h("nav", { class: ["strip", weak && "filtered"], "aria-label": label },
+    only, step(-1, weak ? `이전 ${ELEMENT_KO[weak]} 약점 시즌` : "이전 시즌"), list,
+    step(1, weak ? `다음 ${ELEMENT_KO[weak]} 약점 시즌` : "다음 시즌"));
 }
 
 function period([start, end, reason], first) {
@@ -107,19 +119,34 @@ function header(app, info, entry) {
   }
   const all = entry && entry.servers.length === app.model.servers.length;
   const sample = entry ? `${all ? `${entry.servers.length}개 서버` : entry.servers.join("·")} × 상위 ${app.state.params.topN}위 = ${int(entry.rankers)}명 · 덱 ${int(entry.decks)}개` : null;
-  return h("section", { class: "hero" },
+  return h("section", { class: ["hero", info.bossImage && "has-boss"] },
     h("div", { class: "hero-num" }, h("small", null, "SEASON"), h("b", null, info.season)),
+    info.bossImage ? h("img", {
+      class: "hero-boss", src: `icons/bosses/${info.bossImage}.webp`, alt: "", width: 256, height: 256, decoding: "async",
+    }) : null,
     h("div", { class: "hero-main" },
       h("div", { class: "hero-top" }, status, info.disrupted ? h("span", { class: "status warn" }, "일정 변동 있음") : null),
       h("h2", { class: "hero-title" }, boss, info.bossKo && info.bossEn ? h("span", { class: "hero-sub" }, info.bossEn) : null),
       h("div", { class: "hero-facts" },
         h("span", { class: "fact" }, h("span", { class: "fact-k" }, "보스"), elementIcon(info.bossElement, 18), ELEMENT_KO[info.bossElement] || "?"),
-        h("span", { class: "fact" }, h("span", { class: "fact-k" }, "약점"), elementIcon(info.weak, 18), h("b", null, ELEMENT_KO[info.weak] || "?")),
+        weakFact(app, info.weak),
         info.periods.length ? h("span", { class: "fact" }, h("span", { class: "fact-k" }, "기간"),
           info.periods.map((p, i) => h("span", { class: "period" }, period(p, i === 0)))) : null),
       sample ? h("div", { class: "hero-sample muted" }, `표본 ${sample} · 니케 ${int(used)}명 사용 (당시 ${int(entry.rows.length)}명 중)`) : null),
     entry ? h("div", { class: "hero-counts", "aria-label": "시즌 티어별 인원" }, cuts.map(([t]) => h("span", { class: "count", dataset: { tier: t } },
       h("b", null, t), h("span", null, counts[t] || 0)))) : null);
+}
+
+// The boss's weakness; pressing it keeps the strip to the seasons of that weakness (and back).
+function weakFact(app, weak) {
+  const inner = [h("span", { class: "fact-k" }, "약점"), elementIcon(weak, 18), h("b", null, ELEMENT_KO[weak] || "?")];
+  if (!ELEMENT_KO[weak]) return h("span", { class: "fact" }, inner);
+  const on = app.state.weak === weak;
+  return h("button", {
+    type: "button", class: "fact fact-btn", "aria-pressed": String(on),
+    title: on ? "전체 시즌 보기" : `${ELEMENT_KO[weak]} 약점 시즌만 모아 보기`,
+    onclick: () => app.go({ weak: on ? null : weak }, { replace: true }),
+  }, inner, h("span", { class: "fact-more" }, on ? "모아 보는 중" : "시즌만 보기"));
 }
 
 function seasonTable(app, entry, rows) {

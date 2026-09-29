@@ -296,7 +296,7 @@ timeline.season(26).periods                              # 26시즌이 실제로
 ```bash
 nikke collect roster            # 게임 파일 + nikke-utils
 nikke collect notices           # 공식 공지 + 네이버 라운지 (새 것/수정된 것만)
-nikke collect enikk-meta        # enikk 시즌 메타·수집 시계열·캐릭터 표
+nikke collect enikk-meta        # enikk 시즌 메타·수집 시계열·보스 그림·캐릭터 표
 nikke collect enikk             # 솔로 레이드 랭킹 (새 시즌·바뀐 시즌만)
 nikke collect icons             # 니케 얼굴·속성·클래스·버스트·기업·무기 아이콘 (디스크에 없는 것만)
 nikke build timeline            # → roster, unit_releases, treasures, banners, soloraid_*
@@ -321,6 +321,7 @@ nikke status                    # 지금 디스크에 뭐가 있는지
 | 파일 | 출처 |
 |---|---|
 | `data/assets/icons/units/<unit_id>.webp` | blablalink 게임 리소스 CDN의 128×128 얼굴 (`si_c<id>_00_s`). 로스터의 `unit_id` 가 곧 게임 리소스 id 다 (`010` = 라피) |
+| `data/assets/icons/bosses/<그림 이름>.webp` | enikk 의 솔로 레이드 보스 그림(`monster_image`, 예 `full_eba002_hsta`)을 사이트 이미지 변환기로 256px WebP 로 받은 것. 보스마다 한 번 — 티어 사이트의 시즌 머리에 |
 | `data/assets/icons/elements/<속성>.png` | blablalink 사이트의 색 있는 속성 육각형 (`icon-code-*`) |
 | `data/assets/icons/classes/<클래스>.png` | blablalink 사이트의 클래스 문양 (`icon-job-*`) — 티어 사이트만 |
 | `data/assets/icons/bursts/<버스트>.png` | 버스트 단계 숫자 (`icon-burst-1/2/3`, 전 단계 `I-II-III` 는 `icon-burst-p`) |

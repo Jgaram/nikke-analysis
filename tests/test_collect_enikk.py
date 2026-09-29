@@ -90,3 +90,38 @@ def test_every_request_failing_is_an_error():
     with pytest.raises(CollectorError):
         collect(FakeGraphQL({1: "a"}, broken=[1]))
     assert list_runs(enikk.SOURCE) == []
+
+
+class FakeImages:
+    """Answers the image resizer: a WebP for every picture but those in ``bad``."""
+
+    WEBP = b"RIFF\x10\x00\x00\x00WEBPVP8 "
+
+    def __init__(self, bad=()):
+        self.bad = set(bad)
+        self.requested: list[str] = []
+
+    def get(self, url, params=None, headers=None, allow_status=None):
+        self.requested.append(url)
+        if any(f"%2F{name}.png" in url for name in self.bad):
+            return Response(url, 200, b"<html>", "text/html", {})
+        return Response(url, 200, self.WEBP, "image/webp", {})
+
+
+def test_boss_pictures_are_fetched_once(tmp_path):
+    fake = FakeImages()
+    result = enikk.collect_boss_images(["full_eba002_hsta", "full_bba001", "../etc"], directory=tmp_path, fetcher=fake)
+    assert result["fetched"] == ["full_eba002_hsta", "full_bba001"]  # a name that is not a plain file name is skipped
+    assert fake.requested[0].endswith("/_next/image?url=%2Fbosses%2Ffull_eba002_hsta.png&w=256&q=75")
+    assert (tmp_path / "bosses" / "full_bba001.webp").read_bytes() == FakeImages.WEBP
+    again = FakeImages()
+    assert enikk.collect_boss_images(["full_eba002_hsta", "full_bba001"], directory=tmp_path, fetcher=again)["present"] == 2
+    assert again.requested == []
+
+
+def test_a_boss_picture_that_is_not_webp_is_an_error_after_the_others(tmp_path):
+    fake = FakeImages(bad=["full_bba001"])
+    with pytest.raises(CollectorError, match="full_bba001"):
+        enikk.collect_boss_images(["full_bba001", "full_bbg003"], directory=tmp_path, fetcher=fake)
+    assert not (tmp_path / "bosses" / "full_bba001.webp").exists()
+    assert (tmp_path / "bosses" / "full_bbg003.webp").exists()

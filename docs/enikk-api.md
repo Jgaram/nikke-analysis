@@ -31,7 +31,7 @@ curl -sS -X POST https://enikk.app/api/graphql \
 
 | 필드 | 인자 | 내용 | 여기서 |
 |---|---|---|---|
-| `soloRaidSummaries` | — | 시즌 목록, 보스, 약점, `data.lastupdated` | 시즌 목록·증분 판단 (`collect enikk`, `collect enikk-meta`) |
+| `soloRaidSummaries` | — | 시즌 목록, 보스, 보스 그림 이름(`monster_image`), 약점, `data.lastupdated` | 시즌 목록·증분 판단 (`collect enikk`, `collect enikk-meta`) |
 | `SRRankings` | `raid`, `server`, `all`, `exclude` | 랭커별 총점 + 덱 5개 | **랭킹 본체** (`collect enikk`) |
 | `soloRaid` | `raid` | 보스 웨이브·속성·약점 | 달력 교차검증 (`collect enikk-meta`) |
 | `SRDamageChart` | `raid` | 서버별 수집 시각마다 최고·평균·최저 점수 | 수집 시계열 (`collect enikk-meta`) |
@@ -93,6 +93,17 @@ curl -sS -X POST https://enikk.app/api/graphql \
   `soloRaidSummaries` 의 `lastupdated` 로 판단한다.
 - `all: true` 를 넘기면 enikk 가 우연히 조회한 **순위권 밖 플레이어**가 `rank: null`
   로 섞여 온다(2026-09-17 관측: 시즌 40 에 약 2,100명, 3MB). 정해진 모집단이 아니므로 쓰지 않는다.
+
+## 보스 그림과 이름
+
+`monster_image`(예 `full_eba002_hsta`)는 사이트가 `/bosses/<이름>.png` 로 띄우는 보스 그림이다
+(약 1000px, 배경 투명, 한 장 약 900KB). 사이트 자신의 이미지 변환기
+`/_next/image?url=%2Fbosses%2F<이름>.png&w=256&q=75` 를 `Accept: image/webp` 로 부르면 256px WebP
+(약 30KB)가 온다 — 시즌 페이지가 요청하는 크기다. `collect enikk-meta` 가 보스마다 한 번 받아
+`data/assets/icons/bosses/` 에 둔다.
+
+보스 이름은 영어뿐이다. 언어를 고르는 인자가 없고 페이지도 `lang="en"` 이다. 한글 이름은
+공지에서 나오면 그걸, 아니면 [`data/manual/boss_names.csv`](../data/manual/README.md#boss_namescsv) 를 쓴다.
 
 ## 니케 이름
 

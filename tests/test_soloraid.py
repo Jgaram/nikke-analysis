@@ -245,3 +245,28 @@ def test_checks_flag_disagreement_with_enikk():
     assert "element_mismatch:notice=Wind,enikk=Fire" in checks
     assert "enikk_after_periods" in checks and "enikk_outside_periods" in checks
     assert soloraid.season_checks(None, agree) == ["no_notice"]
+
+
+def test_the_boss_name_falls_back_to_the_manual_table(tmp_path):
+    """Season 41's notice names no boss: its Korean name comes from boss_names by enikk's English one. Season 42
+    has no notice at all and still gets its name and picture."""
+    import csv
+
+    notice = update("9월 17일 업데이트 공지", at(2026, 9, 14, 18),
+                    "솔로 레이드 시즌 41이 2026년 9월 24일 12:00:00에 오픈됩니다.",
+                    "2026년 9월 24일 12:00:00 ~ 2026년 10월 1일 4:59:59 (UTC+9)")
+    enikk = {
+        41: EnikkSeason(41, boss_en="Liberalio Body", boss_image="full_eba002_hsta"),
+        42: EnikkSeason(42, boss_en="Altruia", boss_image="full_xbg004_psid"),
+    }
+    soloraid.build([notice], enikk, boss_names={"Liberalio Body": "리버렐리오 바디", "Altruia": "알트루이아"},
+                   out_dir=tmp_path)
+    with (tmp_path / soloraid.SEASONS_CSV).open(encoding="utf-8") as handle:
+        rows = {int(r["season"]): r for r in csv.DictReader(handle)}
+    assert (rows[41]["boss_ko"], rows[41]["boss_image"]) == ("리버렐리오 바디", "full_eba002_hsta")
+    assert (rows[42]["boss_ko"], rows[42]["boss_image"]) == ("알트루이아", "full_xbg004_psid")
+
+
+def test_the_manual_boss_names_cover_every_named_season():
+    names = soloraid.load_boss_names()
+    assert names["Crystal Chamber"] == "크리스탈 체임버" and len(names) >= 34

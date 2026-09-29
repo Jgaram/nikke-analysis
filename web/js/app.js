@@ -14,6 +14,7 @@ const VIEWS = { season: seasonView, date: dateView, unit: (app) => (app.state.un
 const state = {
   tab: "season",
   season: null,
+  weak: null, // season tab: only the seasons whose boss is weak to this element; null = every season
   date: null, // "YYYY-MM-DD"; null = now
   view: "overall", // date tab: overall or an element
   mode: "tiers", // tiers | table
@@ -104,6 +105,7 @@ app.href = (tab, arg = null, extra = {}) => {
   const keep = {};
   if (tab === "date" || tab === "unit") keep.d = state.date;
   if (tab === "date") keep.v = state.view !== "overall" ? state.view : null;
+  if (tab === "season") keep.wk = state.weak;
   if (tab !== "unit" && state.mode === "table") keep.m = "table";
   return `#/${tab}${arg != null ? `/${arg}` : ""}${app.query({ ...keep, ...extra })}`;
 };
@@ -123,6 +125,7 @@ function readHash() {
   state.params = decodeParams(q, app.defaults, app.model);
   state.date = /^\d{4}-\d{2}-\d{2}$/.test(q.get("d") || "") ? q.get("d") : null;
   state.view = M.ELEMENTS.includes(q.get("v")) ? q.get("v") : "overall";
+  state.weak = M.ELEMENTS.includes(q.get("wk")) ? q.get("wk") : null;
   state.mode = q.get("m") === "table" ? "table" : "tiers";
   if (state.tab === "season") {
     const n = Number(arg);

@@ -36,3 +36,10 @@ def test_enikk_vocabulary_maps_onto_the_roster():
         "squad": "Goddess",
         "first_seen": "",
     }
+
+
+def test_a_boss_picture_name_must_be_a_plain_file_name():
+    from nikke_analysis.build.enikk_meta import boss_image
+
+    assert boss_image("full_eba002_hsta") == "full_eba002_hsta"
+    assert boss_image("../x") == "" and boss_image(None) == "" and boss_image("a b") == ""

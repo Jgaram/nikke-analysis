@@ -14,7 +14,7 @@
 
     nikke collect roster             fetch the roster sources
     nikke collect notices            fetch new/edited official notices (site + Naver lounge)
-    nikke collect enikk-meta         fetch Solo Raid season metadata and the unit table from enikk
+    nikke collect enikk-meta         fetch Solo Raid season metadata, boss pictures and the unit table from enikk
     nikke probe enikk                reconnaissance on the ranking site's API
     nikke collect enikk              fetch Solo Raid rankings (new and changed seasons)
     nikke collect icons              fetch unit faces and attribute icons not on disk yet
@@ -226,6 +226,7 @@ def cmd_collect_enikk_meta(args: argparse.Namespace) -> int:
     _emit(
         {
             "seasons": enikk.collect_seasons(base_url=args.base_url, full=args.full),
+            "boss_images": enikk.collect_boss_images(base_url=args.base_url),
             "characters": enikk.collect_characters(base_url=args.base_url),
         }
     )
@@ -336,6 +337,7 @@ def cmd_refresh(args: argparse.Namespace) -> int:
         _attempt(steps, failures, "collect.notices.official", lambda: notices.collect_official())
         _attempt(steps, failures, "collect.notices.naver", lambda: notices.collect_naver())
         _attempt(steps, failures, "collect.enikk.seasons", lambda: enikk.collect_seasons())
+        _attempt(steps, failures, "collect.enikk.boss_images", lambda: enikk.collect_boss_images())
         _attempt(steps, failures, "collect.enikk.characters", lambda: enikk.collect_characters())
         _attempt(
             steps,
@@ -542,7 +544,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--full", action="store_true", help="re-read every notice, not just new or recent ones")
     p.set_defaults(func=cmd_collect_notices)
 
-    p = collect.add_parser("enikk-meta", help="Solo Raid season metadata and the unit table from enikk")
+    p = collect.add_parser("enikk-meta", help="Solo Raid season metadata, boss pictures and the unit table from enikk")
     p.add_argument("--base-url", default="https://enikk.app")
     p.add_argument("--full", action="store_true", help="re-read every season")
     p.set_defaults(func=cmd_collect_enikk_meta)

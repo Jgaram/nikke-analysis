@@ -13,7 +13,8 @@ step). This module gives it its data and puts the two together:
                      config/tiers.yaml
 ``data/decks.json``  every ranked player's fought decks, season by season: the
                      server, the rank, and each deck's damage and units
-``icons/``           the unit faces and attribute icons of data/assets/icons/
+``icons/``           the unit faces, boss pictures and attribute icons of
+                     data/assets/icons/
 
 The decks are what the metric tables are computed from, so the page repeats the
 whole computation (``web/js/model.js`` follows ``analyze/metrics.py`` and
@@ -41,14 +42,14 @@ from typing import Any
 import pandas as pd
 
 from .analyze import metrics, tiers
-from .paths import REPO_ROOT, icons_dir, processed_dir
+from .paths import REPO_ROOT, boss_icon_path, icons_dir, processed_dir
 from .servers import SERVER_KO, ordered
 
 log = logging.getLogger(__name__)
 
 WEB_DIR = REPO_ROOT / "web"
 SITE_DIR = REPO_ROOT / "_site"
-ICON_KINDS = ("units", "elements", "bursts", "classes", "weapons", "manufacturers")
+ICON_KINDS = ("units", "bosses", "elements", "bursts", "classes", "weapons", "manufacturers")
 LAUNCH = "2022-11-04T00:00:00+09:00"
 # Files whose references to the page's own scripts and styles get the content stamp.
 STAMPED = (".html", ".js", ".css")
@@ -104,7 +105,8 @@ def _units(roster: pd.DataFrame) -> list[dict[str, Any]]:
     return sorted(units, key=lambda u: u["id"])
 
 
-def _seasons(seasons: pd.DataFrame, periods: pd.DataFrame, entries: pd.DataFrame) -> list[dict[str, Any]]:
+def _seasons(seasons: pd.DataFrame, periods: pd.DataFrame, entries: pd.DataFrame,
+             icons: Path | None = None) -> list[dict[str, Any]]:
     collected = pd.to_datetime(entries.groupby("season")["collected_at"].max(), errors="coerce", utc=True)
     servers = entries.groupby("season")["server"].agg(lambda s: ordered(s.unique()))
     spans: dict[int, list[list[Any]]] = {}
@@ -121,6 +123,9 @@ def _seasons(seasons: pd.DataFrame, periods: pd.DataFrame, entries: pd.DataFrame
             "season": number,
             "bossEn": _text(row.get("boss_en")),
             "bossKo": _text(row.get("boss_ko")),
+            # the picture's file name under icons/bosses/, when there is one on disk
+            "bossImage": image if (image := _text(row.get("boss_image"))) and boss_icon_path(image, icons).is_file()
+            else "",
             "bossElement": _text(row.get("element")),
             "weak": _text(row.get("weak_element")),
             "start": _ms(row.get("start_at")),
@@ -171,7 +176,8 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
     }
 
 
-def export(data_dir: Path | None = None, config: tiers.TierConfig | None = None) -> tuple[dict, dict]:
+def export(data_dir: Path | None = None, config: tiers.TierConfig | None = None,
+           icons: Path | None = None) -> tuple[dict, dict]:
     """The page's two data files, ``model.json`` and ``decks.json``, as dicts."""
     directory = data_dir or processed_dir()
     config = config or tiers.load_tier_config()
@@ -200,7 +206,7 @@ def export(data_dir: Path | None = None, config: tiers.TierConfig | None = None)
     if missing:  # every ranked name resolves to a roster id; this only guards the index
         raise RuntimeError(f"raid_entries.csv has units the roster does not: {', '.join(missing)}")
     servers = ordered(entries["server"].unique())
-    season_list = _seasons(seasons, periods, entries)
+    season_list = _seasons(seasons, periods, entries, icons)
     decks = _decks(entries, units, servers)
     newest = max((s["collected"] for s in season_list if s["collected"] is not None), default=None)
     model = {
@@ -238,7 +244,7 @@ def build(
     source = web_dir or WEB_DIR
     if not (source / "index.html").is_file():
         raise RuntimeError(f"no page to build: {source / 'index.html'} is missing")
-    model, decks = export(data_dir, config)
+    model, decks = export(data_dir, config, icons)
     model_text, decks_text = _dump(model), _dump(decks)
     data_stamp = hashlib.sha256((model_text + decks_text).encode("utf-8")).hexdigest()[:12]
     model["dataVersion"] = data_stamp

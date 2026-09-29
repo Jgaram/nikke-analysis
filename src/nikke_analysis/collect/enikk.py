@@ -20,6 +20,9 @@ Entry points:
                actually saw it being played, and attributes for units the
                community tables have not caught up with yet.
 
+``collect_boss_images`` - each season's boss picture, 256 px wide, once per boss
+               (data/assets/icons/bosses/). The site shows it by the season.
+
 ``probe``    - reconnaissance. Walks the app's own asset graph looking for the
                JSON the page renders from and saves every response. Only needed
                if the site is rebuilt and the query in config/enikk.yaml stops
@@ -38,9 +41,11 @@ import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
+from pathlib import Path
 from urllib.parse import urljoin, urlparse
 
 from ..config import EnikkConfig, load_enikk_config
+from ..paths import boss_icon_path, icons_dir
 from ..util.http import Fetcher, Response
 from ..util.jsonpath import resolve_path
 from ..util.nextjs import find_objects, flight_payload
@@ -66,6 +71,11 @@ SEASON_QUERY = (
     "{ wave_name raid_number monster_image monster_obj data } }"
 )
 DAMAGE_CHART_QUERY = "query SRDamageChart($raid: Float!) { SRDamageChart(raid: $raid) }"
+
+# A boss picture through the site's own image resizer, the size its season page asks for:
+# ~30 KB of WebP instead of the ~900 KB PNG at /bosses/<name>.png.
+BOSS_IMAGE_PATH = "/_next/image?url=%2Fbosses%2F{name}.png&w=256&q=75"
+_IMAGE_NAME_RE = re.compile(r"^[a-z0-9_]+$")
 
 # The keys that identify a unit record inside the /characters page payload.
 CHARACTER_KEYS = ("resource_id", "name_localkey", "class", "element_id")
@@ -464,6 +474,67 @@ def extract_characters(html: str) -> list[dict[str, Any]]:
     for record in find_objects(flight_payload(html), CHARACTER_KEYS):
         by_id.setdefault(record["resource_id"], record)
     return [by_id[key] for key in sorted(by_id, key=lambda k: int(k))]
+
+
+def stored_boss_images(root: Any = None) -> list[str]:
+    """Every boss picture name the stored season lists mention (``monster_image``), in order."""
+    names: list[str] = []
+    for run in list_runs(SEASONS_SOURCE, root=root):
+        for entry in run.entries:
+            if (entry.get("meta") or {}).get("kind") != "summaries":
+                continue
+            try:
+                rows = (run.read_json(entry["filename"]).get("data") or {}).get("soloRaidSummaries") or []
+            except (OSError, ValueError):
+                continue
+            for row in rows:
+                name = str(row.get("monster_image") or "")
+                if _IMAGE_NAME_RE.fullmatch(name) and name not in names:
+                    names.append(name)
+    return names
+
+
+def collect_boss_images(
+    images: Iterable[str] | None = None,
+    *,
+    base_url: str = DEFAULT_BASE_URL,
+    directory: Any = None,
+    fetcher: Fetcher | None = None,
+    force: bool = False,
+) -> dict[str, Any]:
+    """Fetch every boss picture not on disk yet, as 256 px WebP.
+
+    ``images`` defaults to every one the stored season lists name. A boss comes
+    back season after season, so after the first run this is one request per new
+    boss. Raises when a picture could not be fetched - after trying the others.
+    """
+    target = directory or icons_dir()
+    names = [n for n in (images if images is not None else stored_boss_images()) if _IMAGE_NAME_RE.fullmatch(n)]
+    fetcher = fetcher or Fetcher(delay=1.5, headers={"Accept": "image/webp,image/*;q=0.8"})
+    fetched, present, failed = [], 0, []
+    for name in names:
+        path = boss_icon_path(name, target)
+        if path.is_file() and not force:
+            present += 1
+            continue
+        url = urljoin(base_url, BOSS_IMAGE_PATH.format(name=name))
+        try:
+            response = fetcher.get(url)
+        except Exception as exc:  # retries exhausted, a changed host
+            failed.append(f"{name}: {exc}")
+            continue
+        if not (response.content[:4] == b"RIFF" and response.content[8:12] == b"WEBP"):
+            failed.append(f"{name}: {url} answered {response.content_type or 'something'} that is not WebP")
+            continue
+        path.parent.mkdir(parents=True, exist_ok=True)
+        partial = path.with_suffix(".part")
+        partial.write_bytes(response.content)
+        partial.replace(path)
+        fetched.append(name)
+    log.info("boss pictures: %s fetched, %s already present", len(fetched), present)
+    if failed:
+        raise CollectorError(f"{len(failed)} boss picture(s) failed: " + "; ".join(failed[:5]))
+    return {"directory": str(Path(target) / "bosses"), "fetched": fetched, "present": present}
 
 
 def collect_characters(*, base_url: str = DEFAULT_BASE_URL, fetcher: Fetcher | None = None) -> dict[str, Any]:

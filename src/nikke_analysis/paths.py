@@ -56,6 +56,11 @@ def unit_icon_path(unit_id: str, directory: Path | None = None) -> Path:
     return (directory or icons_dir()) / "units" / f"{unit_id}.webp"
 
 
+def boss_icon_path(image: str, directory: Path | None = None) -> Path:
+    """A Solo Raid boss's picture, by enikk's name for it (``full_eba002_hsta``)."""
+    return (directory or icons_dir()) / "bosses" / f"{image}.webp"
+
+
 def attribute_icon_path(kind: str, value: str, directory: Path | None = None) -> Path:
     """An attribute's icon, by the roster's spelling of the value.
 

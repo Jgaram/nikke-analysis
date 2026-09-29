@@ -57,7 +57,9 @@
 }
 
 :root[data-theme="light"] {
-  color-scheme: light;
+  /* "only": a browser's own dark mode (Chrome's auto-dark, Samsung Internet's) must not
+     repaint the light theme - the page has a dark theme of its own for that */
+  color-scheme: only light;
   --page: #eef1f6;
   --surface: #ffffff;
   --surface-2: #f6f8fb;
@@ -90,6 +92,12 @@
   --on-SS: #ffffff; --on-S: #ffffff; --on-A: #ffffff; --on-B: #1c2231; --on-C: #1c2231; --on-D: #1c2231;
   --t-F: #e8ebf0; --ti-F: #8a93a6; --on-F: #4f5a71;
   --deck-1: #004288; --deck-2: #005ca5; --deck-3: #2378c2; --deck-4: #4393e1; --deck-5: #60b0ff;
+}
+
+/* The device's dark setting, before the script has picked a theme; it also tells a browser
+   that darkens pages on its own that this one has its own dark theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { color-scheme: dark; }
 }
 
 [data-tier="SS"] { --tc: var(--t-SS); --ti: var(--ti-SS); --on: var(--on-SS); }

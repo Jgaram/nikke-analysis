@@ -53,9 +53,11 @@ and they change with every snapshot until it is over.
 
 Beside the tiers, and not part of them, each unit's **lifespan**: since when
 top rankers have used it, in how many seasons, and whether they still do - a
-unit unused for a year (``retire_after_days``, longer than the half-life on
-purpose: an element can take a year to come round) is retired, and one used
-again after that came back (``lifespans``).
+unit unused for three months (``retire_after_days``) that also sat out a season
+of its own element's weakness (``retire_after_own_seasons``) is retired, and one
+used again after that came back (``lifespans``). The own-element season is what
+keeps the window short without retiring a specialist whose element has not come
+round: an element can take a year to.
 
 A treasure (애장품) changes a unit for good, so its element and overall tiers are
 reckoned on one side of it only: a view of a moment when the unit had its
@@ -114,7 +116,8 @@ class TierConfig:
     include_live: bool = True
     # lifespan
     min_usage: float = 0.10
-    retire_after_days: float = 365.0
+    retire_after_days: float = 90.0
+    retire_after_own_seasons: int = 1
     # diagnostics
     deck_effect_ridge: float = 20.0
     synergy_min_decks: int = 20
@@ -164,6 +167,7 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         include_live=bool(element.get("include_live", defaults.include_live)),
         min_usage=float(lifespan.get("min_usage", defaults.min_usage)),
         retire_after_days=float(lifespan.get("retire_after_days", defaults.retire_after_days)),
+        retire_after_own_seasons=int(lifespan.get("retire_after_own_seasons", defaults.retire_after_own_seasons)),
         deck_effect_ridge=float(diagnostics.get("deck_effect_ridge", defaults.deck_effect_ridge)),
         synergy_min_decks=int(diagnostics.get("synergy_min_decks", defaults.synergy_min_decks)),
     )
@@ -219,12 +223,17 @@ class Standings:
     slots: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=SLOT_COLUMNS))
 
 
-def played_with_treasure(rows: pd.DataFrame) -> pd.Series:
-    """The ``treasure`` flag of season rows as booleans (False where there is none),
+def flags(rows: pd.DataFrame, column: str) -> pd.Series:
+    """A flag column of season rows as booleans (False where there is none),
     whether it was computed or read back from a table as text."""
-    if "treasure" not in rows.columns:
+    if column not in rows.columns:
         return pd.Series(False, index=rows.index)
-    return rows["treasure"].astype(str).str.lower().isin(("true", "1"))
+    return rows[column].astype(str).str.lower().isin(("true", "1"))
+
+
+def played_with_treasure(rows: pd.DataFrame) -> pd.Series:
+    """The ``treasure`` flag of season rows as booleans (False where there is none)."""
+    return flags(rows, "treasure")
 
 
 def _decay(ages_days: pd.Series, half_life_days: float) -> pd.Series:
@@ -387,7 +396,7 @@ def standings(
 # --------------------------------------------------------------------------
 
 LIFESPAN_COLUMNS = ["unit_id", "first_used", "run_from", "last_used", "seasons_used", "seasons_out", "returns",
-                    "idle_days", "retired"]
+                    "idle_days", "missed_own", "retired"]
 
 
 def lifespans(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: TierConfig | None = None) -> pd.DataFrame:
@@ -397,16 +406,24 @@ def lifespans(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: T
     (``usage_rate``). Nothing else goes in - not the lift, not the element - so a
     specialist is used in its element's seasons and idle in between.
 
-    A unit is ``retired`` once ``retire_after_days`` have gone by since the end
-    of the last season that used it (``idle_days``). The window is kept longer
-    than the recency half-life on purpose: an element comes round every few
-    months and sometimes only after a year, so a specialist idle for half a year
-    is still in use. A unit used again after such a gap came back (``returns``
-    counts the gaps, measured from the end of one season that used it to the
-    start of the next), and its run in use since then starts at ``run_from``.
-    ``first_used`` is its first season in use ever, ``last_used`` the latest,
-    ``seasons_used`` how many used it of the ``seasons_out`` it was out for. A
-    unit no season used has no seasons and is not retired.
+    A unit is ``retired`` once both hold since the end of the last season that
+    used it: ``retire_after_days`` have gone by (``idle_days``), and at least
+    ``retire_after_own_seasons`` of the seasons it sat out were weak to an
+    element it counts as (``missed_own``; the table's ``element_match``). Days
+    alone cannot tell a unit out of use from a specialist waiting for its
+    element, which comes round every few months and sometimes only after a year;
+    a season of its element passing it by can. So a unit used everywhere retires
+    once it misses its own element as well, and a specialist whose element has
+    not come round since stays in use however long that takes. With
+    ``retire_after_own_seasons`` 0 the days alone decide.
+
+    A unit used again after such a gap came back (``returns`` counts the gaps,
+    measured from the end of one season that used it to the start of the next,
+    with the own-element seasons in between), and its run in use since then
+    starts at ``run_from``. ``first_used`` is its first season in use ever,
+    ``last_used`` the latest, ``seasons_used`` how many used it of the
+    ``seasons_out`` it was out for. A unit no season used has no seasons and is
+    not retired.
 
     Same seasons as ``standings``: those over by ``moment`` and, with
     ``include_live``, the one in progress as far as collected - it counts as
@@ -419,23 +436,30 @@ def lifespans(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: T
         return pd.DataFrame(columns=LIFESPAN_COLUMNS)
     counted["start_at"] = counted["season"].map(seasons.set_index("season")["start_at"])
     counted["at"] = counted["end_at"].where(counted["end_at"] <= moment, moment)
-    rows = (table.loc[table["season"].isin(counted["season"]), ["season", "unit_id", "usage_rate"]]
+    rows = (table.loc[table["season"].isin(counted["season"])]
+            .assign(own=lambda frame: flags(frame, "element_match"))[["season", "unit_id", "usage_rate", "own"]]
             .merge(counted[["season", "start_at", "at"]], on="season").sort_values(["unit_id", "season"]))
     window = pd.Timedelta(days=config.retire_after_days)
+    need = config.retire_after_own_seasons
     out = []
     for unit_id, group in rows.groupby("unit_id", sort=True):
-        used = group[group["usage_rate"] >= config.min_usage]
+        in_use = (group["usage_rate"] >= config.min_usage).to_numpy(dtype=bool)
+        used = group[in_use]
         record: dict[str, Any] = {"unit_id": unit_id, "first_used": pd.NA, "run_from": pd.NA, "last_used": pd.NA,
                                   "seasons_used": len(used), "seasons_out": len(group), "returns": 0,
-                                  "idle_days": np.nan, "retired": False}
+                                  "idle_days": np.nan, "missed_own": 0, "retired": False}
         if not used.empty:
+            own = np.cumsum(group["own"].to_numpy(dtype=bool))  # own-element seasons so far
+            at = np.flatnonzero(in_use)
+            missed = own[at[1:] - 1] - own[at[:-1]]  # own-element seasons between two that used it
             gaps = used["start_at"].iloc[1:].reset_index(drop=True) - used["at"].iloc[:-1].reset_index(drop=True)
-            breaks = (gaps >= window).to_numpy(dtype=bool)
+            breaks = (gaps >= window).to_numpy(dtype=bool) & (missed >= need)
             since = int(np.flatnonzero(breaks)[-1]) + 1 if breaks.any() else 0
             idle = (moment - used["at"].iloc[-1]).total_seconds() / 86400.0
+            missed_own = int(own[-1] - own[at[-1]])
             record.update(first_used=int(used["season"].iloc[0]), run_from=int(used["season"].iloc[since]),
                           last_used=int(used["season"].iloc[-1]), returns=int(breaks.sum()), idle_days=idle,
-                          retired=idle >= config.retire_after_days)
+                          missed_own=missed_own, retired=idle >= config.retire_after_days and missed_own >= need)
         out.append(record)
     life = pd.DataFrame(out, columns=LIFESPAN_COLUMNS)
     for column in ("first_used", "run_from", "last_used"):

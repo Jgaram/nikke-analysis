@@ -6,7 +6,7 @@ import {
   h, elementIcon, ELEMENT_KO, day, shortDay, todayKst, tierBadge, sortableTable, segmented, kst,
 } from "../ui.js";
 import {
-  unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, duration,
+  unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText,
 } from "./common.js";
 
 const OVERALL_KO = {
@@ -109,12 +109,11 @@ function viewTabs(app) {
 
 // How the lifespan columns and the grey faces read, with the parameters in force.
 function lifeNote(app, table) {
-  const { minUsage, retireAfterDays } = app.state.params;
-  const min = Math.round(minUsage * 100);
-  const retired = `마지막으로 쓰인 시즌이 끝나고 ${duration(retireAfterDays)} 동안 상위 랭커 ${min}% 넘게 쓴 시즌이 없음`;
+  const min = Math.round(app.state.params.minUsage * 100);
+  const retired = retiredText(app.state.params);
   return table
     ? `시즌별 사용 = 시즌 하나가 칸 하나, 칠한 칸은 상위 랭커 ${min}% 이상이 쓴 시즌(진할수록 많이) · 수명 = 지금 쓰이는 흐름이 `
-      + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired}, 그 뒤 다시 쓰이면 복귀. `
+      + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired} · 복귀 = 은퇴한 뒤 다시 쓰임. `
     : `흑백 얼굴 = 은퇴(${retired}). `;
 }
 

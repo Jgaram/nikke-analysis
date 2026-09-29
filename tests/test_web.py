@@ -35,9 +35,11 @@ CONFIGS = {
     "defaults": {},
     "servers-top-uniform": {"exclude_servers": ("S2",), "top_n": 8, "rank_weighting": "uniform"},
     "flat-frequency-prior": {"half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
-                             "min_elements_observed": 2, "min_usage": 0.3, "retire_after_days": 40.0},
+                             "min_elements_observed": 2, "min_usage": 0.3, "retire_after_days": 40.0,
+                             "retire_after_own_seasons": 0},
     "max-finished-only-cuts": {"overall": "max", "include_live": False, "half_life_days": 60.0,
-                               "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)]},
+                               "cuts": [("SS", 1.6), ("S", 1.2), ("A", 0.9), ("B", 0.6), ("C", 0.3), ("D", 0.0)],
+                               "retire_after_days": 0.0, "retire_after_own_seasons": 2},
 }
 
 
@@ -140,6 +142,7 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "priorStrength": config.prior_strength, "overall": config.overall,
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
         "minUsage": config.min_usage, "retireAfterDays": config.retire_after_days,
+        "retireAfterOwnSeasons": config.retire_after_own_seasons,
     }
 
 
@@ -204,7 +207,7 @@ def compare(tables: Path, page: dict) -> None:
         _flags(overall[column], theirs[column], f"overall table: {column}")
 
     life = overall.merge(pd.DataFrame(page["life"]), on="unit_id", how="left", suffixes=("_py", "_js"))
-    for column in ("first_used", "run_from", "last_used", "seasons_used", "seasons_out", "returns"):
+    for column in ("first_used", "run_from", "last_used", "seasons_used", "seasons_out", "returns", "missed_own"):
         _same(life[f"{column}_py"], life[f"{column}_js"], f"overall table: {column}")
     _close(life["idle_days_py"], life["idle_days_js"], "overall table: idle_days")
     _flags(life["retired_py"], life["retired_js"], "overall table: retired")
@@ -219,6 +222,25 @@ def compare(tables: Path, page: dict) -> None:
     _flags(elements["treasure"], theirs["treasure"], "element tables: treasure")
 
 
+def compare_lives(tables: Path, page: dict, config: tiers.TierConfig) -> pd.DataFrame:
+    """Every unit's lifespan as each finished season ended, the pipeline's (from its tables in
+    ``tables``) against the page's. Returns the pipeline's."""
+    usage = _table(tables / "metrics_unit_season.csv")
+    seasons = _table(tables / "metrics_seasons.csv")
+    for column in ("start_at", "end_at", "collected_on", "collected_until"):
+        seasons[column] = pd.to_datetime(seasons[column], utc=True)
+    ours = pd.concat([tiers.lifespans(usage, seasons, end, config).assign(season=season)
+                      for season, end in seasons.loc[seasons["final"], ["season", "end_at"]].itertuples(index=False)])
+    both = ours.astype(object).merge(pd.DataFrame(page["lives"]), on=["season", "unit_id"], how="outer",
+                                     suffixes=("_py", "_js"), indicator=True)
+    assert (both["_merge"] == "both").all(), both.loc[both["_merge"] != "both", ["season", "unit_id", "_merge"]]
+    for column in ("first_used", "run_from", "last_used", "seasons_used", "seasons_out", "returns", "missed_own"):
+        _same(both[f"{column}_py"], both[f"{column}_js"], f"lifespans: {column}")
+    _close(both["idle_days_py"], both["idle_days_js"], "lifespans: idle_days")
+    _flags(both["retired_py"], both["retired_js"], "lifespans: retired")
+    return ours
+
+
 @pytest.mark.skipif(NODE is None, reason="node is not installed")
 @pytest.mark.parametrize("name", list(CONFIGS))
 def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_path):
@@ -228,7 +250,10 @@ def test_the_page_computes_what_the_pipeline_does(name, world_dir, site, tmp_pat
     pipeline.run(data_dir=directory, config=config, out_dir=tmp_path)
     page = run_page(out, js_params(config, ordered(world.entries["server"].unique())))
     compare(tmp_path, page)
+    lives = compare_lives(tmp_path, page, config)
     if name == "defaults":
+        # somewhere along the way units sat out a season of their own element, and one retired for it
+        assert (lives["missed_own"] > 0).any() and lives["retired"].any()
         # the treasure and the added elements took part
         rows = pd.DataFrame(page["rows"])
         assert rows["treasure"].any()

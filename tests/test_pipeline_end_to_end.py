@@ -3,6 +3,7 @@
 Uses the synthetic world so it needs no network and no committed ranking data.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -166,9 +167,29 @@ def test_unit_history_says_how_long_the_unit_has_been_in_use(processed):
                                                                          world.live_season)
     assert life["seasons_out"] == world.live_season - world.newcomer_season + 1 and not life["retired"]
     assert f"현역 · S{world.newcomer_season}부터" in render_unit(fresh, book.config)
+    # a year on with no season since, none of its element (Electric) either: nothing has passed it by
     later = book.unit("Newcomer", (last + pd.Timedelta(days=400)).to_pydatetime())
+    assert later.life["missed_own"] == 0 and not later.life["retired"]
+    by_days = TierBook.load(directory, replace(book.config, retire_after_own_seasons=0))
+    later = by_days.unit("Newcomer", (last + pd.Timedelta(days=400)).to_pydatetime())
     assert later.life["retired"]
-    assert f"은퇴 · S{world.newcomer_season}–S{world.live_season}" in render_unit(later, book.config)
+    assert f"은퇴 · S{world.newcomer_season}–S{world.live_season}" in render_unit(later, by_days.config)
+    assert "은퇴 = 마지막으로 쓰인 시즌이 끝나고 90일 동안 안 쓰임" in render_unit(later, by_days.config)
+
+
+def test_a_specialist_between_its_seasons_is_in_use_and_says_why(processed):
+    """The Fire dealer plays only Fire-weak seasons (1 and 6 of the eight): a month after the
+    last season it has been idle past the days, but no Fire-weak season has come since."""
+    directory, world, _ = processed
+    book = TierBook.load(directory)
+    last = pd.Timestamp(world.seasons.set_index("season").loc[world.live_season, "end_at"])
+    history = book.unit("Fire Dealer", (last + pd.Timedelta(days=30)).to_pydatetime())
+    life = history.life
+    assert (life["last_used"], life["missed_own"], life["retired"]) == (6, 0, False)
+    assert life["idle_days"] >= book.config.retire_after_days
+    text = render_unit(history, book.config)
+    assert "현역 · S1부터" in text and "그 뒤 작열 약점 시즌 아직 없음" in text
+    assert "은퇴 = 마지막으로 쓰인 시즌이 끝나고 90일이 지났고 그 사이 온 자기 속성 약점 시즌에도 안 쓰임" in text
 
 
 def test_a_unit_shows_what_its_overall_is_made_of(processed):

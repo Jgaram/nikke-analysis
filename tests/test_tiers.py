@@ -106,7 +106,7 @@ def test_config_file_round_trip(tmp_path):
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
         "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
         "          include_live: false}\n"
-        "lifespan: {min_usage: 0.25, retire_after_days: 200}\n",
+        "lifespan: {min_usage: 0.25, retire_after_days: 200, retire_after_own_seasons: 2}\n",
         encoding="utf-8",
     )
     config = tiers.load_tier_config(path)
@@ -114,7 +114,7 @@ def test_config_file_round_trip(tmp_path):
     assert config.tier_order == ["S", "A", "B"]
     assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
-    assert config.min_usage == 0.25 and config.retire_after_days == 200
+    assert config.min_usage == 0.25 and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
 
 
 def test_repo_config_loads():
@@ -361,23 +361,25 @@ def test_tier_changes_have_signed_steps(built):
 # lifespans
 
 
-def seasons_monthly(usage, *, live=False):
-    """Hand-made seasons a month apart (a week long each), unit "001" fielded by
-    ``usage[i]`` of the rankers in season i + 1; with ``live`` the last is in progress."""
+def seasons_monthly(usage, *, live=False, weak=None):
+    """Hand-made seasons a month apart (a week long each), unit "001" (Fire) fielded by
+    ``usage[i]`` of the rankers in season i + 1; ``weak`` gives the seasons' boss weaknesses
+    (by default every one Fire, the unit's own); with ``live`` the last is in progress."""
     start = pd.Timestamp("2024-01-01T00:00:00Z")
+    weak = weak or ["Fire"] * len(usage)
     seasons, rows = [], []
-    for number, share in enumerate(usage, start=1):
+    for number, (share, element) in enumerate(zip(usage, weak, strict=True), start=1):
         begin = start + pd.DateOffset(months=number - 1)
         end = begin + pd.Timedelta(days=7)
         last = number == len(usage)
-        seasons.append({"season": number, "weak_element": "Fire", "start_at": begin, "end_at": end,
+        seasons.append({"season": number, "weak_element": element, "start_at": begin, "end_at": end,
                         "final": not (live and last), "collected_on": begin + pd.Timedelta(days=3)})
-        rows.append({"season": number, "unit_id": "001", "usage_rate": share})
+        rows.append({"season": number, "unit_id": "001", "usage_rate": share, "element_match": element == "Fire"})
     return pd.DataFrame(rows), pd.DataFrame(seasons)
 
 
-def life_of(usage, moment, *, live=False, **config):
-    table, summary = seasons_monthly(usage, live=live)
+def life_of(usage, moment, *, live=False, weak=None, **config):
+    table, summary = seasons_monthly(usage, live=live, weak=weak)
     return tiers.lifespans(table, summary, pd.Timestamp(moment), tiers.TierConfig(**config)).iloc[0]
 
 
@@ -386,23 +388,39 @@ def test_a_lifespan_runs_from_the_first_season_that_used_the_unit_to_the_last():
     life = life_of([0.05, 0.4, 0.1, 0.02, 0.9, 0.0], "2024-07-01T00:00:00Z")
     assert (life["first_used"], life["run_from"], life["last_used"]) == (2, 2, 5)
     assert (life["seasons_used"], life["seasons_out"], life["returns"]) == (3, 6, 0)
-    assert not life["retired"] and life["idle_days"] == pytest.approx(54.0)  # since 2024-05-08
+    assert life["idle_days"] == pytest.approx(54.0) and life["missed_own"] == 1  # since 2024-05-08; June was Fire
+    assert not life["retired"]  # under 90 days
 
 
-def test_a_year_unused_is_retired_and_a_return_after_it_starts_a_new_run():
-    usage = [0.5] * 3 + [0.0] * 13  # used in January-March 2024, then not
-    assert not life_of(usage, "2025-03-01T00:00:00Z")["retired"]  # under a year since March 8
-    assert life_of(usage, "2025-03-10T00:00:00Z")["retired"]
-    assert not life_of(usage, "2025-03-10T00:00:00Z", retire_after_days=400)["retired"]
+def test_three_months_unused_through_a_season_of_its_element_is_retired():
+    usage = [0.5] * 3 + [0.0] * 13  # used in January-March 2024, then not; every boss weak to Fire, its element
+    assert not life_of(usage, "2024-06-01T00:00:00Z")["retired"]  # under 90 days since March 8
+    life = life_of(usage, "2024-06-10T00:00:00Z")
+    assert life["retired"] and life["missed_own"] == 3  # the Fire seasons of April, May and June went by
+    assert not life_of(usage, "2024-06-10T00:00:00Z", retire_after_days=120)["retired"]
+    assert not life_of(usage, "2024-06-10T00:00:00Z", retire_after_own_seasons=4)["retired"]
     back = life_of(usage + [0.6], "2025-06-01T00:00:00Z")  # used again in May 2025
     assert (back["first_used"], back["run_from"], back["last_used"], back["returns"]) == (1, 17, 17, 1)
-    assert not back["retired"]
+    assert not back["retired"] and back["missed_own"] == 0
 
 
-def test_a_gap_shorter_than_the_window_is_not_a_return():
-    life = life_of([0.5] + [0.0] * 6 + [0.5], "2024-09-01T00:00:00Z")  # a half-year gap: a specialist between its seasons
-    assert (life["run_from"], life["returns"]) == (1, 0)
-    assert life_of([0.5] + [0.0] * 6 + [0.5], "2024-09-01T00:00:00Z", retire_after_days=90)["returns"] == 1
+def test_a_specialist_waiting_for_its_element_is_not_retired():
+    # a Fire dealer used in January 2024, then ten months of other bosses' weaknesses, then Fire again
+    weak = ["Fire"] + ["Water", "Wind", "Iron", "Electric", "Water"] * 2 + ["Fire"]
+    waiting = life_of([0.5] + [0.0] * 10, "2024-11-20T00:00:00Z", weak=weak[:-1])
+    assert waiting["idle_days"] > 300 and waiting["missed_own"] == 0 and not waiting["retired"]
+    assert life_of([0.5] + [0.0] * 10, "2024-11-20T00:00:00Z", weak=weak[:-1], retire_after_own_seasons=0)["retired"]
+    # its element comes round and passes it by: retired; or it is used there: in use all along
+    assert life_of([0.5] + [0.0] * 11, "2024-12-20T00:00:00Z", weak=weak)["retired"]
+    kept = life_of([0.5] + [0.0] * 10 + [0.4], "2024-12-20T00:00:00Z", weak=weak)
+    assert (kept["run_from"], kept["returns"], kept["retired"]) == (1, 0, False)
+
+
+def test_a_gap_is_a_return_only_when_long_and_through_a_season_of_its_element():
+    usage = [0.5] + [0.0] * 6 + [0.5]  # used in January and August 2024, 206 days apart
+    assert life_of(usage, "2024-09-01T00:00:00Z")["returns"] == 1  # every boss weak to Fire: it sat out six
+    assert life_of(usage, "2024-09-01T00:00:00Z", weak=["Fire"] + ["Water"] * 6 + ["Fire"])["returns"] == 0
+    assert life_of(usage, "2024-09-01T00:00:00Z", retire_after_days=240)["returns"] == 0
 
 
 def test_the_live_season_counts_as_in_use_now():
@@ -413,4 +431,5 @@ def test_the_live_season_counts_as_in_use_now():
 
 def test_a_unit_no_season_used_has_no_lifespan():
     life = life_of([0.05, 0.0], "2026-01-01T00:00:00Z")
-    assert pd.isna(life["first_used"]) and life["seasons_used"] == 0 and not life["retired"]
+    assert pd.isna(life["first_used"]) and life["seasons_used"] == 0 and life["missed_own"] == 0
+    assert not life["retired"]

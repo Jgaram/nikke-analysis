@@ -1,6 +1,6 @@
 // Pieces the three views share: a unit's card, the tier board, the filter row, tooltips.
 
-import { ELEMENTS, DAY_MS, assignTier } from "../model.js";
+import { ELEMENTS, DAY_MS, assignTier, unitElements } from "../model.js";
 import {
   h, num, pct, int, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, nameLines, unitName, withTip, tierBadge,
   deckSplit, segmented, ELEMENT_KO, CLASS_KO, BURSTS, WEAPON_SHORT, WEAPON_KO, MAKER_KO, shortDay,
@@ -166,31 +166,55 @@ export function duration(days) {
   return rest ? `${years}년 ${rest}개월` : `${years}년`;
 }
 
-// What the view says of unit ``u``'s lifespan, in words: its state and two lines.
+// What retired means, with the parameters in force.
+export function retiredText(params) {
+  const { minUsage, retireAfterDays: days, retireAfterOwnSeasons: own } = params;
+  const since = days > 0 ? `마지막으로 쓰인 시즌이 끝나고 ${duration(days)} 넘게` : "마지막으로 쓰인 뒤";
+  const unused = `상위 랭커 ${Math.round(minUsage * 100)}% 넘게 쓴 시즌이 없음`;
+  if (!own) return `${since} ${unused}`;
+  const seasons = `자기 속성 약점 시즌${own > 1 ? ` ${own}번` : ""}`;
+  return `${since}${days > 0 ? ", 그 사이" : ""} 온 ${seasons}까지 ${unused} — 자기 속성 시즌이 아직 안 왔으면 현역`;
+}
+
+// What the view says of unit ``u``'s lifespan, in words: its state, two lines, and ``why``
+// - the seasons of its own element behind a retirement, or a long idle unit still in use.
 export function lifeText(app, view, u) {
   const a = view.life.get(u);
+  const { minUsage, retireAfterDays, retireAfterOwnSeasons } = app.state.params;
   if (!a || a.lastUsed == null) {
-    const min = Math.round(app.state.params.minUsage * 100);
+    const min = Math.round(minUsage * 100);
     return { a, state: "never", label: "안 쓰임", main: "쓰인 시즌 없음", sub: `사용 ${min}%를 넘은 시즌이 없음`, length: null };
   }
   const counted = view.standing.counted;
   const latest = counted.length ? counted[counted.length - 1].season : null;
+  // its elements as the seasons it sat out were weighed: 작열, or 작열·철갑
+  const unit = app.model.units[u];
+  const own = unitElements(unit, unit.treasure != null && unit.treasure <= view.moment)
+    .map((m) => ELEMENT_KO[m.element]).join("·");
   if (a.retired) {
     const length = a.lastEnd - a.runStart;
     return {
       a, state: "retired", label: "은퇴", length,
       main: a.runFrom === a.lastUsed ? `S${a.lastUsed} 한 시즌` : `S${a.runFrom}–S${a.lastUsed} · ${duration(length / DAY_MS)}`,
       sub: `S${a.lastUsed} 뒤 ${duration(a.idleDays)}째 안 쓰임`,
+      why: a.missedOwn ? `${own} 약점 시즌 ${a.missedOwn}번 놓침` : null,
     };
   }
   const length = view.moment - a.runStart;
   const recent = a.lastUsed === latest;
+  // past the days, in use only because its element has not come round (often enough) since
+  const waiting = !recent && retireAfterOwnSeasons > 0 && a.idleDays >= retireAfterDays;
   return {
     a, state: "active", label: "현역", length, recent,
     main: `S${a.runFrom}부터 · ${duration(length / DAY_MS)}째`,
     sub: recent ? "최근 시즌까지 쓰임" : `마지막 S${a.lastUsed} · ${duration(a.idleDays)} 전`,
+    why: !waiting ? null : a.missedOwn ? `${own} 약점 시즌 ${a.missedOwn}번 놓침(은퇴는 ${retireAfterOwnSeasons}번부터)`
+      : `그 뒤 ${own} 약점 시즌 아직 없음`,
   };
 }
+
+// The two lines under the state as one.
+export const lifeSub = (t) => [t.sub, t.why].filter(Boolean).join(" · ");
 
 export function lifePill(text) {
   return h("span", { class: ["life-pill", text.state] }, text.label);
@@ -198,9 +222,8 @@ export function lifePill(text) {
 
 export function returnTag(app, a) {
   if (!a || !a.returns) return null;
-  const gap = duration(app.state.params.retireAfterDays);
   return h("span", {
-    class: "tag", title: `S${a.firstUsed}부터 쓰이다 ${gap} 넘게 안 쓰인 적이 ${a.returns}번 · 이번에는 S${a.runFrom}부터 다시 쓰임`,
+    class: "tag", title: `S${a.firstUsed}부터 쓰이다 은퇴한 적이 ${a.returns}번 · 이번에는 S${a.runFrom}부터 다시 쓰임`,
   }, a.returns > 1 ? `복귀 ${a.returns}번` : "복귀");
 }
 
@@ -240,14 +263,14 @@ export function lifeColumns(app, view) {
     if (!texts.has(row.u)) texts.set(row.u, lifeText(app, view, row.u));
     return texts.get(row.u);
   };
-  const { minUsage, retireAfterDays } = app.state.params;
+  const { minUsage } = app.state.params;
   return [
     { key: "strip", label: lifeHeader(view), class: "life-col", firstDir: "asc",
       title: `시즌 하나가 칸 하나. 칠한 칸 = 상위 랭커 ${Math.round(minUsage * 100)}% 이상이 쓴 시즌(진할수록 많이), `
         + "옅은 칸 = 나와 있었지만 거의 안 쓴 시즌. 정렬하면 처음 쓰인 시즌 순",
       sort: (row) => of(row).a?.firstUsed, cell: (row) => lifeStrip(app, view, row.u) },
     { key: "state", label: "상태", firstDir: "asc",
-      title: `마지막으로 쓰인 시즌이 끝나고 ${retireAfterDays}일 동안 안 쓰이면 은퇴. 정렬하면 최근에 쓰인 순`,
+      title: `은퇴 = ${retiredText(app.state.params)}. 정렬하면 최근에 쓰인 순`,
       sort: (row) => {
         const t = of(row);
         return t.state === "never" ? null : (t.state === "retired" ? 1e6 : 0) + t.a.idleDays;
@@ -259,7 +282,8 @@ export function lifeColumns(app, view) {
         const t = of(row);
         return h("span", { class: "life-cell" },
           h("span", { class: "life-main" }, t.main, returnTag(app, t.a)),
-          t.recent ? null : h("span", { class: "life-sub" }, t.sub));
+          t.recent ? null : h("span", { class: "life-sub" }, t.sub),
+          t.why ? h("span", { class: "life-sub" }, t.why) : null);
       } },
     { key: "used", label: "쓰인 시즌", num: true, title: "쓰인 시즌 / 출시 뒤 치른 시즌",
       sort: (row) => of(row).a?.seasonsUsed,
@@ -307,7 +331,7 @@ export function standingTip(app, u, view, { element = null } = {}) {
       h("dt", null, "수명"), h("dd", null, lifePill(life), life.main, returnTag(app, life.a)),
       life.a ? [h("dt", null, "쓰인 시즌"), h("dd", null, `출시 뒤 ${life.a.seasonsOut}시즌 중 ${life.a.seasonsUsed}번`,
         life.a.firstUsed != null ? h("span", { class: "muted" }, ` · 처음 S${life.a.firstUsed}`) : null)] : null),
-    life.a ? h("div", { class: "tip-life" }, h("div", { class: "muted small" }, life.sub), lifeStrip(app, view, u, { width: 240 })) : null,
+    life.a ? h("div", { class: "tip-life" }, h("div", { class: "muted small" }, lifeSub(life)), lifeStrip(app, view, u, { width: 240 })) : null,
     h("div", { class: "tip-notes" },
       o?.treasure ? h("span", { class: "pill heart" }, `♥ 애장품(${shortDay(unit.treasure)}) 뒤 시즌만으로`) : null,
       o?.provisional ? h("span", { class: "pill" }, provisionalReason(o, slots, app.state.params)) : null));

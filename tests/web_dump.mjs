@@ -47,12 +47,18 @@ const elements = view.standing.elements.map((r) => ({
   element: r.element, element_rank: r.rank, unit_id: r.id, source: r.source, element_lift: r.lift,
   element_tier: r.tier, element_seasons: r.seasons, treasure: r.treasure,
 }));
-const life = [...view.life.values()].map((a) => ({
+const lifeRows = (life) => [...life.values()].map((a) => ({
   unit_id: a.id, first_used: a.firstUsed, run_from: a.runFrom, last_used: a.lastUsed, seasons_used: a.seasonsUsed,
-  seasons_out: a.seasonsOut, returns: a.returns, idle_days: a.idleDays, retired: a.retired,
+  seasons_out: a.seasonsOut, returns: a.returns, idle_days: a.idleDays, missed_own: a.missedOwn, retired: a.retired,
 }));
+const life = lifeRows(view.life);
+// every unit's lifespan as each finished season ended, when most units have gaps behind them
+const lives = population.summary.filter((s) => s.final)
+  .flatMap((s) => lifeRows(M.lifespans(model, population, s.end, params)).map((r) => ({ season: s.season, ...r })));
 const seasons = population.summary.map((s) => ({
   season: s.season, rankers: s.rankers, decks: s.decks, final: s.final, servers: s.servers.join(";"),
 }));
 
-process.stdout.write(JSON.stringify({ params, rows, overall, elements, life, seasons, final: view.final, live: view.live }));
+process.stdout.write(JSON.stringify({
+  params, rows, overall, elements, life, lives, seasons, final: view.final, live: view.live,
+}));

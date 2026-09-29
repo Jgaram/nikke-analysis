@@ -8,7 +8,8 @@
 //               -> per season and unit: usage, deck split, lift (기여도)
 //   tiers       cuts, recency, prior, how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
-//   lifespans   what counts as used, how long idle means retired
+//   lifespans   what counts as used, how long idle - and through how many seasons of
+//               its own element - means retired
 //               -> since when each unit was in use, and whether it still is
 //
 // No DOM here: the same module runs under Node for the tests.
@@ -36,6 +37,7 @@ export function defaultParams(model) {
     includeLive: d.includeLive,
     minUsage: d.minUsage,
     retireAfterDays: d.retireAfterDays,
+    retireAfterOwnSeasons: d.retireAfterOwnSeasons,
   });
 }
 
@@ -55,7 +57,7 @@ export function tierKey(p) {
 }
 
 export function lifeKey(p) {
-  return JSON.stringify([p.minUsage, p.retireAfterDays]);
+  return JSON.stringify([p.minUsage, p.retireAfterDays, p.retireAfterOwnSeasons]);
 }
 
 // ---------------------------------------------------------------------------
@@ -381,11 +383,13 @@ export function standings(model, population, moment, params, treasured = null) {
 // lifespans: when each unit was in use (analyze/tiers.py lifespans)
 
 // Per unit out by ``moment``: the seasons that used it (usage >= minUsage), the first
-// and last, and whether it has been idle for retireAfterDays since the end of the last
-// one. A gap that long between two seasons that used it is a return, and the run in
-// use since the latest starts at ``runFrom``. The live season counts as ending at ``moment``.
+// and last, and whether it is retired: idle for retireAfterDays since the end of the
+// last one, through at least retireAfterOwnSeasons seasons weak to its own element
+// (``missedOwn``). Such a gap between two seasons that used it is a return, and the run
+// in use since the latest starts at ``runFrom``. The live season counts as ending at ``moment``.
 export function lifespans(model, population, moment, params) {
   const window = params.retireAfterDays * DAY_MS;
+  const need = params.retireAfterOwnSeasons;
   const out = new Map();
   for (const c of countedSeasons(population.summary, moment, params)) {
     const at = c.end != null && c.end <= moment ? c.end : moment;
@@ -393,16 +397,19 @@ export function lifespans(model, population, moment, params) {
       let a = out.get(r.u);
       if (!a) {
         a = { u: r.u, id: r.id, firstUsed: null, runFrom: null, lastUsed: null, seasonsUsed: 0, seasonsOut: 0,
-          returns: 0, idleDays: NaN, retired: false, runStart: null, lastEnd: null };
+          returns: 0, idleDays: NaN, missedOwn: 0, retired: false, runStart: null, lastEnd: null };
         out.set(r.u, a);
       }
       a.seasonsOut++;
-      if (!(r.usageRate >= params.minUsage)) continue;
+      if (!(r.usageRate >= params.minUsage)) {
+        if (a.lastUsed != null && r.elementMatch) a.missedOwn++;
+        continue;
+      }
       if (a.lastUsed == null) {
         a.firstUsed = c.season;
         a.runFrom = c.season;
         a.runStart = c.start;
-      } else if (c.start != null && c.start - a.lastEnd >= window) {
+      } else if (c.start != null && c.start - a.lastEnd >= window && a.missedOwn >= need) {
         a.returns++;
         a.runFrom = c.season;
         a.runStart = c.start;
@@ -410,12 +417,13 @@ export function lifespans(model, population, moment, params) {
       a.lastUsed = c.season;
       a.lastEnd = at;
       a.seasonsUsed++;
+      a.missedOwn = 0;
     }
   }
   for (const a of out.values()) {
     if (a.lastUsed == null) continue;
     a.idleDays = (moment - a.lastEnd) / DAY_MS;
-    a.retired = a.idleDays >= params.retireAfterDays;
+    a.retired = a.idleDays >= params.retireAfterDays && a.missedOwn >= need;
   }
   return out;
 }

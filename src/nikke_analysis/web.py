@@ -166,6 +166,7 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
         "includeLive": config.include_live,
         "minUsage": config.min_usage,
         "retireAfterDays": config.retire_after_days,
+        "retireAfterOwnSeasons": config.retire_after_own_seasons,
     }
 
 

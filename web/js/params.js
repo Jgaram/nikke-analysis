@@ -11,6 +11,8 @@ const OVERALL_HINT = {
 };
 // The cuts one can move: every tier but the bottom one (F), whose floor is 0.
 const cutLabels = (d) => d.cuts.slice(0, -1).map(([label]) => label);
+// The most own-element seasons a unit may sit out before it counts as retired.
+const RETIRE_OWN_MAX = 3;
 
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const sortedServers = (p) => [...p.servers].sort();
@@ -28,6 +30,7 @@ export function encodeParams(p, d) {
   if (p.includeLive !== d.includeLive) q.live = p.includeLive ? "1" : "0";
   if (p.minUsage !== d.minUsage) q.use = String(Math.round(p.minUsage * 100));
   if (p.retireAfterDays !== d.retireAfterDays) q.ret = String(p.retireAfterDays);
+  if (p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) q.rown = String(p.retireAfterOwnSeasons);
   return q;
 }
 
@@ -58,8 +61,10 @@ export function decodeParams(q, d, model) {
   if (q.has("live")) p.includeLive = q.get("live") === "1";
   const use = number(q.get("use"), 1, 100);
   if (use != null) p.minUsage = Math.round(use) / 100;
-  const ret = number(q.get("ret"), 30, 3650);
+  const ret = number(q.get("ret"), 0, 3650);
   if (ret != null) p.retireAfterDays = Math.round(ret);
+  const own = number(q.get("rown"), 0, RETIRE_OWN_MAX);
+  if (own != null) p.retireAfterOwnSeasons = Math.round(own);
   return p;
 }
 
@@ -79,7 +84,7 @@ export function changedParams(p, d) {
   if (p.minElementsObserved !== d.minElementsObserved) out.push("잠정 기준");
   if (p.includeLive !== d.includeLive) out.push("진행 중 시즌");
   if (p.minUsage !== d.minUsage) out.push("쓰인 기준");
-  if (p.retireAfterDays !== d.retireAfterDays) out.push("은퇴 기준");
+  if (p.retireAfterDays !== d.retireAfterDays || p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) out.push("은퇴 기준");
   return out;
 }
 
@@ -190,12 +195,16 @@ export function buildParams(app, body) {
         format: (v) => `사용 ${v}% 이상`,
         onCommit: (v) => app.setParams({ minUsage: v / 100 }),
       }), "상위 랭커의 이만큼 이상이 쓴 시즌을 그 니케가 쓰인 시즌으로 칩니다."),
-      field("은퇴", range({
-        min: 30, max: 730, step: 5, value: p.retireAfterDays, label: "은퇴로 볼 공백 (일)",
+      field("은퇴 공백", range({
+        min: 0, max: 730, step: 5, value: p.retireAfterDays, label: "은퇴로 볼 공백 (일)",
         format: (v) => `${v}일 공백`,
         onCommit: (v) => app.setParams({ retireAfterDays: v }),
-      }), "마지막으로 쓰인 시즌이 끝나고 이만큼 안 쓰이면 은퇴, 그 뒤 다시 쓰이면 복귀. 같은 약점이 1년 만에 "
-        + "돌아오기도 해서 반감기보다 길게 잡습니다.")),
+      }), "마지막으로 쓰인 시즌이 끝나고 이만큼 안 쓰였고 아래 자기 속성 시즌도 놓쳤으면 은퇴, 그 뒤 다시 쓰이면 복귀."),
+      field("놓친 자기 속성 시즌", segmented([0, 1, 2, 3].map((n) => ({ value: n, label: n ? `${n}번` : "안 봄" })),
+        p.retireAfterOwnSeasons, (v) => { app.setParams({ retireAfterOwnSeasons: v }); buildParams(app, body); },
+        { label: "은퇴로 볼 놓친 자기 속성 시즌 수" }),
+      "그 공백 동안 자기 속성이 약점인 시즌이 이만큼 지나가도록 안 쓰여야 은퇴. 같은 약점이 1년 만에 돌아오기도 해서, "
+        + "자기 속성 시즌이 아직 안 온 속성 특화 니케는 공백이 길어도 현역으로 둡니다. 안 봄 = 공백만으로.")),
   );
 
   renderParamsFoot(app, () => buildParams(app, body));

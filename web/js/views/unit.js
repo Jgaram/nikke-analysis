@@ -5,7 +5,7 @@ import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, todayKst, tierBadge, deckSplit, sortableTable, unitName, kst,
 } from "../ui.js";
-import { provisionalReason, lifeText, lifeStrip, returnTag, fold } from "./common.js";
+import { provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, fold } from "./common.js";
 import { trajectoryChart } from "../chart.js";
 
 export function unitView(app) {
@@ -145,7 +145,7 @@ function lifeTile(app, u, view) {
     h("div", { class: "tile-value" }, h("span", { class: ["tile-state", t.state] }, t.label),
       used ? h("span", { class: "tile-life-main" }, t.main) : null),
     lifeStrip(app, view, u, { width: 230 }),
-    h("div", { class: "tile-sub" }, used ? `${t.sub} · 출시 뒤 ${t.a.seasonsOut}시즌 중 ${t.a.seasonsUsed}번 쓰임` : t.sub));
+    h("div", { class: "tile-sub" }, used ? `${lifeSub(t)} · 출시 뒤 ${t.a.seasonsOut}시즌 중 ${t.a.seasonsUsed}번 쓰임` : t.sub));
 }
 
 function profile(app, u, prof, moment) {

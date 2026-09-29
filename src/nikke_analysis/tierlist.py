@@ -404,7 +404,8 @@ class TierBook:
 
     def _life(self, unit_id: str, instant: pd.Timestamp) -> dict[str, Any] | None:
         """The unit's lifespan at ``instant``, with ``run_days``: how long its run in use has
-        lasted - to ``instant`` while in use, to the end of its last season once retired."""
+        lasted - to ``instant`` while in use, to the end of its last season once retired - and
+        ``recent``: the latest season counted then used it."""
         life = tiering.lifespans(self.history, self.seasons, instant, self.config)
         mine = life[life["unit_id"] == unit_id]
         if mine.empty:
@@ -416,6 +417,8 @@ class TierBook:
             start = by_season.loc[record["run_from"], "start_at"]
             end = min(by_season.loc[record["last_used"], "end_at"], instant) if record["retired"] else instant
             record["run_days"] = (end - start).total_seconds() / 86400.0 if not pd.isna(start) else None
+        final, live, _ = self._counted(instant)
+        record["recent"] = record["last_used"] is not None and record["last_used"] == max(final + live, default=None)
         return record
 
 
@@ -656,6 +659,16 @@ def _duration(days: float | None) -> str:
     return f"{years}년 {rest}개월" if rest else f"{years}년"
 
 
+def _retired_rule(config: tiering.TierConfig) -> str:
+    """What retired means, with ``config``'s parameters (the site says the same)."""
+    days, own = config.retire_after_days, config.retire_after_own_seasons
+    if not own:
+        return f"마지막으로 쓰인 시즌이 끝나고 {days:g}일 동안 안 쓰임"
+    seasons = "자기 속성 약점 시즌" + (f" {own}번" if own > 1 else "")
+    since = f"마지막으로 쓰인 시즌이 끝나고 {days:g}일이 지났고 그 사이 온 " if days > 0 else "마지막으로 쓰인 뒤 온 "
+    return f"{since}{seasons}에도 안 쓰임 (자기 속성 시즌이 아직 안 왔으면 현역)"
+
+
 def _life_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
     """The unit's lifespan at the moment of the view: in use or retired, since when, how often."""
     life = history.life
@@ -665,19 +678,26 @@ def _life_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str]:
     head = f"  {pad('수명', 9)}  "
     if life["last_used"] is None:
         return [head + f"쓰인 시즌 없음 — {usage} 넘게 쓴 시즌이 없음 (출시 뒤 {life['seasons_out']}시즌)"]
-    first, last = life["run_from"], life["last_used"]
+    first, last, missed = life["run_from"], life["last_used"], life["missed_own"]
+    own = "·".join(_element(e) for e in history.elements)
     if life["retired"]:
         run = f"S{last} 한 시즌" if first == last else f"S{first}–S{last} {_duration(life['run_days'])}"
         text = f"은퇴 · {run} · S{last} 뒤 {_duration(life['idle_days'])}째 안 쓰임"
+        if missed:
+            text += f" · {own} 약점 시즌 {missed}번 놓침"
     else:
         ago = f"({_duration(life['idle_days'])} 전)" if life["idle_days"] >= 45 else ""
         text = f"현역 · S{first}부터 {_duration(life['run_days'])}째 · 마지막 S{last}{ago}"
+        need = config.retire_after_own_seasons
+        if need and not life["recent"] and life["idle_days"] >= config.retire_after_days:
+            # past the days: in use only because its element has not come round (often enough) since
+            text += (f" · {own} 약점 시즌 {missed}번 놓침(은퇴는 {need}번부터)" if missed
+                     else f" · 그 뒤 {own} 약점 시즌 아직 없음")
     text += f" · 출시 뒤 {life['seasons_out']}시즌 중 {life['seasons_used']}번 쓰임"
     if life["returns"]:
-        text += f" · 복귀(S{life['first_used']}부터 쓰이다 {_duration(config.retire_after_days)} 넘게 쉼)"
-    return [head + text,
-            f"  {pad('', 9)}  쓰임 = {usage} 이상이 쓴 시즌 · 은퇴 = 마지막으로 쓰인 시즌이 끝나고 "
-            f"{config.retire_after_days:g}일 동안 안 쓰임"]
+        again = f"은퇴한 적 {life['returns']}번," if life["returns"] > 1 else "은퇴했다가"
+        text += f" · 복귀(S{life['first_used']}부터 쓰이다 {again} S{first}부터 다시)"
+    return [head + text, f"  {pad('', 9)}  쓰임 = {usage} 이상이 쓴 시즌 · 은퇴 = {_retired_rule(config)}"]
 
 
 def render_unit(history: UnitHistory, config: tiering.TierConfig | None = None) -> str:

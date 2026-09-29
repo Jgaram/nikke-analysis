@@ -78,7 +78,7 @@ function picker(app, current) {
     unitSearch(app, {
       placeholder: `${unitName(model.units[current])} · 다른 니케 찾기 (한글·영문)`, choose: (u) => app.go({ unit: u }),
     }),
-    full ? h("span", { class: "btn ghost compare-add off", title: "비교는 5명까지 — 비교 화면에서 한 명을 빼세요" }, "비교 5명 가득")
+    full ? h("span", { class: "btn ghost compare-add off", title: "비교는 20명까지 — 비교 화면에서 한 명을 빼세요" }, "비교 20명 가득")
       : h("a", {
         class: ["btn", "compare-add", listed && "on"], href: app.link({ trend: "compare", compare: list }),
         title: listed ? "비교 중 — 비교 화면으로" : "이 니케를 비교에 넣고 비교 화면으로",

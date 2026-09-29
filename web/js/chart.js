@@ -452,36 +452,49 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
 }
 
 // ---------------------------------------------------------------------------
-// Several units on one axis: a line each, in its colour slot (1-5, fixed to the unit
-// while it stays in the list), over the tier bands of ``cuts``. ``points`` are the x
-// positions, each {season} (a summary entry); a series is {u, slot, values (one per
-// point, null for none), breakAt (a point the line restarts at: the treasure) }.
-// Each line ends in the unit's name where there is room; a legend is always there.
+// Several units on one axis, up to twenty: a line each in its element's colour over the
+// tier bands of ``cuts``, and at its end the unit's face - faces that would overlap step
+// out into further columns. Pointing at a face (or calling ``chart.spotlight(u)``) brings
+// that line forward and fades the rest; pressing it opens the unit. ``points`` are the x
+// positions, each {season} (a summary entry); a series is {u, values (one per point, null
+// for none), breakAt (a point the line restarts at: the treasure)}.
 
-const S_HEIGHT = 300;
-const S_MARGIN = { l: 40, r: 104, t: 20, b: 34 };
+const S_HEIGHT = 320;
+const S_MARGIN = { l: 40, t: 20, b: 34 };
+const FACE = 24;
+const FACE_STEP = FACE + 2;
+const FACE_COLS = 4;
+let clipCount = 0;
 
-export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, at = null, legendNote = null }) {
+export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, at = null }) {
   const unitOf = (sr) => app.model.units[sr.u];
+  const elOf = (sr) => unitOf(sr).element || "none";
   const host = h("div", { class: "chart-host", tabindex: "0", role: "img", "aria-label": ariaLabel });
-  const legend = h("div", { class: "legend" },
-    series.map((sr) => h("span", { class: "lg" }, h("i", { class: `sw line ser s${sr.slot + 1}` }), unitName(unitOf(sr)))),
-    legendNote ? h("span", { class: "lg muted" }, legendNote) : null);
-  const root = h("div", { class: "chart" }, legend, host);
+  const root = h("div", { class: "chart" }, host);
+  const clip = `face-clip-${++clipCount}`;
   let hover = -1;
   let geometry = null;
+  let lit = null;
+
+  function spotlight(u) {
+    lit = u;
+    if (!geometry) return;
+    geometry.svg.classList.toggle("focusing", u != null);
+    for (const node of geometry.svg.querySelectorAll("[data-u]")) node.classList.toggle("on", Number(node.dataset.u) === u);
+  }
+  root.spotlight = spotlight;
 
   function tipFor(i) {
     const info = points[i].season.info;
-    const rows = series.map((sr) => ({ sr, v: sr.values[i] })).sort((a, b) => (b.v ?? -1) - (a.v ?? -1));
-    return h("div", { class: "tip" },
+    const rows = series.map((sr) => ({ sr, v: sr.values[i] })).filter((r) => r.v != null).sort((a, b) => b.v - a.v);
+    return h("div", { class: ["tip", rows.length > 10 && "tip-wide"] },
       h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
       h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
-        h("span", { class: "muted" }, ` · ${day(info.start)}${points[i].season.final ? "" : " · 진행 중"}`)),
-      h("dl", { class: "tip-list" }, rows.map(({ sr, v }) => [
-        h("dt", { class: "tip-ser" }, h("i", { class: `sw line ser s${sr.slot + 1}` }), unitName(unitOf(sr))),
-        h("dd", null, v != null ? tierBadge(assignTier(v, cuts), v) : h("span", { class: "muted" }, "–"))])),
-      h("div", { class: "muted small" }, valueLabel));
+        h("span", { class: "muted" }, ` · ${day(info.start)}${points[i].season.final ? "" : " · 진행 중"} · ${valueLabel}`)),
+      h("div", { class: "tip-rows" }, rows.map(({ sr, v }) => h("div", { class: ["tip-row", sr.u === lit && "on"] },
+        h("img", { class: "tip-face", src: `icons/units/${unitOf(sr).id}.webp`, alt: "", width: 20, height: 20 }),
+        h("span", { class: "tip-row-name" }, unitName(unitOf(sr))), tierBadge(assignTier(v, cuts), v)))),
+      rows.length < series.length ? h("div", { class: "muted small" }, `${series.length - rows.length}명은 이 시즌 값 없음`) : null);
   }
 
   function setHover(i, pointer = null) {
@@ -500,9 +513,10 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
     for (const sr of series) {
       const v = sr.values[i];
       if (v == null) continue;
-      svg.append(s("circle", { class: `hover-dot ser s${sr.slot + 1}`, cx, cy: y(v), r: 4.5 }));
+      svg.append(s("circle", { class: `hover-dot el-${elOf(sr)}`, "data-u": sr.u, cx, cy: y(v), r: 4 }));
       top = Math.max(top ?? v, v);
     }
+    spotlight(lit);
     const box = host.getBoundingClientRect();
     showTip(host, tipFor(i), pointer || { x: box.left + cx, y: box.top + y(top ?? 0) });
   }
@@ -510,21 +524,44 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
   function draw() {
     const width = Math.max(300, Math.floor(host.clientWidth));
     const narrow = width < 560;
-    const H = narrow ? 260 : S_HEIGHT;
-    const m = { ...S_MARGIN, l: narrow ? 34 : S_MARGIN.l, r: narrow ? 14 : S_MARGIN.r };
-    const iw = width - m.l - m.r;
+    const H = narrow ? 280 : S_HEIGHT;
+    const m = { ...S_MARGIN, l: narrow ? 34 : S_MARGIN.l };
     const ih = H - m.t - m.b;
     const n = points.length;
-    const band = iw / Math.max(n, 1);
-    const x = (i) => m.l + band * (i + 0.5);
     const values = series.flatMap((sr) => sr.values).filter((v) => v != null);
     const yMax = Math.ceil(Math.max(cuts[0][1] + 0.2, ...values) * 1.06 * 5) / 5;
     const y = (v) => m.t + ih * (1 - v / yMax);
     const base = y(0);
-    const svg = s("svg", { width, height: H, viewBox: `0 0 ${width} ${H}`, class: "traj multi" });
+
+    // where each line ends, and a place for its face: the first column it fits in, top down
+    const ends = [];
+    for (const sr of series) {
+      let k = sr.values.length - 1;
+      while (k >= 0 && sr.values[k] == null) k--;
+      if (k >= 0) ends.push({ sr, i: k, y: y(sr.values[k]) });
+    }
+    ends.sort((a, b) => a.y - b.y);
+    const lastIn = [];
+    for (const e of ends) {
+      const want = Math.max(m.t + FACE / 2, e.y);
+      let col = lastIn.findIndex((ly, c) => c < FACE_COLS && want - ly >= FACE_STEP);
+      if (col < 0 && lastIn.length < FACE_COLS) col = lastIn.length;
+      if (col < 0) { // every column full here: take the one that frees first, and overlap if need be
+        col = lastIn.indexOf(Math.min(...lastIn));
+        e.fy = Math.min(lastIn[col] + FACE_STEP, H - FACE / 2);
+      } else e.fy = Math.max(want, lastIn[col] != null ? lastIn[col] + FACE_STEP : want);
+      e.col = col;
+      lastIn[col] = e.fy;
+    }
+    const cols = Math.max(1, lastIn.length);
+    m.r = 14 + cols * FACE_STEP;
+    const iw = width - m.l - m.r;
+    const band = iw / Math.max(n, 1);
+    const x = (i) => m.l + band * (i + 0.5);
+    const svg = s("svg", { width, height: H, viewBox: `0 0 ${width} ${H}`, class: "traj multi" },
+      s("defs", null, s("clipPath", { id: clip, clipPathUnits: "objectBoundingBox" }, s("circle", { cx: 0.5, cy: 0.5, r: 0.5 }))));
 
     const bands = s("g", { class: "bands" });
-    // cut values on the axis, skipping one that would crowd a label already there (0 first)
     const placed = [base];
     const roomy = (at) => !placed.some((p) => Math.abs(p - at) < 12) && placed.push(at);
     cuts.forEach(([label, lo], k) => {
@@ -543,9 +580,9 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
     svg.append(bands);
     dayMarker(svg, points, at, { m, band, top: m.t, bottom: base });
 
-    const ends = [];
+    const lines = s("g", { class: "slines" });
     for (const sr of series) {
-      const cls = `ser s${sr.slot + 1}`;
+      const cls = `el-${elOf(sr)}`;
       const parts = [];
       let cur = [];
       sr.values.forEach((v, i) => {
@@ -554,33 +591,35 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
         cur.push([i, v]);
       });
       if (cur.length) parts.push(cur);
-      const g = s("g", { class: cls });
+      const g = s("g", { class: `sline ${cls}`, "data-u": sr.u });
       for (const part of parts) {
-        if (part.length > 1) g.append(s("path", { class: `line ${cls}`, d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
-        else g.append(s("circle", { class: `dot ${cls}`, cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
+        if (part.length > 1) g.append(s("path", { class: "line", d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
+        else g.append(s("circle", { class: "dot", cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
       }
       if (sr.breakAt > 0 && sr.values[sr.breakAt] != null) {
-        g.append(s("text", { class: "treasure-mark small", x: x(sr.breakAt), y: y(sr.values[sr.breakAt]) - 8, "text-anchor": "middle" }, "♥"));
+        g.append(s("text", { class: "treasure-mark small", x: x(sr.breakAt), y: y(sr.values[sr.breakAt]) - 7, "text-anchor": "middle" }, "♥"));
       }
-      const last = parts.length ? parts[parts.length - 1][parts[parts.length - 1].length - 1] : null;
-      if (last) {
-        g.append(s("circle", { class: `dot ${cls}`, cx: x(last[0]), cy: y(last[1]), r: 4 }));
-        ends.push({ sr, cls, x: x(last[0]), y: y(last[1]) });
-      }
-      svg.append(g);
+      lines.append(g);
     }
-    // names at the line ends, pushed apart where they would overlap
-    if (!narrow) {
-      ends.sort((a, b) => a.y - b.y);
-      for (let k = 1; k < ends.length; k++) ends[k].ly = Math.max(ends[k].y, (ends[k - 1].ly ?? ends[k - 1].y) + 13);
-      if (ends.length) ends[0].ly = ends[0].y;
-      const over = ends.length ? (ends[ends.length - 1].ly - (H - m.b)) : 0;
-      if (over > 0) for (const e of ends) e.ly -= over;
-      for (const e of ends) {
-        const name = unitName(unitOf(e.sr));
-        svg.append(s("text", { class: "ax end-label", x: m.l + iw + 8, y: e.ly + 4 }, name.length > 9 ? `${name.slice(0, 8)}…` : name));
-        svg.append(s("line", { class: `end-tick ${e.cls}`, x1: e.x + 4, x2: m.l + iw + 5, y1: e.y, y2: e.ly }));
-      }
+    svg.append(lines);
+
+    // the faces, each tied to its line's end
+    const faces = s("g", { class: "end-faces" });
+    for (const e of ends) {
+      const unit = unitOf(e.sr);
+      const cls = `el-${elOf(e.sr)}`;
+      const ex = x(e.i), fx = m.l + iw + 10 + e.col * FACE_STEP + FACE / 2;
+      const g = s("g", { class: `end-face ${cls}`, "data-u": e.sr.u, tabindex: "-1" },
+        s("title", null, unitName(unit)),
+        s("path", { class: "end-lead", d: `M${ex},${e.y}L${fx - FACE / 2 - 1},${e.fy}` }),
+        s("circle", { class: "end-dot", cx: ex, cy: e.y, r: 3.5 }),
+        s("circle", { class: "end-ring", cx: fx, cy: e.fy, r: FACE / 2 + 1.5 }),
+        s("image", { href: `icons/units/${unit.id}.webp`, x: fx - FACE / 2, y: e.fy - FACE / 2, width: FACE, height: FACE,
+          "clip-path": `url(#${clip})`, preserveAspectRatio: "xMidYMid slice" }));
+      g.addEventListener("pointerenter", () => spotlight(e.sr.u));
+      g.addEventListener("pointerleave", () => spotlight(null));
+      g.addEventListener("click", () => { location.hash = app.unitHref(unit.id); });
+      faces.append(g);
     }
 
     const every = Math.max(1, Math.ceil(26 / band));
@@ -599,6 +638,7 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
     svg.append(s("line", { class: "cross", x1: 0, x2: 0, y1: m.t, y2: base, visibility: "hidden" }));
     const hit = s("rect", { class: "hit", x: m.l, y: 0, width: iw, height: H });
     svg.append(hit);
+    svg.append(faces); // above the hit area, so the faces take the pointer
     const index = (clientX) => {
       const box = svg.getBoundingClientRect();
       return Math.max(0, Math.min(n - 1, Math.floor((clientX - box.left - m.l) / band)));
@@ -608,6 +648,7 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
     hit.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") setHover(-1); });
     geometry = { svg, x, y };
     host.replaceChildren(svg);
+    spotlight(lit);
     if (hover >= 0) setHover(hover);
   }
 

@@ -1,6 +1,7 @@
-// 티어표 · 종합 / 속성: where every unit stood on a day - overall, or in one element - and
-// how long each has been in use.
+// 티어표 · 종합 / 약점: where every unit stood on a day - overall, or when the boss is weak
+// to one element (every unit, whatever its own element) - and how long each has been in use.
 
+import { ELEMENTS, assignTier } from "../model.js";
 import {
   h, elementIcon, ELEMENT_KO, day, shortDay, todayKst, tierBadge, sortableTable, kst,
 } from "../ui.js";
@@ -169,24 +170,38 @@ function overallTable(app, view, rows) {
 
 // ---------------------------------------------------------------------------
 
+// One boss weakness: every unit - whatever its element - by its slot for that weakness, the
+// part of its overall tier that stands on the seasons whose boss was weak to it.
+function weakRows(app, view, element) {
+  const e = ELEMENTS.indexOf(element);
+  const rows = view.standing.overall.map((o) => ({ u: o.u, o, slot: view.standing.slots.get(o.u)?.[e] || null }))
+    .filter((r) => r.slot && app.passes(app.model.units[r.u]));
+  const cuts = app.state.params.cuts;
+  const seen = rows.filter((r) => r.slot.seasons).sort((a, b) => b.slot.lift - a.slot.lift);
+  seen.forEach((r, i) => {
+    r.rank = i > 0 && seen[i - 1].slot.lift === r.slot.lift ? seen[i - 1].rank : i + 1;
+    r.tier = assignTier(r.slot.lift, cuts);
+  });
+  return { rows, seen, unseen: rows.filter((r) => !r.slot.seasons) };
+}
+
 function elementBody(app, view, element) {
   const { state, model } = app;
-  const rows = view.standing.elements.filter((r) => r.element === element && app.passes(model.units[r.u]));
+  const ko = ELEMENT_KO[element];
+  const { rows, seen, unseen } = weakRows(app, view, element);
   const seasons = view.standing.counted.filter((c) => c.weak === element)
     .map((c) => (c.live ? `${c.season}(진행 중)` : String(c.season)));
-  const unseen = rows.filter((r) => !r.seasons);
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
-    `${ELEMENT_KO[element]} 속성 티어 = 보스 약점이 ${ELEMENT_KO[element]}이던 시즌${seasons.length ? `(${seasons.join(" · ")})` : ""}의 기여도를 최근일수록 크게 친 평균. `,
-    "얼굴 옆 속성 아이콘이 다르면 스킬로 이 속성 우월 코드를 가진 니케. ",
-    h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
+    `${ko} 약점 티어 = 보스 약점이 ${ko}이던 시즌${seasons.length ? `(${seasons.join(" · ")})` : ""}의 기여도를 최근일수록 크게 친 평균 — `,
+    "종합 티어를 이루는 보스 약점별 다섯 칸 중 하나. 니케 속성과 무관하게 모든 니케가 들어서, 다른 속성이라도 이 약점 덱에 쓰이면 높다. ",
+    "▶ = 이 속성의 니케(자기 속성 약점). ", h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, elementTable(app, view, rows, element), explain);
-  const observed = rows.filter((r) => r.seasons);
-  const board = tierBoard(app, observed.map((r) => ({ u: r.u, tier: r.tier, value: r.lift, r })), {
+  const board = tierBoard(app, seen.map((r) => ({ u: r.u, tier: r.tier, value: r.slot.lift, r })), {
     key: `element-${element}-${state.date || "now"}`,
     card: (it) => unitCard(app, it.u, {
-      value: it.value, tier: it.tier, heart: it.r.treasure, retired: view.life.get(it.u)?.retired,
-      extra: it.r.source === "skill" ? h("span", { class: "tag", title: `스킬로 ${ELEMENT_KO[element]} 우월 코드도 가진 니케` }, `스킬 · 본래 ${ELEMENT_KO[model.units[it.u].element]}`) : null,
+      value: it.value, tier: it.tier, heart: it.r.o.treasure, retired: view.life.get(it.u)?.retired,
+      extra: it.r.slot.own ? h("span", { class: "tag own-tag", title: `${ko} 니케 — 자기 속성 약점` }, `▶ ${ko}`) : null,
       tip: () => standingTip(app, it.u, view, { element }),
     }),
     note: explain,
@@ -195,9 +210,9 @@ function elementBody(app, view, element) {
     board.insertBefore(h("section", { class: "tier-row unseen", "aria-label": `미관측 ${unseen.length}명` },
       h("div", { class: "tier-label" }, h("span", { class: "tier-letter small" }, "미관측"), h("span", { class: "tier-count" }, `${unseen.length}명`)),
       h("div", { class: "cards" }, unseen.map((r) => unitCard(app, r.u, {
-        tier: "D", dim: true, heart: r.treasure,
+        tier: "D", dim: true, heart: r.o.treasure,
         tip: () => standingTip(app, r.u, view, { element }),
-      })), h("span", { class: "row-note muted" }, `출시${unseen.some((r) => r.treasure) ? "·애장품" : ""} 뒤 ${ELEMENT_KO[element]} 약점 시즌을 아직 못 겪음`))),
+      })), h("span", { class: "row-note muted" }, `출시${unseen.some((r) => r.o.treasure) ? "·애장품" : ""} 뒤 ${ko} 약점 시즌을 아직 못 겪음`))),
     board.lastChild);
   }
   return board;
@@ -205,24 +220,21 @@ function elementBody(app, view, element) {
 
 function elementTable(app, view, rows, element) {
   const { state, model } = app;
+  const ko = ELEMENT_KO[element];
   const sort = state.sort.element || { key: "lift", dir: "desc" };
   const columns = [
     { key: "rank", label: "#", num: true, sort: (r) => r.rank, firstDir: "asc", cell: (r) => r.rank ?? "–" },
     { key: "unit", label: "니케", head: true, sort: (r) => model.units[r.u].ko, firstDir: "asc",
-      cell: (r) => unitInline(app, r.u, { sub: r.source === "skill" ? `스킬 · 본래 ${ELEMENT_KO[model.units[r.u].element]}` : null }) },
-    { key: "lift", label: `${ELEMENT_KO[element]} 티어`, sort: (r) => (r.seasons ? r.lift : null),
-      cell: (r) => (r.seasons ? tierBadge(r.tier, r.lift) : h("span", { class: "muted" }, "미관측")) },
-    { key: "seasons", label: "약점 시즌", title: `겪은 ${ELEMENT_KO[element]} 약점 시즌 수`, num: true, sort: (r) => r.seasons, cell: (r) => `${r.seasons}번` },
-    { key: "overall", label: "종합", sort: (r) => view.standing.overallByUnit.get(r.u)?.overall, cell: (r) => {
-      const o = view.standing.overallByUnit.get(r.u);
-      return o ? h("span", null, tierBadge(o.tier, o.overall), o.provisional ? h("sup", { class: "muted" }, "*") : null,
-        h("span", { class: "muted" }, ` ${o.rank}위`)) : "–";
-    } },
+      cell: (r) => unitInline(app, r.u, { sub: r.slot.own ? `▶ ${ko} 니케` : null }) },
+    { key: "lift", label: `${ko} 약점`, title: `${ko} 약점 시즌들의 기여도 (최근일수록 크게)`, sort: (r) => (r.slot.seasons ? r.slot.lift : null),
+      cell: (r) => (r.slot.seasons ? tierBadge(r.tier, r.slot.lift) : h("span", { class: "muted" }, "미관측")) },
+    { key: "seasons", label: "약점 시즌", title: `겪은 ${ko} 약점 시즌 수`, num: true, sort: (r) => r.slot.seasons, cell: (r) => `${r.slot.seasons}번` },
+    { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", null, tierBadge(r.o.tier, r.o.overall),
+      r.o.provisional ? h("sup", { class: "muted" }, "*") : null, h("span", { class: "muted" }, ` ${r.o.rank}위`)) },
     ...lifeColumns(app, view),
   ];
   return sortableTable(columns, rows, {
-    sortKey: sort.key, sortDir: sort.dir, caption: `${ELEMENT_KO[element]} 속성 티어 비교표`,
+    sortKey: sort.key, sortDir: sort.dir, caption: `${ko} 약점 티어 비교표`,
     onSort: (key, dir) => { state.sort.element = { key, dir }; app.rerender(); },
   });
 }
-

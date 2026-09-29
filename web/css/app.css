@@ -34,7 +34,7 @@
   --accent-2: #e36927;
   --accent-soft: rgba(52, 150, 239, .15);
   --glow: rgba(52, 150, 239, .5);
-  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  --el-Fire: #f07030; --el-Water: #2f80ed; --el-Wind: #1baf7a; --el-Iron: #f2c230; --el-Electric: #ff79c6;
   --gen-0: rgba(52, 150, 239, .07); --gen-1: rgba(52, 150, 239, .17); --gen-2: rgba(52, 150, 239, .32);
   --grid: #1d2536;
   --axis: #34405a;
@@ -67,7 +67,7 @@
   --accent-2: #eb6834;
   --accent-soft: rgba(42, 120, 214, .11);
   --glow: rgba(42, 120, 214, .35);
-  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --el-Fire: #c93a3a; --el-Water: #2a78d6; --el-Wind: #1baf7a; --el-Iron: #c98500; --el-Electric: #4a3aa7;
   --gen-0: rgba(42, 120, 214, .06); --gen-1: rgba(42, 120, 214, .15); --gen-2: rgba(42, 120, 214, .28);
   --grid: #e4e8ef;
   --axis: #c3cad8;
@@ -890,27 +890,29 @@ a.mb:hover { background: var(--surface-3); }
 .compare-add.off { opacity: .6; cursor: default; }
 .btn.small { height: 28px; padding: 0 10px; font-size: 12px; }
 
-/* series colours, fixed per slot */
-.sw.line.ser { height: 3px; }
-.sw.ser.s1, .gauge-legend .s1 { background: var(--s1); }
-.sw.ser.s2 { background: var(--s2); }
-.sw.ser.s3 { background: var(--s3); }
-.sw.ser.s4 { background: var(--s4); }
-.sw.ser.s5 { background: var(--s5); }
-.traj .line.ser.s1, .traj .end-tick.s1 { stroke: var(--s1); }
-.traj .line.ser.s2, .traj .end-tick.s2 { stroke: var(--s2); }
-.traj .line.ser.s3, .traj .end-tick.s3 { stroke: var(--s3); }
-.traj .line.ser.s4, .traj .end-tick.s4 { stroke: var(--s4); }
-.traj .line.ser.s5, .traj .end-tick.s5 { stroke: var(--s5); }
-.traj .dot.ser.s1, .traj .hover-dot.ser.s1 { fill: var(--s1); }
-.traj .dot.ser.s2, .traj .hover-dot.ser.s2 { fill: var(--s2); }
-.traj .dot.ser.s3, .traj .hover-dot.ser.s3 { fill: var(--s3); }
-.traj .dot.ser.s4, .traj .hover-dot.ser.s4 { fill: var(--s4); }
-.traj .dot.ser.s5, .traj .hover-dot.ser.s5 { fill: var(--s5); }
-.traj .end-tick { stroke-width: 1; stroke-opacity: .6; }
-.traj .ax.end-label { fill: var(--ink-2); font-weight: 600; font-size: 11.5px; }
+/* the comparison: lines in their unit's element colour, the face at each end */
+.el-Fire { --elc: var(--el-Fire); } .el-Water { --elc: var(--el-Water); } .el-Wind { --elc: var(--el-Wind); }
+.el-Iron { --elc: var(--el-Iron); } .el-Electric { --elc: var(--el-Electric); } .el-none { --elc: var(--ink-2); }
+.multi .sline .line { stroke: var(--elc); stroke-width: 2; stroke-opacity: .85; transition: stroke-opacity .15s, stroke-width .15s; }
+.multi .sline .dot, .multi .hover-dot { fill: var(--elc); stroke: var(--surface); stroke-width: 1.5; }
+.multi .end-lead { fill: none; stroke: var(--elc); stroke-width: 1; stroke-opacity: .55; }
+.multi .end-dot { fill: var(--elc); stroke: var(--surface); stroke-width: 1.5; }
+.multi .end-ring { fill: var(--surface-2); stroke: var(--elc); stroke-width: 2; }
+.multi .end-face { cursor: pointer; transition: opacity .15s; }
+.multi.focusing .sline:not(.on) .line { stroke-opacity: .12; }
+.multi.focusing .sline:not(.on) .dot, .multi.focusing .sline:not(.on) .treasure-mark, .multi.focusing .hover-dot:not(.on) { opacity: .15; }
+.multi.focusing .end-face:not(.on) { opacity: .3; }
+.multi .sline.on .line { stroke-width: 3.5; stroke-opacity: 1; }
+.multi .end-face.on .end-ring { stroke-width: 3; }
 .traj .treasure-mark.small { font-size: 11px; }
 .multi .ax.tier { opacity: .8; }
+.tip-rows { display: grid; grid-template-columns: 1fr; gap: 3px 14px; }
+.tip-wide .tip-rows { grid-template-columns: 1fr 1fr; }
+.tip-wide { max-width: 480px; }
+.tip-row { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.tip-row.on { font-weight: 800; }
+.tip-face { width: 20px; height: 20px; border-radius: 50%; flex: none; }
+.tip-row-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tip-ser { display: flex; align-items: center; gap: 6px; color: var(--ink-2) !important; }
 .ser-head { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .ser-head .face-img { width: 22px; height: 22px; border-radius: 5px; }
@@ -919,7 +921,23 @@ a.mb:hover { background: var(--surface-3); }
 .cmp-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 18px 14px; }
 .cmp-row .picker { flex: 1 1 240px; }
 .cmp-chip { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 4px 0 10px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--surface-2); font-size: 13px; font-weight: 600; }
-.cmp-chip .sw.line { width: 14px; }
+.cmp-chip { border-left: 3px solid var(--elc, var(--line-2)); }
+.cmp-chip[data-el="Fire"] { --elc: var(--el-Fire); } .cmp-chip[data-el="Water"] { --elc: var(--el-Water); }
+.cmp-chip[data-el="Wind"] { --elc: var(--el-Wind); } .cmp-chip[data-el="Iron"] { --elc: var(--el-Iron); }
+.cmp-chip[data-el="Electric"] { --elc: var(--el-Electric); }
+.cmp-actions { display: inline-flex; gap: 6px; align-items: center; }
+.cmp-empty { padding: 0 18px 14px; margin: 0; }
+.cmp-picker { display: flex; flex-direction: column; gap: 10px; }
+.cmp-picker-head {
+  display: flex; align-items: baseline; gap: 10px; justify-content: space-between; width: 100%; padding: 12px 18px;
+  border-radius: 14px; border: 1px dashed var(--line-2); background: var(--surface); color: inherit; cursor: pointer; font: inherit; text-align: left;
+}
+.cmp-picker-head:hover:not(:disabled) { border-color: var(--accent); }
+.cmp-picker-head:disabled { cursor: default; color: inherit; }
+.card.pickable { cursor: pointer; }
+.card.picked .face-img { box-shadow: 0 0 0 3px var(--accent); }
+.card .mark.check { top: auto; bottom: 12px; left: -6px; background: var(--accent); color: #fff; font-size: 10px; }
+.own-tag { color: var(--ink); }
 .cmp-chip-name { display: inline-flex; align-items: center; gap: 6px; color: inherit; text-decoration: none; }
 .cmp-chip-name:hover { color: var(--accent); }
 .cmp-chip-name .face-img { width: 24px; height: 24px; border-radius: 6px; }
@@ -929,7 +947,6 @@ a.mb:hover { background: var(--surface-3); }
 .pick-btn { width: 28px; height: 24px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--surface-2); color: var(--ink-3); cursor: pointer; display: inline-grid; place-items: center; font-weight: 700; }
 .pick-btn:hover { border-color: var(--accent); color: var(--ink); }
 .pick-btn.on { border-color: var(--line-2); background: var(--surface-3); }
-.pick-btn .sw.line { width: 14px; }
 .grid tr.picked-row > * { background: var(--accent-soft); }
 a.cmp-head { color: inherit; text-decoration: none; }
 a.cmp-head:hover span { color: var(--accent); }

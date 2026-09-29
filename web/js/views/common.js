@@ -13,11 +13,15 @@ import {
 // A name as the unit searches compare it: "라피 : 레드 후드" -> "라피레드후드".
 export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/g, "");
 
-export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, tip, extra } = {}) {
+// ``pick`` makes the card a toggle (the comparison's list): {on, href, onclick} in place of
+// the link to the unit.
+export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, tip, extra, pick = null } = {}) {
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
   const card = h("a", {
-    class: ["card", dim && "dim", retired && "retired"], href: app.unitHref(unit.id), dataset: { tier: tier || "D" },
+    class: ["card", dim && "dim", retired && "retired", pick && "pickable", pick?.on && "picked"],
+    href: pick ? pick.href : app.unitHref(unit.id), dataset: { tier: tier || "D" },
+    "aria-pressed": pick ? String(pick.on) : null, onclick: pick ? (e) => { e.preventDefault(); pick.onclick(); } : null,
     "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}`,
   },
   h("span", { class: "face" },
@@ -25,6 +29,7 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
     elementIcon(unit.element, 18, { class: "card-el", title: "" }),
     provisional ? h("span", { class: "mark prov", "aria-hidden": "true" }, "*") : null,
     heart ? h("span", { class: "mark heart", "aria-hidden": "true" }, "♥") : null,
+    pick?.on ? h("span", { class: "mark check", "aria-hidden": "true" }, "✓") : null,
     value != null && !Number.isNaN(value) ? h("span", { class: "val" }, num(value)) : null),
   h("span", { class: "name" }, h("span", null, first), second ? h("span", null, second) : null),
   extra || null);
@@ -158,22 +163,24 @@ export function modeSwitch(app) {
 }
 
 // 티어표's kinds: the overall tier and each element's on a day, or one season's own.
+// An element here is the boss's weakness, not the units' element: every unit, by how it does
+// when the boss is weak to it.
 export function kindTabs(app) {
   return h("nav", { class: "kindbar", "aria-label": "티어 종류" }, segmented([
     { value: "overall", label: "종합 티어", title: "고른 날 기준 종합 티어" },
-    ...ELEMENTS.map((e) => ({ value: e, label: ELEMENT_KO[e], icon: elementIcon(e, 16, { title: "" }), title: `고른 날 기준 ${ELEMENT_KO[e]} 속성 티어` })),
-    { value: "season", label: "시즌 티어", title: "한 시즌의 기여도로 매긴 티어" },
+    ...ELEMENTS.map((e) => ({ value: e, label: ELEMENT_KO[e], icon: elementIcon(e, 16, { title: "" }),
+      title: `보스 약점이 ${ELEMENT_KO[e]}인 시즌 기준 — 니케 속성과 무관하게 모든 니케 (고른 날 기준)` })),
+    { value: "season", label: "시즌별 티어", title: "한 시즌의 기여도로 매긴 티어" },
   ], app.state.view, (v) => app.go({ view: v, weak: null }, { replace: true }), { class: "viewtabs", label: "티어 종류" }));
 }
 
-// 티어 변화's views: one unit, units side by side, the seasons of one weakness.
+// 티어 변화's views: one unit, or units side by side.
 export function trendTabs(app) {
-  const n = app.state.compare.filter((u) => u != null).length;
+  const n = app.state.compare.length;
   return h("nav", { class: "kindbar", "aria-label": "변화 보기" }, segmented([
     { value: "unit", label: "니케 한 명", title: "한 니케의 시즌별 기여도·티어·범용도" },
-    { value: "compare", label: n ? `니케 비교 ${n}` : "니케 비교", title: "여러 니케의 종합 티어를 한 그래프에" },
-    { value: "weak", label: "약점별 시즌", title: "한 보스 약점의 시즌들을 나란히" },
-  ], app.state.trend, (v) => app.go({ trend: v, weak: v === "weak" ? app.state.weak : null }), { class: "viewtabs", label: "변화 보기" }));
+    { value: "compare", label: n ? `니케 비교 ${n}` : "니케 비교", title: "여러 니케의 종합 티어, 또는 한 보스 약점 시즌들의 기여도를 한 그래프에" },
+  ], app.state.trend, (v) => app.go({ trend: v, weak: null }), { class: "viewtabs", label: "변화 보기" }));
 }
 
 // A search box over the units that have played: typing lists the best matches (Korean or

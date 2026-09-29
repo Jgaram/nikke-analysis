@@ -177,6 +177,8 @@ sup { font-size: 11px; margin-left: 1px; }
 .brand-mark .brand-a { fill: none; stroke: var(--accent); stroke-width: 2.4; stroke-linejoin: round; stroke-linecap: round; }
 .brand-text { display: flex; flex-direction: column; line-height: 1.05; min-width: 0; }
 .brand-text b { font: 700 17px/1 var(--display); letter-spacing: .22em; }
+.brand-text b em { font-style: normal; color: var(--t-SS); }
+:root[data-theme="light"] .brand-text b em { color: var(--t-A); }
 .brand-text span { font-size: 12px; color: var(--ink-2); letter-spacing: .02em; white-space: nowrap; }
 .top-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .asof { font-size: 12px; white-space: nowrap; }
@@ -884,6 +886,7 @@ svg.traj { display: block; overflow: visible; }
   body { font-size: 13.5px; }
   .top-bar { height: 52px; }
   .brand-text span { display: none; }
+  .brand-text b { font-size: 16px; letter-spacing: .16em; }
   .params-sample { display: none; }
   .tabs a { padding: 8px 10px 10px; font-size: 14px; }
   .tab-k { display: none; }

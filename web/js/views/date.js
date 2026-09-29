@@ -133,13 +133,16 @@ function hero(app, view, element) {
   }
   const tiered = Object.values(counts).reduce((a, b) => a + b, 0);
 
-  const art = element ? null : (chosen ?? model.bySeason.get(app.latestSeason()));
   const first = counted.length ? counted[0].season : null, last = counted.length ? counted[counted.length - 1].season : null;
   const servers = params.servers.length === model.servers.length ? `${model.servers.length}개 서버` : params.servers.join("·");
-  return h("section", { class: ["hero", "hero-stand", art?.bossImage && "has-boss", element && "has-foot"] },
+  // 종합 stands on every boss: the Solo Raid's own emblem (its hatch, from the first seasons' notices)
+  return h("section", { class: ["hero", "hero-stand", !element && "has-boss"] },
     element ? h("div", { class: "hero-num hero-el" }, h("small", null, "WEAK"), elementIcon(element, 60, { title: "" }))
       : h("div", { class: "hero-num" }, h("small", null, "SEASON"), h("b", { class: first !== last ? "range" : null }, first === last ? first ?? "–" : `${first}–${last}`)),
-    art?.bossImage ? h("img", { class: "hero-boss", src: `icons/bosses/${art.bossImage}.webp`, alt: "", width: 256, height: 256, decoding: "async" }) : null,
+    element ? null : h("img", {
+      class: "hero-boss hero-emblem", src: "img/soloraid.webp", alt: "", width: 256, height: 256, decoding: "async",
+      onerror: (e) => e.target.remove(),
+    }),
     h("div", { class: "hero-main" },
       h("div", { class: "hero-top" }, status),
       h("h2", { class: "hero-title" }, element ? `${ELEMENT_KO[element]} 약점 티어` : "종합 티어",
@@ -152,31 +155,53 @@ function hero(app, view, element) {
       h("div", { class: "hero-sample muted" }, `표본 ${servers} × 상위 ${params.topN}위 · 니케 ${int(tiered)}명`)),
     h("div", { class: "hero-counts", "aria-label": "티어별 인원" }, cuts.map(([k]) => h("span", { class: "count", dataset: { tier: k } },
       h("b", null, k), h("span", null, counts[k] || 0)))),
-    element ? weakSeasons(app, view, mine) : null);
+    seasonCards(app, view, element));
 }
 
-// A weakness's seasons, newest first, each with its share of the recency weighting at the moment.
-function weakSeasons(app, view, counted) {
-  if (!counted.length) return h("p", { class: "hero-foot note wi-empty" }, "이때까지 이 약점 시즌이 없습니다.");
-  const weights = counted.map((c) => seasonWeight(c, view.moment, app.state.params));
-  const total = weights.reduce((a, b) => a + b, 0) || 1;
+// What each counted season weighs in the tier, for a unit that has met every weakness. Within a
+// weakness: its recency weight over the weakness's own. Overall, times the weakness's part: an
+// equal part each (mean), or the weakness's recent frequency (frequency: that comes to the
+// season's recency weight over every season's). ``max`` counts one weakness a unit, its best:
+// the shares within each weakness then.
+function seasonShares(view, params, element) {
+  const counted = element ? view.standing.counted.filter((c) => c.weak === element) : view.standing.counted;
+  const weights = counted.map((c) => seasonWeight(c, view.moment, params));
+  const byWeak = new Map();
+  counted.forEach((c, i) => byWeak.set(c.weak, (byWeak.get(c.weak) || 0) + weights[i]));
+  const all = weights.reduce((a, b) => a + b, 0) || 1;
+  return counted.map((c, i) => {
+    const within = weights[i] / (byWeak.get(c.weak) || 1);
+    const share = element || params.overall === "max" ? within : params.overall === "frequency" ? weights[i] / all : within / byWeak.size;
+    return { c, share };
+  });
+}
+
+// The seasons behind the tier, newest first, each with its share.
+function seasonCards(app, view, element) {
+  const { params } = app.state;
+  const shares = seasonShares(view, params, element);
+  if (!shares.length) return h("p", { class: "hero-foot note wi-empty" }, "이때까지 반영된 시즌이 없습니다.");
+  const note = element ? `최근일수록 크게 (반감기 ${params.halfLifeDays}일)`
+    : params.overall === "max" ? "약점마다 따로, 최근일수록 크게"
+      : params.overall === "frequency" ? "최근일수록 크게 (반감기 " + params.halfLifeDays + "일)"
+        : "약점 다섯 가지가 같은 몫, 그 안에서 최근일수록 크게";
+  const top = Math.max(...shares.map((x) => x.share)) || 1;
   const card = (s, share, live) => {
     const boss = s.bossKo || s.bossEn || "?";
-    const pct = Math.round(share * 100);
+    const pct = share < 0.1 ? (share * 100).toFixed(1) : String(Math.round(share * 100));
     return h("a", { class: ["wb", live && "live"], href: app.link({ view: "raid", season: s.season }), title: `시즌 ${s.season} · ${boss} · 비중 ${pct}%` },
       s.bossImage ? h("img", { class: "wb-img", src: `icons/bosses/${s.bossImage}.webp`, alt: "", width: 44, height: 44, loading: "lazy", decoding: "async" })
         : h("span", { class: "wb-img none", "aria-hidden": "true" }),
       h("span", { class: "wb-text" },
-        h("span", { class: "wb-top" }, h("b", null, `S${s.season}`), live ? h("span", { class: "pill live" }, "진행 중") : null,
-          h("span", { class: "wb-when muted" }, shortDay(s.start))),
+        h("span", { class: "wb-top" }, h("b", null, `S${s.season}`), element ? null : elementIcon(s.weak, 13, { title: `약점 ${ELEMENT_KO[s.weak] || "?"}` }),
+          live ? h("span", { class: "pill live" }, "진행 중") : null, h("span", { class: "wb-when muted" }, shortDay(s.start))),
         h("span", { class: "wb-name" }, boss),
         h("span", { class: "wb-share", "aria-label": `비중 ${pct}%` },
-          h("i", { style: { width: `${Math.max(4, pct)}%` } }), h("small", null, `${pct}%`))));
+          h("i", { style: { width: `${Math.max(3, (share / top) * 70)}%` } }), h("small", null, `${pct}%`))));
   };
   return h("div", { class: "hero-foot" },
-    h("div", { class: "hero-foot-k fact-k" }, "시즌별 비중"),
-    h("div", { class: "wb-list" }, counted.map((c, i) => ({ c, share: weights[i] / total })).reverse()
-      .map(({ c, share }) => card(app.model.bySeason.get(c.season), share, c.live))));
+    h("div", { class: "hero-foot-k" }, h("span", { class: "fact-k" }, "시즌별 비중"), h("span", { class: "muted small" }, note)),
+    h("div", { class: "wb-list" }, [...shares].reverse().map(({ c, share }) => card(app.model.bySeason.get(c.season), share, c.live))));
 }
 
 function elementBody(app, view, element) {

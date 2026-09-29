@@ -418,6 +418,8 @@ a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .hero-num b.range { font-size: 52px; }
 .hero-el img { width: 60px; height: auto; filter: drop-shadow(0 4px 12px rgb(0 0 0 / .35)); }
 .hero-foot { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; min-width: 0; margin: 0; }
+.hero-foot-k { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.hero-emblem { background: none; border-radius: 50%; }
 /* The boss picture (enikk): a portrait beside the season number, lit from behind. */
 .hero-boss {
   width: 104px; height: 104px; object-fit: contain; margin: -6px 0;

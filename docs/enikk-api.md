@@ -103,7 +103,8 @@ curl -sS -X POST https://enikk.app/api/graphql \
 `data/assets/icons/bosses/` 에 둔다.
 
 보스 이름은 영어뿐이다. 언어를 고르는 인자가 없고 페이지도 `lang="en"` 이다. 한글 이름은
-공지에서 나오면 그걸, 아니면 [`data/manual/boss_names.csv`](../data/manual/README.md#boss_namescsv) 를 쓴다.
+공지에서만 온다: 그 시즌 공지가 이름을 댄 경우(최근 공지는 "솔로 레이드 시즌 41 - 리버렐리오 바디가 …"),
+그리고 enikk 이름이 같은 다른 시즌에 공지가 이름을 댄 경우. 나머지는 영문 이름을 보여 준다.
 
 ## 니케 이름
 

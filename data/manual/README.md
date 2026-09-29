@@ -75,22 +75,6 @@ way. A name listed in `data/processed/raid_unresolved_names.csv` with two
 candidates is the signal one may be needed; a `unit_id` the roster does not
 have is reported by `nikke check` (`ranking_name_unknown_unit`).
 
-## `boss_names.csv`
-
-Korean names of the Solo Raid bosses, by enikk's English name. enikk has English
-only, and the notices name a boss just now and then (the season build takes a
-notice's name first when there is one). A new boss needs a row here to show in
-Korean; until then the site shows the English name.
-
-```csv
-boss_en,boss_ko,reason
-Crystal Chamber,크리스탈 체임버,"공지: 새로운 보스인 <크리스탈 체임버>"
-Queen 001,퀸 001,"초안: 공지에서 확인 못함 (음역)"
-```
-
-`reason` quotes the notice that uses the name, or says `초안` for a name no
-notice was found to use - a transliteration to check against the game.
-
 ## `unit_aliases.csv`
 
 Extra spellings for the name index, for a name the notices use that the game

@@ -31,9 +31,11 @@ Outputs: ``soloraid_seasons.csv`` (one row per season), ``soloraid_periods.csv``
 (one row per open interval) and ``soloraid_events.csv`` (the evidence, one row
 per statement).
 
-The boss's Korean name comes from the season's own notices when they give it,
-otherwise from data/manual/boss_names.csv by its English name (enikk's) - the
-notices name a boss only now and then, and enikk has English names only.
+The boss's Korean name comes from the notices only - enikk has English names
+only. A season's own notices give it now and then (recent ones name it in the
+opening line); a boss named for one season is named for every other season
+with the same enikk name (Altruia, 34 and 42). The rest keep ``boss_ko`` empty
+and show the English name.
 """
 
 from __future__ import annotations
@@ -46,7 +48,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Iterable
 
-from ..paths import manual_dir, processed_dir
+from ..paths import processed_dir
 from ..util.kdate import Stamp, find_points, find_spans, find_until
 from .enikk_meta import EnikkSeason
 from .notices import HEADING_RE, Notice
@@ -56,7 +58,6 @@ log = logging.getLogger(__name__)
 SEASONS_CSV = "soloraid_seasons.csv"
 PERIODS_CSV = "soloraid_periods.csv"
 EVENTS_CSV = "soloraid_events.csv"
-BOSS_NAMES_CSV = "boss_names.csv"
 
 ELEMENTS_KO = {"작열": "Fire", "수냉": "Water", "풍압": "Wind", "철갑": "Iron", "전격": "Electric"}
 LAUNCH_DATE = "2022-11-04"
@@ -607,28 +608,14 @@ def _iso(stamp: Stamp | None) -> str:
     return stamp.iso() if stamp else ""
 
 
-def load_boss_names(path: Path | None = None) -> dict[str, str]:
-    """English boss name (enikk's) -> Korean, from data/manual/boss_names.csv."""
-    target = path or (manual_dir() / BOSS_NAMES_CSV)
-    if not target.is_file():
-        return {}
-    with target.open(encoding="utf-8", newline="") as handle:
-        return {row["boss_en"].strip(): row["boss_ko"].strip() for row in csv.DictReader(handle)
-                if (row.get("boss_en") or "").strip() and (row.get("boss_ko") or "").strip()}
-
-
 def build(
     notices: list[Notice],
     enikk: dict[int, EnikkSeason],
     *,
     releases: dict[str, str] | None = None,
-    boss_names: dict[str, str] | None = None,
     out_dir: Path | None = None,
 ) -> dict[str, Any]:
-    """Write the season tables. ``releases`` maps unit id -> release instant (ISO);
-    ``boss_names`` English boss name -> Korean where the notices give none
-    (default: data/manual/boss_names.csv)."""
-    boss_names = load_boss_names() if boss_names is None else boss_names
+    """Write the season tables. ``releases`` maps unit id -> release instant (ISO)."""
     events = extract_all(notices)
     seasons = group_seasons(events)
     for season in seasons:
@@ -653,7 +640,7 @@ def build(
         row: dict[str, Any] = {
             "season": number,
             "boss_en": meta.boss_en if meta else "",
-            "boss_ko": boss_names.get(meta.boss_en, "") if meta else "",
+            "boss_ko": "",
             "boss_image": meta.boss_image if meta else "",
             "element": meta.boss_element if meta else "",
             "weak_element": meta.weak_element if meta else "",
@@ -676,7 +663,7 @@ def build(
         if season is not None:
             original = min(season.openings, key=lambda e: (e.notice.published_at, e.start.at))
             row.update(
-                boss_ko=next((e.boss_ko for e in season.events if e.boss_ko), row["boss_ko"]),
+                boss_ko=next((e.boss_ko for e in season.events if e.boss_ko), ""),
                 scheduled_start=_iso(original.start),
                 scheduled_end=_iso(original.end),
                 periods=len(season.periods),
@@ -710,6 +697,15 @@ def build(
                     }
                 )
         season_rows.append(row)
+
+    # A boss a notice named for one season is the same boss wherever enikk gives the same name.
+    named: dict[str, str] = {}
+    for row in season_rows:
+        if row["boss_en"] and row["boss_ko"]:
+            named.setdefault(row["boss_en"], row["boss_ko"])
+    for row in season_rows:
+        if not row["boss_ko"]:
+            row["boss_ko"] = named.get(row["boss_en"], "")
 
     event_rows = []
     number_of = {id(e): s.number for s in seasons for e in s.events}

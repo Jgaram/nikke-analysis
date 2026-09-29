@@ -146,15 +146,15 @@ function generalityHelp(app, g = null) {
       + "자기 속성 기여도는 가장 최근 자기 속성 시즌의 값, 다른 속성은 그 앞 자기 속성 시즌 뒤로의 다른 속성 시즌들의 평균. "
       + "티어처럼 지난 시즌을 기억하지 않아서, 다른 속성 덱에서 빠지면 다음 자기 속성 시즌에 바로 보인다."),
     h("div", { class: "gauge-legend" },
-      h("span", { class: "z0" }, h("b", null, "특화"), ` 0 – ${num(low)}`),
-      h("span", { class: "z1" }, h("b", null, "속성 우선"), ` ${num(low)} – ${num(high)}`),
+      h("span", { class: "z0" }, h("b", null, "속성 특화"), ` 0 – ${num(low)}`),
+      h("span", { class: "z1" }, h("b", null, "속성 위주"), ` ${num(low)} – ${num(high)}`),
       h("span", { class: "z2" }, h("b", null, "범용"), ` ${num(high)} – ${GENERALITY_MAX}`)),
     g ? h("p", null, !Number.isNaN(g.generality)
       ? `이 니케: 2 × ${num(g.otherLevel)} ÷ (${num(g.ownLevel)} + ${num(g.otherLevel)}) → ${num(g.generality)}`
       : "이 니케: 아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임") : null,
     h("p", { class: "muted" }, "티어에는 들어가지 않는다. 최근성 반감기처럼 속성·종합 티어의 기억에 관한 인자는 범용도에 영향이 없다."),
     paramsNote([
-      [PARAM.bands, "특화 · 속성 우선 · 범용의 경계"],
+      [PARAM.bands, "속성 특화 · 속성 위주 · 범용의 경계"],
       [PARAM.live, "진행 중 시즌을 최근 한 바퀴에 넣을지"],
       [PARAM.sample, "기여도 자체"],
     ]));
@@ -196,15 +196,15 @@ function curveHelp(app, c = null) {
     h("dl", { class: "tip-list" },
       ...["specialist", "narrowed", "faded", "general", "unused", "unknown"].flatMap((k) => [h("dt", null, CURVE_KO[k]), h("dd", null, CURVE_HINT[k])])),
     h("p", { class: "muted" }, `전성기 = 수준((자기 속성 + 다른 속성) ÷ 2)이 가장 높은 바퀴. 전성기 범용도 ${num(curveWide)} 이상이면 처음부터 범용, `
-      + `그 뒤 아직 쓰이는(시즌 티어 ${curveMinTier} 이상) 바퀴의 범용도가 ${num(generalityBands[0])} 아래로 가면 속성 전용으로 좁아진 것, `
+      + `그 뒤 아직 쓰이는(시즌 티어 ${curveMinTier} 이상) 바퀴의 범용도가 ${num(generalityBands[0])} 아래로 가면 속성 특화로 좁아진 것, `
       + "마지막 바퀴가 전성기 수준의 절반 아래면 내려온 것."),
     c ? h("p", null, `이 니케: 전성기 범용도 ${num(c.gPeak)} · 내려오며 가장 낮은 범용도 ${num(c.gLow)} · `
       + `자기 속성만 남은 바퀴 ${c.narrowTurns}개 · 지금 수준 전성기의 ${Math.round((lastLevel(c) / c.peak) * 100)}%`) : null,
     h("p", { class: "muted" }, "티어에는 들어가지 않는다."),
     paramsNote([
       [PARAM.curveUse, "한 바퀴를 쓰인 것으로 칠 기준 티어"],
-      [PARAM.curveWide, "처음부터 범용과 처음부터 속성 전용의 경계"],
-      [PARAM.bands, "아래 값 = 속성 전용으로 좁아졌다고 볼 범용도"],
+      [PARAM.curveWide, "처음부터 범용과 처음부터 속성 특화의 경계"],
+      [PARAM.bands, "아래 값 = 속성 특화로 좁아졌다고 볼 범용도"],
       [PARAM.cuts, "기준 티어의 기여도 값"],
       [PARAM.live, "진행 중 시즌을 곡선에 넣을지"],
       [PARAM.sample, "기여도 자체"],
@@ -250,7 +250,7 @@ function turnPanel(app, u, c) {
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" },
       h("h3", null, "로테이션 한 바퀴씩"), infoButton("생애 곡선", () => curveHelp(app, c)),
-      h("span", { class: "muted small" }, `생애 곡선: ${CURVE_KO[c.curve]} · 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들 · 두 선이 같이 가면 범용, 다른 속성 선만 먼저 떨어지면 속성 전용으로 좁아짐`)),
+      h("span", { class: "muted small" }, `생애 곡선: ${CURVE_KO[c.curve]} · 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들 · 두 선이 같이 가면 범용, 다른 속성 선만 먼저 떨어지면 속성 특화로 좁아짐`)),
     lineLegend(series), chart);
 }
 

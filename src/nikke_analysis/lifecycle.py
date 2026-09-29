@@ -325,9 +325,9 @@ LEFT_AFTER = 3  # other-element seasons in a row without it: it has left them
 CAREER_COLUMNS = ["unit_id", "other_used", "last_other", "other_since", "own_after", "path"]
 PATHS = ("generalist", "element_only", "left_others", "specialist",
          "retired_generalist", "retired_element_only", "retired_specialist", "unused")
-PATH_KO = {"generalist": "범용", "element_only": "속성 전용", "left_others": "다른 속성에서 빠짐", "specialist": "특화",
+PATH_KO = {"generalist": "범용", "element_only": "속성 전용", "left_others": "다른 속성에서 빠짐", "specialist": "속성 특화",
            "retired_generalist": "범용 → 은퇴", "retired_element_only": "범용 → 속성 전용 → 은퇴",
-           "retired_specialist": "특화 → 은퇴", "unused": "안 쓰임"}
+           "retired_specialist": "속성 특화 → 은퇴", "unused": "안 쓰임"}
 
 
 def careers(table: pd.DataFrame, seasons: pd.DataFrame, moment: Any, config: tiers.TierConfig | None = None,
@@ -506,7 +506,7 @@ def report(book=None) -> str:
     lines.append("")
 
     lines.append(f"6. 생애 곡선 (로테이션 한 바퀴 = 자기 속성 시즌 하나와 그 뒤 다른 속성 시즌들, 쓰임 = 시즌 티어 "
-                 f"{config.curve_min_tier} 이상, 처음부터 범용 = 전성기 범용도 {config.curve_wide} 이상, 속성 전용으로 좁아짐 = "
+                 f"{config.curve_min_tier} 이상, 처음부터 범용 = 전성기 범용도 {config.curve_wide} 이상, 속성 특화로 좁아짐 = "
                  f"범용도 {config.generality_bands[0]} 아래)")
     shapes = tiers.curves(history, seasons, now, config).assign(name=lambda f: f["unit_id"].map(label))
     for curve in tiers.CURVES:
@@ -514,7 +514,7 @@ def report(book=None) -> str:
         listed = ", ".join(members.sort_values("peak", ascending=False)["name"].head(12))
         lines.append(f"   {CURVE_KO[curve]:<12} {len(members):>3}명  — {listed}")
     ended = shapes[shapes["curve"].isin(["narrowed", "faded"])]
-    lines.append("   범용 → 속성 전용 · 범용인 채로 저묾의 전성기 범용도 중앙값: " + " · ".join(
+    lines.append("   범용 → 속성 특화 · 범용인 채로 저묾의 전성기 범용도 중앙값: " + " · ".join(
         f"{CURVE_KO[c]} {ended.loc[ended['curve'] == c, 'g_peak'].median():.2f}" for c in ("narrowed", "faded")))
     lines.append("")
 
@@ -528,7 +528,7 @@ def report(book=None) -> str:
                      f"{r.pool:.1f}")
     mix = meta.usage_mix(history, seasons, config)
     lines.append(f"   그 시즌까지 {config.meta_window_days}일 동안 쓰인 니케(시즌 티어 {config.curve_min_tier} 이상), "
-                 "그 기간의 범용도로: 특화 · 속성 우선 · 범용 / 전체 (특화 비율)")
+                 "그 기간의 범용도로: 속성 특화 · 속성 위주 · 범용 / 전체 (속성 특화 비율)")
     lines.append("   " + " | ".join(f"S{i} {r.specialist} · {r.element_first} · {r.generalist} / {r.units} "
                                     f"({_pct(r.specialist / r.units)})" for i, r in mix.loc[mix.index % 5 == 1].iloc[1:].iterrows()))
     lines.append("   시즌별 약점 교차 유사도: " + " ".join(f"{s}:{v:.2f}" for s, v in index["same"].dropna().items()))

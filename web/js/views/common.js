@@ -15,7 +15,7 @@ export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/
 
 // ``pick`` makes the card a toggle (the comparison's list): {on, href, onclick} in place of
 // the link to the unit.
-// ``band`` is its generality band (특화 · 속성 우선 · 범용), shown as a bar under the name.
+// ``band`` is its generality band (속성 특화 · 속성 위주 · 범용), shown as a bar under the name.
 export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, band, tip, extra, pick = null } = {}) {
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
@@ -318,10 +318,10 @@ export const lifeSub = (t) => [t.sub, t.why].filter(Boolean).join(" · ");
 // ---------------------------------------------------------------------------
 // a unit's career: how general it is, and which way it is going
 
-export const GENERALITY_KO = { specialist: "특화", element_first: "속성 우선", generalist: "범용" };
+export const GENERALITY_KO = { specialist: "속성 특화", element_first: "속성 위주", generalist: "범용" };
 
-// A generality band in the colours of the unit's element (its primary): 특화 all of it,
-// 속성 우선 half, 범용 none - grey. As a tag with the words (the tables), or a bare bar (the cards).
+// A generality band in the colours of the unit's element (its primary): 속성 특화 all of it,
+// 속성 위주 half, 범용 none - grey. As a tag with the words (the tables), or a bare bar (the cards).
 export function generalityTag(band, element) {
   if (!band) return null;
   return h("span", { class: "gen-tag", dataset: { band, el: element } }, GENERALITY_KO[band]);
@@ -341,7 +341,7 @@ export function generalityLegend(element = "Fire") {
 // What the three bands are, with the parameters in force.
 export function generalityRule(params) {
   const [low, high] = params.generalityBands;
-  return `범용도 = 보스 약점이 자기 속성이 아닐 때도 얼마나 쓰이나: 특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용`;
+  return `범용도 = 보스 약점이 자기 속성이 아닐 때도 얼마나 쓰이나: 속성 특화 < ${num(low)} ≤ 속성 위주 < ${num(high)} ≤ 범용`;
 }
 
 // The generality column of a date-view table; its rows carry the unit as ``.u``. Sorted by
@@ -378,9 +378,9 @@ export const PARAM = {
 };
 
 // A career's shape (model.js curves) - how it has run, not a role.
-export const CURVE_KO = { unused: "안 쓰임", specialist: "처음부터 속성 전용", narrowed: "범용 → 속성 전용",
+export const CURVE_KO = { unused: "안 쓰임", specialist: "처음부터 속성 특화", narrowed: "범용 → 속성 특화",
   faded: "범용인 채로 저묾", general: "아직 범용", unknown: "아직 모름" };
-export const CURVE_SHORT = { unused: "안 쓰임", specialist: "속성 전용", narrowed: "범용→속성", faded: "범용→저묾",
+export const CURVE_SHORT = { unused: "안 쓰임", specialist: "속성 특화", narrowed: "범용→특화", faded: "범용→저묾",
   general: "범용 중", unknown: "모름" };
 export const CURVE_HINT = {
   unused: "로테이션 어느 바퀴에서도 자기 속성·다른 속성 기여도가 기준에 못 미침",

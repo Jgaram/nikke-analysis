@@ -172,11 +172,11 @@ export function buildParams(app, body) {
   const cutError = h("p", { class: "hint error", hidden: true }, "위 티어일수록 커야 하고 0 이상이어야 합니다.");
   const bandError = h("p", { class: "hint error", hidden: true },
     `0 이상 ${GENERALITY_MAX} 이하, 왼쪽이 오른쪽보다 크지 않게.`);
-  // The two generality bands: 특화 below the first, 범용 from the second.
+  // The two generality bands: 속성 특화 below the first, 범용 from the second.
   const bandRow = () => {
     const row = h("div", { class: "cuts" });
     const read = () => [...row.querySelectorAll("input")].map((i) => Number(i.value));
-    [["속성 우선", 0], ["범용", 1]].forEach(([label, i]) => {
+    [["속성 위주", 0], ["범용", 1]].forEach(([label, i]) => {
       row.append(h("label", { class: "cut" },
         h("span", { class: "band-label" }, label), h("span", { class: "cut-ge", "aria-hidden": "true" }, "≥"),
         h("input", {
@@ -279,7 +279,7 @@ export function buildParams(app, body) {
       h("h3", null, "범용도", h("small", null, "약점을 얼마나 타나 · 티어와 별개")),
       field("범용도 띠", bandRow(), "범용도 = 2 × 다른 속성 평균 ÷ (자기 속성 + 다른 속성 평균), 최근 한 바퀴(가장 최근 자기 속성 "
         + `시즌과 그 앞뒤 다른 속성 시즌)로. 0 = 약점이 자기 속성일 때만 쓰임, 1 = 약점과 무관, ${GENERALITY_MAX} = 약점이 다른 속성일 때만 쓰임. `
-        + "이 두 값으로 특화 · 속성 우선 · 범용을 나눕니다."),
+        + "이 두 값으로 속성 특화 · 속성 위주 · 범용을 나눕니다."),
       bandError,
       field("생애 곡선 · 쓰인 바퀴", segmented(tierChoices(d).map((label) => ({ value: label, label: `${label} 이상` })), p.curveMinTier,
         (v) => { app.setParams({ curveMinTier: v }); buildParams(app, body); }, { label: "생애 곡선에서 쓰인 바퀴로 칠 시즌 티어" }),
@@ -289,8 +289,8 @@ export function buildParams(app, body) {
         min: 0, max: GENERALITY_MAX, step: 0.05, value: p.curveWide, label: "처음부터 범용으로 볼 전성기 범용도",
         format: (v) => `범용도 ${num(v)} 이상`,
         onCommit: (v) => app.setParams({ curveWide: v }),
-      }), "전성기의 범용도가 이 값 이상이면 처음부터 범용, 아래면 처음부터 속성 전용입니다. 내려오며 범용도가 특화 띠로 "
-        + "들어가면 범용 → 속성 전용, 안 들어가고 내려오면 범용인 채로 저묾.")),
+      }), "전성기의 범용도가 이 값 이상이면 처음부터 범용, 아래면 처음부터 속성 특화입니다. 내려오며 범용도가 속성 특화 띠로 "
+        + "들어가면 범용 → 속성 특화, 안 들어가고 내려오면 범용인 채로 저묾.")),
     h("section", { class: "psec" },
       h("h3", null, "메타 변화", h("small", null, "시즌마다 거슬러 볼 기간")),
       field("기간", range({

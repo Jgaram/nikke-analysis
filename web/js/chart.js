@@ -299,11 +299,11 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
 
 // ---------------------------------------------------------------------------
 // One unit's generality once each season was over: a line on 0-GENERALITY_MAX over the bands
-// (특화 · 속성 우선 · 범용), broken at the treasure and where there is no value.
+// (속성 특화 · 속성 위주 · 범용), broken at the treasure and where there is no value.
 
 const G_HEIGHT = 190;
 const G_MARGIN = { l: 40, r: 64, t: 16, b: 30 };
-export const BAND_KO = ["특화", "속성 우선", "범용"];
+export const BAND_KO = ["속성 특화", "속성 위주", "범용"];
 
 export function generalityChart(app, u, records, { treasureAt = null, at = null } = {}) {
   const [low, high] = app.state.params.generalityBands;
@@ -318,8 +318,8 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
     "aria-label": `${unitName(unit)} 시즌별 범용도, 시즌 ${records[0]?.season.season}부터 ${records[records.length - 1]?.season.season}까지` });
   const root = h("div", { class: "chart" }, h("div", { class: "legend" },
     h("span", { class: "lg" }, h("i", { class: "sw line ink" }), "범용도 (그 시즌이 끝났을 때)"),
-    h("span", { class: "lg" }, h("i", { class: "sw zone z0" }), `특화 < ${num(low)}`),
-    h("span", { class: "lg" }, h("i", { class: "sw zone z1" }), "속성 우선"),
+    h("span", { class: "lg" }, h("i", { class: "sw zone z0" }), `속성 특화 < ${num(low)}`),
+    h("span", { class: "lg" }, h("i", { class: "sw zone z1" }), "속성 위주"),
     h("span", { class: "lg" }, h("i", { class: "sw zone z2" }), `범용 ≥ ${num(high)}`),
     firstTreasure > 0 ? h("span", { class: "lg" }, h("i", { class: "sw heart" }, "♥"), "애장품") : null), host);
 

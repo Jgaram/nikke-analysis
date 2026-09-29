@@ -63,7 +63,7 @@ OVERALL_KO = {"mean": "보스 약점 다섯 가지 성적의 평균", "frequency
 LIFT_NOTE = ["  숫자 = 기여도. 랭커의 대미지를 덱에 든 니케끼리 나눠 가진 몫이다. 한 사람이 쓰는",
              "  25명(5덱 × 5명)이 똑같이 나누면 모두 1.0 — 1.5 = 그 1.5배, 0 = 아무도 안 씀"]
 CLASS_KO = {"Attacker": "화력형", "Supporter": "지원형", "Defender": "방어형"}
-GENERALITY_KO = {"specialist": "특화", "element_first": "속성 우선", "generalist": "범용"}
+GENERALITY_KO = {"specialist": "속성 특화", "element_first": "속성 위주", "generalist": "범용"}
 
 
 def _utc(value: Any) -> pd.Timestamp:
@@ -517,7 +517,7 @@ def _provisional_note(config: tiering.TierConfig) -> str:
             "자기 속성 시즌을 아직 못 겪음")
 
 
-CURVE_KO = {"unused": "안 쓰임", "specialist": "처음부터 속성 전용", "narrowed": "범용 → 속성 전용",
+CURVE_KO = {"unused": "안 쓰임", "specialist": "처음부터 속성 특화", "narrowed": "범용 → 속성 특화",
             "faded": "범용인 채로 저묾", "general": "아직 범용", "unknown": "아직 모름"}
 FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성의 평균(다른 속성 기록이 없으면 0), "
              "자기 속성 칸은 0")
@@ -733,7 +733,7 @@ def _general_lines(history: UnitHistory, config: tiering.TierConfig) -> list[str
                else "없음 — 최근 한 바퀴에 자기 속성·다른 속성 시즌 중 한쪽이 없거나 거의 안 쓰임")
     low, high = config.generality_bands
     lines = [f"  {pad('범용도', 9)}  {general}",
-             f"  {pad('', 9)}  범용도 띠 = 특화 < {low:g} ≤ 속성 우선 < {high:g} ≤ 범용"]
+             f"  {pad('', 9)}  범용도 띠 = 속성 특화 < {low:g} ≤ 속성 위주 < {high:g} ≤ 범용"]
     curve = c.get("curve")
     if curve:
         numbers = (f" (전성기 범용도 {c['g_peak']:.2f} · 내려오며 가장 낮은 {c['g_low']:.2f})"

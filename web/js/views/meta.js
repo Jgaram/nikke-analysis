@@ -10,8 +10,8 @@ import { lineChart, lineLegend } from "../linechart.js";
 import { CURVE_KO, CURVE_HINT, paramsNote, PARAM, unitInline } from "./common.js";
 
 const MIX = [
-  { key: "specialist", name: "특화", cls: "mix0" },
-  { key: "element_first", name: "속성 우선", cls: "mix1" },
+  { key: "specialist", name: "속성 특화", cls: "mix0" },
+  { key: "element_first", name: "속성 위주", cls: "mix1" },
   { key: "generalist", name: "범용", cls: "mix2" },
 ];
 const SHOWN_CURVES = ["specialist", "narrowed", "faded", "general"];
@@ -24,16 +24,16 @@ function mixHelp(app) {
   const [low, high] = p.generalityBands;
   return help("쓰인 니케의 범용도",
     h("p", null, `시즌마다 그 시즌 시작까지 ${p.metaWindowDays}일 동안 열린 시즌들로, 니케마다 자기 속성 시즌 기여도 평균(O)과 다른 속성 시즌 `
-      + "기여도 평균(X)을 내고 범용도 2X ÷ (O + X)로 특화 · 속성 우선 · 범용을 나눕니다."),
+      + "기여도 평균(X)을 내고 범용도 2X ÷ (O + X)로 속성 특화 · 속성 위주 · 범용을 나눕니다."),
     h("p", null, `O나 X가 시즌 티어 ${p.curveMinTier} 이상이면 쓰인 니케로 셉니다. `, h("b", null, "은퇴한 니케는 뺍니다"),
       " — 그 시즌이 끝났을 때 은퇴(수명 규칙)면, 기간 안에 쓰였어도 세지 않고 따로 셉니다(툴팁의 \"은퇴해서 뺌\")."),
     h("p", { class: "muted" }, `그 기간에 자기 속성과 다른 속성 시즌을 둘 다 겪어야 셉니다. 첫 ${p.metaWindowDays}일은 기간이 덜 차서 비웁니다. `
-      + `특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용.`),
+      + `속성 특화 < ${num(low)} ≤ 속성 위주 < ${num(high)} ≤ 범용.`),
     paramsNote([
       [PARAM.window, "시즌마다 거슬러 보는 기간"],
       [PARAM.curveUse, "쓰인 니케로 칠 기준 티어"],
       [PARAM.cuts, "그 기준 티어의 기여도 값"],
-      [PARAM.bands, "특화 · 속성 우선 · 범용의 경계"],
+      [PARAM.bands, "속성 특화 · 속성 위주 · 범용의 경계"],
       [PARAM.used, "은퇴 판정의 \"쓰인 시즌\""],
       [PARAM.retire, "은퇴 판정 → 빼는 니케"],
       [PARAM.live, "진행 중 시즌을 은퇴 판정에 넣을지"],
@@ -56,7 +56,7 @@ function debutHelp(app) {
     h("p", null, `니케마다 처음 쓰인 시즌(시즌 티어 ${p.minTier} 이상)부터 ${p.metaWindowDays}일 동안의 자기 속성·다른 속성 기여도 평균과 범용도.`),
     h("p", { class: "muted" }, `그 기간이 끝났고, 그 기간의 자기 속성이나 다른 속성 기여도가 시즌 티어 ${p.curveMinTier} 이상인 니케만 점으로 찍습니다. `
       + "한쪽 시즌만 겪었으면 범용도가 없어 빠집니다."),
-    h("p", { class: "muted" }, "제곱근 눈금은 0 근처(특화)를 넓게 펼칩니다 — 0.3 이 세로축의 약 40% 높이. 로그 눈금은 쓰지 않습니다: "
+    h("p", { class: "muted" }, "제곱근 눈금은 0 근처(속성 특화)를 넓게 펼칩니다 — 0.3 이 세로축의 약 40% 높이. 로그 눈금은 쓰지 않습니다: "
       + "다른 속성 시즌에 한 번도 안 쓰인 니케(범용도 0)를 찍을 수 없고, 0.002 와 0.02 처럼 뜻이 같은 차이를 크게 벌려서."),
     paramsNote([
       [PARAM.used, "처음 쓰인 시즌"],
@@ -77,8 +77,8 @@ function cohortHelp(app) {
     h("p", { class: "muted" }, "곡선은 역할이 아니라 쓰임의 모양입니다. 최근 데뷔일수록 곡선이 덜 그려져 \"아직 범용\"·\"아직 모름\"이 많습니다."),
     paramsNote([
       [PARAM.curveUse, "한 바퀴를 쓰인 것으로 칠 기준 티어"],
-      [PARAM.curveWide, "처음부터 범용과 처음부터 속성 전용의 경계"],
-      [PARAM.bands, "아래 값 = 속성 전용으로 좁아졌다고 볼 범용도"],
+      [PARAM.curveWide, "처음부터 범용과 처음부터 속성 특화의 경계"],
+      [PARAM.bands, "아래 값 = 속성 특화로 좁아졌다고 볼 범용도"],
       [PARAM.cuts, "기준 티어들의 기여도 값"],
       [PARAM.used, "처음 쓰인 시즌 → 어느 구간에 드나"],
       [PARAM.live, "진행 중 시즌을 곡선에 넣을지"],
@@ -129,10 +129,10 @@ function intro(app, rows, full, upTo) {
     h("div", { class: "panel-head" }, h("h3", null, "메타 변화"),
       h("span", { class: "muted small" }, `${seasonName(then)} → ${seasonName(now)} · 쓰인 니케 = 시즌 티어 ${params.curveMinTier} 이상`)),
     h("p", null, "시즌마다, 그때까지 ", h("b", null, `${params.metaWindowDays}일`), " 동안 쓰인 니케를 그 기간의 범용도(자기 속성 시즌 기여도와 "
-      + "다른 속성 시즌 기여도의 비율)로 나눠 셉니다. 그 시즌에 은퇴한 니케는 뺍니다. 특화가 늘고 범용이 줄면 메타가 보스 약점을 더 따르게 된 것입니다. "
+      + "다른 속성 시즌 기여도의 비율)로 나눠 셉니다. 그 시즌에 은퇴한 니케는 뺍니다. 속성 특화가 늘고 범용이 줄면 메타가 보스 약점을 더 따르게 된 것입니다. "
       + "역할(딜러·서포터)이 아니라 쓰임의 모양입니다 — 속성 시즌에만 쓰이는 건 딜 때문일 수도, 그 속성 덱에 주는 버프 때문일 수도 있습니다."),
     h("div", { class: "meta-tiles" },
-      tile("쓰인 니케 중 특화", pct(share(then, "specialist")), pct(share(now, "specialist")),
+      tile("쓰인 니케 중 속성 특화", pct(share(then, "specialist")), pct(share(now, "specialist")),
         `${then.specialist}명 / ${then.units}명 → ${now.specialist}명 / ${now.units}명`),
       tile("범용 니케 수", `${then.generalist}명`, `${now.generalist}명`, `쓰인 니케 중 ${pct(share(then, "generalist"))} → ${pct(share(now, "generalist"))}`),
       tile("약점 교차 유사도", num(mean(early, (r) => r.similarity)), num(mean(late, (r) => r.similarity)),
@@ -164,12 +164,12 @@ function mixPanel(app, rows, full, points, markAt) {
     (v) => { app.state.metaMix = v; app.rerender(); }, { label: "명 또는 비율" });
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "쓰인 니케의 범용도"), infoButton("쓰인 니케의 범용도", () => mixHelp(app))), toggle,
-      h("span", { class: "muted small" }, `시즌마다 그때까지 ${params.metaWindowDays}일 동안 쓰인 니케, 은퇴한 니케는 뺌 · 특화 < ${num(low)} ≤ 속성 우선 < ${num(high)} ≤ 범용 · 첫 ${params.metaWindowDays}일은 기간이 덜 차서 비움`)),
+      h("span", { class: "muted small" }, `시즌마다 그때까지 ${params.metaWindowDays}일 동안 쓰인 니케, 은퇴한 니케는 뺌 · 속성 특화 < ${num(low)} ≤ 속성 위주 < ${num(high)} ≤ 범용 · 첫 ${params.metaWindowDays}일은 기간이 덜 차서 비움`)),
     lineLegend(series, { stacked: true }),
     lineChart({
       points, series, stacked: true, max, ticks, mark: markAt, height: 240,
       format: mode === "count" ? (v) => String(v) : (v) => `${Math.round(v * 100)}%`,
-      label: "시즌별로 쓰인 니케를 특화·속성 우선·범용으로 나눈 누적 그래프",
+      label: "시즌별로 쓰인 니케를 속성 특화·속성 위주·범용으로 나눈 누적 그래프",
       tip: (i) => {
         const r = rows[i];
         if (!full(r)) return seasonTip(r, [["", `아직 ${params.metaWindowDays}일이 차지 않음`]]);
@@ -223,7 +223,7 @@ function debutPanel(app) {
     const x = (season) => m.l + step * ((pos.get(season) ?? 0) + 0.5);
     const y = (v) => m.t + ih * (1 - f(Math.min(v, GENERALITY_MAX)) / f(GENERALITY_MAX));
     const svg = s("svg", { width, height, viewBox: `0 0 ${width} ${height}`, class: "traj gen debut-dots" });
-    [[0, low, "특화"], [low, high, "속성 우선"], [high, GENERALITY_MAX, "범용"]].forEach(([a, b, name], k) => {
+    [[0, low, "속성 특화"], [low, high, "속성 위주"], [high, GENERALITY_MAX, "범용"]].forEach(([a, b, name], k) => {
       svg.append(s("rect", { class: `zone z${k}`, x: m.l, y: y(b), width: iw, height: y(a) - y(b) }));
       if (y(a) - y(b) >= 16) svg.append(s("text", { class: `ax zone-label z${k}`, x: m.l + iw + 8, y: (y(a) + y(b)) / 2 + 4 }, name));
     });
@@ -272,7 +272,7 @@ function debutPanel(app) {
   }).observe(host);
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" }, h("span", { class: "head-title" }, h("h3", null, "새 니케의 첫 1년"), infoButton("새 니케의 첫 1년", () => debutHelp(app))),
-      segmented([{ value: "sqrt", label: "제곱근 눈금", title: "0 근처를 넓게 — 특화 니케가 겹치지 않게" },
+      segmented([{ value: "sqrt", label: "제곱근 눈금", title: "0 근처를 넓게 — 속성 특화 니케가 겹치지 않게" },
         { value: "linear", label: "보통 눈금", title: "범용도 그대로" }], scale,
       (v) => { state.debutScale = v; app.rerender(); }, { label: "세로축 눈금" }),
       h("span", { class: "muted small" }, `점 하나가 니케 하나(색 = 속성) · 처음 쓰인 시즌부터 ${params.metaWindowDays}일 동안의 범용도 · `

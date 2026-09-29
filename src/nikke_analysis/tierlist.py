@@ -497,7 +497,7 @@ def _provisional_note(config: tiering.TierConfig) -> str:
             "자기 속성 시즌을 아직 못 겪음")
 
 
-FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성의 평균(다른 속성 기록이 없으면 임시로 자기 속성 값), "
+FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성의 평균(다른 속성 기록이 없으면 0), "
              "자기 속성 칸은 0")
 
 
@@ -609,9 +609,9 @@ def _slot_lines(profile: dict[str, Any], config: tiering.TierConfig) -> list[str
     filled = []
     if any(not s["seasons"] for s in other):
         filled.append("다른 속성은 겪은 다른 속성의 평균" if any(s["seasons"] for s in other)
-                      else "다른 속성은 기록이 없어 임시로 자기 속성 값")
+                      else "다른 속성은 기록이 없어 0")
     if any(not s["seasons"] for s in own):
-        filled.append("자기 속성은 겪은 자기 속성 값" if any(s["seasons"] for s in own) else "자기 속성은 0")
+        filled.append("자기 속성은 0")
     if filled:
         lines.append(f"  {pad('', 9)}    괄호 = 아직 못 겪어서 채운 값: {', '.join(filled)} · ▶ = 자기 속성")
     return lines

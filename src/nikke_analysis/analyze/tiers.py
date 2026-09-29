@@ -34,10 +34,15 @@ A slot with no season since the unit's release is filled from its own side
 only. Its own elements and the other elements are two sides, and what a unit
 does in its own element says little about the others: a specialist that
 carries its element's decks sits out the rest. So an unobserved other-element
-slot takes the mean of the other-element slots the unit was seen in, and its
-own level only while it has been seen in no other element at all. An
-unobserved own-element slot is never guessed from the other side: it counts
-0 until the unit meets a season of its element.
+slot takes the mean of the other-element slots the unit was seen in, and 0
+while it has been seen in no other element at all - a unit fielded only in
+its own element's seasons so far is taken for a specialist until it shows
+otherwise (tried on seasons 1-41: of the units once seen in their own element
+only, the other elements they met later came to a median 2% of their own
+level). An unobserved own-element slot is never guessed either: it counts 0
+until the unit meets a season of that element, also when the unit has a
+second own element it was seen in (Sugar's Iron is not guessed from the
+Water it played with its treasure).
 
 The two read together: high in its element and low overall is a specialist,
 high in both a unit that goes anywhere, low in its element and high overall a
@@ -338,17 +343,16 @@ def standings(
     level = mean if k <= 0 else ((count * mean.fillna(0)).add(k * prior, axis=0)).div(count + k).where(observed)
 
     # The elements a unit counts as (its own, and any its skill adds) and the others are two
-    # sides; a slot not observed since release is filled from its own side. An other-element
-    # slot takes the mean of the other-element slots seen - the unit's own level only while it
-    # has met no other element yet. An own-element slot is never guessed from the other side:
-    # 0 until the unit meets a season of it.
+    # sides; a slot not observed since release is filled from the other-element side only. An
+    # other-element slot takes the mean of the other-element slots seen - 0 while the unit has
+    # met no other element yet. An own-element slot is never guessed: 0 until the unit meets a
+    # season of it.
     members = unit_elements(table, treasured)
     members = members[members["unit_id"].isin(unit.index)].reset_index(drop=True)
     own = (pd.crosstab(members["unit_id"], members["element"]).reindex(index=unit.index, columns=list(ELEMENTS))
            .fillna(0).astype(bool))
-    own_level = level.where(own).mean(axis=1)
-    other_level = level.where(~own).mean(axis=1).fillna(own_level)
-    fill = pd.DataFrame({e: own_level.fillna(0.0).where(own[e], other_level) for e in ELEMENTS})
+    other_level = level.where(~own).mean(axis=1).fillna(0.0)
+    fill = pd.DataFrame({e: other_level.where(~own[e], 0.0) for e in ELEMENTS})
     estimate = level.where(observed, fill)
 
     # Element tiers: the slots of the elements a unit counts as, once observed.

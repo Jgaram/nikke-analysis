@@ -251,9 +251,13 @@ def test_other_elements_come_from_other_elements():
     assert overall_of(tiny({"Fire": 1.5, "Water": 0.2, "Wind": 0.6}))["overall"] == pytest.approx((1.5 + 0.2 + 0.6 + 0.4 * 2) / 5)
 
 
-def test_with_no_other_element_seen_the_own_level_stands_in_for_now():
-    overall = overall_of(tiny({"Fire": 1.2}))
-    assert overall["overall"] == pytest.approx(1.2) and bool(overall["provisional"])
+def test_with_no_other_element_seen_the_others_count_zero():
+    """Fielded in its own element only so far: taken for a specialist, not given its own level elsewhere."""
+    standing = tiny({"Fire": 1.2})
+    overall = overall_of(standing)
+    assert overall["overall"] == pytest.approx(1.2 / 5) and bool(overall["provisional"])
+    slots = standing.slots.set_index("element")
+    assert slots.loc["Water", "lift"] == 0 and slots.loc["Water", "seasons"] == 0
 
 
 def test_an_unseen_own_element_counts_zero():
@@ -266,10 +270,11 @@ def test_an_unseen_own_element_counts_zero():
     assert own["element"] == "Fire" and pd.isna(own["element_lift"]) and own["element_tier"] == ""
 
 
-def test_a_skill_elements_unseen_slot_takes_the_units_own_level():
-    """Fire with Iron by skill, seen in Fire and Water: Iron is its own side too, so it takes the Fire level."""
+def test_a_skill_elements_unseen_slot_counts_zero():
+    """Fire with Iron by skill, seen in Fire and Water: Iron is its own side, and an own slot is not guessed -
+    not from Fire either (Sugar's Iron is not what it did in Water with its treasure)."""
     standing = tiny({"Fire": 1.5, "Water": 0.5}, extra="Iron")
-    assert overall_of(standing)["overall"] == pytest.approx((1.5 + 1.5 + 0.5 * 3) / 5)
+    assert overall_of(standing)["overall"] == pytest.approx((1.5 + 0.0 + 0.5 * 3) / 5)
     iron = standing.elements.set_index("element").loc["Iron"]
     assert iron["source"] == "skill" and iron["element_seasons"] == 0 and pd.isna(iron["element_lift"])
 

@@ -335,11 +335,11 @@ export function standings(model, population, moment, params, treasured = null) {
       : ELEMENTS.map((_, e) => (observed[e] ? (a.n[e] * mean[e] + k * prior) / (a.n[e] + k) : NaN));
     const members = unitElements(unit, treasured.has(u));
     const own = ELEMENTS.map((e) => members.some((m) => m.element === e));
-    const ownLevel = nanMean(level.filter((_, e) => own[e]));
+    // An unseen slot: the mean of the other elements seen for another element (0 with none
+    // seen yet), 0 for an element of its own.
     let otherLevel = nanMean(level.filter((_, e) => !own[e]));
-    if (Number.isNaN(otherLevel)) otherLevel = ownLevel;
-    const estimate = ELEMENTS.map((_, e) => (observed[e] ? level[e]
-      : own[e] ? (Number.isNaN(ownLevel) ? 0 : ownLevel) : otherLevel));
+    if (Number.isNaN(otherLevel)) otherLevel = 0;
+    const estimate = ELEMENTS.map((_, e) => (observed[e] ? level[e] : own[e] ? 0 : otherLevel));
 
     for (const m of members) {
       const e = ELEMENTS.indexOf(m.element);

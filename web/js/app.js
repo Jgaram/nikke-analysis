@@ -47,7 +47,7 @@ const state = {
 };
 
 const app = { state, model: null, decks: null, defaults: null };
-const cache = { pop: null, popKey: null, hist: null, histKey: null, views: new Map(), meta: null, metaKey: null };
+const cache = { pop: null, popKey: null, hist: null, histKey: null, views: new Map(), meta: null, metaKey: null, elems: null, elemsKey: null };
 
 // ---------------------------------------------------------------------------
 // the computation, cached
@@ -72,6 +72,25 @@ app.history = () => {
     cache.histKey = key;
   }
   return cache.hist;
+};
+
+// Every unit's element tiers once each season was over (the moments and the treasure side
+// tierHistory reads at), for the meta tab's tier counts: season -> standing.elements.
+app.elementHistory = () => {
+  const pop = app.population();
+  const key = M.tierKey(state.params);
+  if (cache.elemsKey !== key || cache.elemsPop !== pop) {
+    cache.elems = new Map();
+    for (const s of pop.summary) {
+      const moment = s.final ? s.end : s.collectedUntil;
+      if (moment == null) continue;
+      const treasured = new Set(s.rows.filter((r) => r.treasure).map((r) => r.u));
+      cache.elems.set(s.season, M.standings(app.model, pop, moment, state.params, treasured).elements);
+    }
+    cache.elemsKey = key;
+    cache.elemsPop = pop;
+  }
+  return cache.elems;
 };
 
 app.viewAt = (moment) => {

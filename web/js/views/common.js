@@ -206,7 +206,7 @@ export function trendTabs(app) {
 export function metaTabs(app) {
   return h("nav", { class: "kindbar", "aria-label": "메타 보기" }, segmented([
     { value: "generality", label: "범용도 분포", title: "쓰인 니케의 범용도, 약점을 따르는 정도, 새 니케의 첫 1년, 생애 곡선" },
-    { value: "tiers", label: "티어 분포", title: "시즌마다 티어별 니케 수 — 시즌 티어 또는 그때의 종합 티어" },
+    { value: "tiers", label: "티어 분포", title: "시즌마다 티어별 니케 수 — 그때의 종합 티어 · 속성 티어, 또는 시즌 티어" },
   ], app.state.meta, (v) => app.go({ meta: v }), { class: "viewtabs", label: "메타 보기" }));
 }
 

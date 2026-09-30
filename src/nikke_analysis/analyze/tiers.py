@@ -14,7 +14,12 @@ season one deck dominates has five, a season with no dominant deck may have none
 **Element tier** - how much a unit is worth in its own element: its recent lift
 in the seasons whose boss was weak to the unit's element, the seasons that
 element's decks are built for. Solo Raid's meta turns on the boss's weakness,
-and more so every year. Recent seasons count more (``half_life_days``). A unit
+and more so every year. Recent seasons count more (``half_life_days``), and an
+old season's lift is first brought to the value of the latest season of the
+same weakness (``value_half_life_days``): units lose ground as newer ones come
+out, so an old season's lift says more than the unit would carry now -
+weighing it less does not undo that, since a mean divides the weight back out.
+A unit
 that has not met such a season since its release has no element tier yet. A
 unit whose skill gives it a second element's weakness advantage (우월 코드: the
 roster's ``extra_elements``, from data/manual/extra_elements.csv) counts as
@@ -115,12 +120,12 @@ DEFAULT_CUTS: list[tuple[str, float]] = [
 # that carries one element and sits out the rest scores a fifth of its element lift there; these
 # cuts put about as many units in each overall tier as the element tiers hold (seasons 16-41).
 DEFAULT_OVERALL_CUTS: list[tuple[str, float]] = [
-    ("SS", 0.9),
+    ("SS", 1.0),
     ("S", 0.65),
     ("A", 0.3),
-    ("B", 0.18),
+    ("B", 0.16),
     ("C", 0.07),
-    ("D", 0.015),
+    ("D", 0.012),
     ("F", 0.0),
 ]
 OVERALL_MODES = ("mean", "max", "frequency")
@@ -141,6 +146,9 @@ class TierConfig:
     overall_cuts: list[tuple[str, float]] | None = None
     # element and overall tiers
     half_life_days: float = 180.0
+    # an old season's lift, brought to the value of the latest season of its boss weakness: halved
+    # every this many days before it (0 = as it was)
+    value_half_life_days: float = 300.0
     prior_strength: float = 0.0
     overall: str = "mean"
     min_elements_observed: int = 3
@@ -236,6 +244,7 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         cuts=[(str(c["label"]), float(c["min_lift"])) for c in cuts] if cuts else list(DEFAULT_CUTS),
         overall_cuts=[(str(c["label"]), float(c["min_lift"])) for c in overall_cuts] if overall_cuts else None,
         half_life_days=float(element.get("half_life_days", defaults.half_life_days)),
+        value_half_life_days=float(element.get("value_half_life_days", defaults.value_half_life_days)),
         prior_strength=float(element.get("prior_strength", defaults.prior_strength)),
         overall=str(element.get("overall", defaults.overall)),
         min_elements_observed=int(element.get("min_elements_observed", defaults.min_elements_observed)),
@@ -408,8 +417,15 @@ def standings(
     # A season counts from its end; the one in progress as of now.
     counted["at"] = counted["end_at"].where(counted["end_at"] <= moment, moment)
     rows = rows.merge(counted[["season", "at"]], on="season")
+    # Weight: how much a season counts. Value: what its lift is worth now - units lose ground as
+    # newer ones come out, and weighing an old season less does not undo that (a mean divides the
+    # weight back out), so its lift is first brought to the value of the latest season of the same
+    # boss weakness. That season is taken as it is, and a slot changes only when a season of its
+    # weakness comes in.
     rows = rows.assign(w=_decay((moment - rows["at"]).dt.total_seconds() / 86400.0, config.half_life_days))
-    rows["wl"] = rows["w"] * rows["lift"]
+    latest = rows["weak_element"].map(counted.groupby("weak_element")["at"].max())
+    value = _decay((latest - rows["at"]).dt.total_seconds() / 86400.0, config.value_half_life_days)
+    rows["wl"] = rows["w"] * rows["lift"] * value
     unit = rows.groupby("unit_id").agg(W=("w", "sum"), WL=("wl", "sum"), seasons_observed=("season", "size"),
                                        last_season=("season", "max"))
     prior = unit["WL"] / unit["W"]

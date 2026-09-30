@@ -30,6 +30,7 @@ export function encodeParams(p, d) {
   if (!same(p.cuts, d.cuts)) q.cuts = p.cuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
   if (!same(p.overallCuts, d.overallCuts)) q.ocuts = p.overallCuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
   if (p.halfLifeDays !== d.halfLifeDays) q.hl = String(p.halfLifeDays);
+  if (p.valueHalfLifeDays !== d.valueHalfLifeDays) q.vhl = String(p.valueHalfLifeDays);
   if (p.priorStrength !== d.priorStrength) q.k = String(p.priorStrength);
   if (p.overall !== d.overall) q.ov = p.overall;
   if (p.minElementsObserved !== d.minElementsObserved) q.min = String(p.minElementsObserved);
@@ -66,6 +67,7 @@ export function decodeParams(q, d, model) {
     }
   }
   p.halfLifeDays = number(q.get("hl"), 0, 3650) ?? d.halfLifeDays;
+  p.valueHalfLifeDays = number(q.get("vhl"), 0, 3650) ?? d.valueHalfLifeDays;
   p.priorStrength = number(q.get("k"), 0, 50) ?? d.priorStrength;
   if (OVERALL_MODES.includes(q.get("ov"))) p.overall = q.get("ov");
   p.minElementsObserved = Math.round(number(q.get("min"), 1, 5) ?? d.minElementsObserved);
@@ -105,6 +107,7 @@ export function changedParams(p, d) {
   if (!same(p.cuts, d.cuts)) out.push("티어 컷");
   if (!same(p.overallCuts, d.overallCuts)) out.push("종합 티어 컷");
   if (p.halfLifeDays !== d.halfLifeDays) out.push("반감기");
+  if (p.valueHalfLifeDays !== d.valueHalfLifeDays) out.push("값 반감기");
   if (p.priorStrength !== d.priorStrength) out.push("축소");
   if (p.overall !== d.overall) out.push("종합 방식");
   if (p.minElementsObserved !== d.minElementsObserved) out.push("잠정 기준");
@@ -122,6 +125,8 @@ export function renderHowto(p) {
   const put = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   put("howto-weight", p.rankWeighting === "uniform" ? "순위와 상관없이 똑같이 쳐서" : "순위가 높을수록 조금 크게 쳐서");
   put("howto-recent", p.halfLifeDays > 0 ? `최근일수록 크게 친(${p.halfLifeDays}일 지난 시즌은 절반)` : "시즌마다 똑같이 친");
+  put("howto-value", p.valueHalfLifeDays > 0
+    ? `같은 보스 약점의 가장 최근 시즌 값으로 환산해(${p.valueHalfLifeDays}일 앞선 시즌은 절반) ` : "");
   put("howto-used", `${p.minTier} 이상`);
   put("howto-retired", retiredText(p));
 }
@@ -244,6 +249,14 @@ export function buildParams(app, body) {
         format: (v) => (v > 0 ? `${v}일` : "끔"),
         onInput: (v) => later({ halfLifeDays: v }), onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ halfLifeDays: v }); },
       }), "이만큼 지난 시즌은 절반만 칩니다. 끔(0) = 모든 시즌을 똑같이."),
+      field("값 반감기", range({
+        min: 0, max: upTo(1080, d.valueHalfLifeDays, p.valueHalfLifeDays), step: 30, value: p.valueHalfLifeDays,
+        label: "값 반감기 (일)", format: (v) => (v > 0 ? `${v}일` : "끔"),
+        onInput: (v) => later({ valueHalfLifeDays: v }),
+        onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ valueHalfLifeDays: v }); },
+      }), "옛 시즌의 기여도를 같은 보스 약점의 가장 최근 시즌 값으로 환산합니다: 그보다 이만큼 앞선 시즌의 "
+        + "기여도는 절반으로. 니케는 새 니케가 나올수록 밀려서, 덜 믿기만 하면 옛 니케가 부풀려집니다. "
+        + "끔(0) = 그때 값 그대로."),
       field("종합 티어 방식", segmented(OVERALL_MODES.map((m) => ({ value: m, label: OVERALL_KO[m] })), p.overall,
         (v) => { app.setParams({ overall: v }); buildParams(app, body); }, { label: "종합 티어 방식" }),
       OVERALL_HINT[p.overall]),

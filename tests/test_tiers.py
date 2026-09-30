@@ -84,7 +84,8 @@ def tiny(lifts, *, element="Fire", extra="", live=()):
         rows.append({"season": number, "unit_id": "001", "lift": lift, "element": element, "extra_elements": extra})
     summary = pd.DataFrame(seasons)
     moment = summary["end_at"].max() + pd.Timedelta(days=1)
-    return tiers.standings(pd.DataFrame(rows), summary, moment, tiers.TierConfig(half_life_days=0))
+    return tiers.standings(pd.DataFrame(rows), summary, moment,
+                           tiers.TierConfig(half_life_days=0, value_half_life_days=0))
 
 
 def overall_of(standing):
@@ -105,7 +106,7 @@ def test_config_file_round_trip(tmp_path):
     path.write_text(
         "population: {top_n: 20, servers: [KR], rank_weighting: uniform}\n"
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
-        "element: {half_life_days: 90, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
+        "element: {half_life_days: 90, value_half_life_days: 200, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
         "          include_live: false}\n"
         "lifespan: {min_tier: A, retire_after_days: 200, retire_after_own_seasons: 2}\n"
         "career: {generality_bands: [0.1, 1.5]}\n",
@@ -114,7 +115,8 @@ def test_config_file_round_trip(tmp_path):
     config = tiers.load_tier_config(path)
     assert config.top_n == 20 and config.servers == ("KR",) and config.rank_weighting == "uniform"
     assert config.tier_order == ["S", "A", "B"]
-    assert config.half_life_days == 90 and config.prior_strength == 1 and config.overall == "frequency"
+    assert config.half_life_days == 90 and config.value_half_life_days == 200
+    assert config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
     assert config.min_tier == "A" and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
     assert config.generality_bands == (0.1, 1.5)
@@ -180,9 +182,11 @@ def test_tier_labels_are_monotone_in_lift(built):
 
 
 def test_a_dealer_is_top_of_its_element_and_weak_overall(world, built):
-    overall = overall_at(built, settled(world, built))
+    # The synthetic units never lose ground, so their old seasons are taken at the value they had.
+    stationary = tiers.TierConfig(value_half_life_days=0)
+    overall = overall_at(built, settled(world, built), stationary)
     for element, unit_id in world.element_dps.items():
-        row = element_at(built, settled(world, built), unit_id, element)
+        row = element_at(built, settled(world, built), unit_id, element, stationary)
         assert row["source"] == "own"
         assert row["element_tier"] == "SS" and row["element_rank"] == 1
         assert overall.loc[unit_id, "overall"] < 0.6  # worth little in four elements out of five
@@ -332,11 +336,68 @@ def test_an_element_not_met_yet_has_no_tier_and_the_overall_is_provisional(world
     assert pd.isna(row["element_rank"]) and electric["unit_id"].iloc[-1] == world.newcomer  # listed last
 
 
+def test_an_old_season_counts_at_todays_value():
+    """An old season's lift is brought to the value of the latest season of the same boss
+    weakness before it is averaged: a year before it (value half-life 365 days), it is worth
+    half; the latest is taken as it is, however long ago it ended, and seasons of other
+    weaknesses since do not count. Weighing an old season less alone does not do that - a unit
+    seen only in it keeps its lift whatever the half-life, since the mean divides the weight
+    back out."""
+    latest = pd.Timestamp("2026-01-01T00:00:00Z")
+    summary = pd.DataFrame([
+        {"season": 1, "weak_element": "Fire", "end_at": latest - pd.Timedelta(days=365), "final": True},
+        {"season": 2, "weak_element": "Fire", "end_at": latest, "final": True},
+        {"season": 3, "weak_element": "Water", "end_at": latest + pd.Timedelta(days=90), "final": True},
+    ])
+    today = latest + pd.Timedelta(days=100)
+    rows = pd.DataFrame([
+        {"season": 1, "unit_id": "old", "lift": 1.0, "element": "Fire", "extra_elements": ""},
+        {"season": 2, "unit_id": "old", "lift": 1.0, "element": "Fire", "extra_elements": ""},
+        {"season": 1, "unit_id": "gone", "lift": 1.0, "element": "Fire", "extra_elements": ""},
+    ])
+
+    def fire(config):
+        elements = tiers.standings(rows, summary, today, config).elements
+        return elements.set_index("unit_id")["element_lift"]
+
+    valued = fire(tiers.TierConfig(half_life_days=0, value_half_life_days=365))
+    assert valued["old"] == pytest.approx(0.75) and valued["gone"] == pytest.approx(0.5)
+    weighed = fire(tiers.TierConfig(half_life_days=30, value_half_life_days=0))
+    assert weighed["gone"] == pytest.approx(1.0)  # weighed down, still at its old lift
+    assert tiers.TierConfig().value_half_life_days == 300
+
+
+def test_old_seasons_inform_but_do_not_inflate():
+    """Units that lose ground at the rate the value half-life assumes: brought to the latest
+    season's value, their old seasons say what the latest does, so leaving the seasons over a
+    year old out changes nothing. Taken as they were, the old seasons pull every older unit up."""
+    latest = pd.Timestamp("2026-01-01T00:00:00Z")
+    ends = [latest - pd.Timedelta(days=150 * k) for k in range(8)][::-1]  # three years of Fire seasons
+    summary = pd.DataFrame({"season": range(1, 9), "weak_element": "Fire", "end_at": ends, "final": True})
+    rows = pd.DataFrame([
+        {"season": n, "unit_id": f"u{u}", "element": "Fire", "extra_elements": "",
+         "lift": (0.8 + 0.1 * u) * 0.5 ** ((end - ends[u]).days / 300)}
+        for u in range(6) for n, end in enumerate(ends, start=1) if end >= ends[u]
+    ])
+    recent = rows[rows["season"].map(dict(zip(summary["season"], summary["end_at"]))) >= latest - pd.Timedelta(days=365)]
+
+    def gap(config):
+        whole = tiers.standings(rows, summary, latest, config).elements.set_index("unit_id")["element_lift"]
+        cut = tiers.standings(recent, summary, latest, config).elements.set_index("unit_id")["element_lift"]
+        return whole - cut
+
+    assert gap(tiers.TierConfig(value_half_life_days=300)).abs().max() == pytest.approx(0.0, abs=1e-12)
+    as_they_were = gap(tiers.TierConfig(value_half_life_days=0))
+    assert (as_they_were[["u0", "u1", "u2", "u3", "u4"]] > 0.01).all()  # the units with seasons over a year old
+
+
 def test_recent_seasons_weigh_more(world, built):
     """With a short half-life the latest Fire season dominates; with none, all count alike."""
     fire = world.element_dps["Fire"]
-    short = element_at(built, newest(built), fire, "Fire", tiers.TierConfig(half_life_days=1))["element_lift"]
-    flat = element_at(built, newest(built), fire, "Fire", tiers.TierConfig(half_life_days=0))["element_lift"]
+    short = element_at(built, newest(built), fire, "Fire",
+                       tiers.TierConfig(half_life_days=1, value_half_life_days=0))["element_lift"]
+    flat = element_at(built, newest(built), fire, "Fire",
+                      tiers.TierConfig(half_life_days=0, value_half_life_days=0))["element_lift"]
     table, _ = built
     fire_seasons = table[(table["unit_id"] == fire) & (table["weak_element"] == "Fire") & (table["season"] < world.live_season)]
     latest = fire_seasons.sort_values("season")["lift"].iloc[-1]

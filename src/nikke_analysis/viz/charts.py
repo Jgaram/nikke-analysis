@@ -271,9 +271,11 @@ def _boss(meta: Any) -> str:
 
 
 def _recency(config: Any) -> str:
-    if config.half_life_days <= 0:
-        return "모든 시즌을 똑같이 침"
-    return f"최근 시즌일수록 크게 침({config.half_life_days:g}일 지난 시즌은 절반만)"
+    weight = ("모든 시즌을 똑같이 침" if config.half_life_days <= 0 else
+              f"최근 시즌일수록 크게 침({config.half_life_days:g}일 지난 시즌은 절반만)")
+    if config.value_half_life_days <= 0:
+        return weight
+    return f"{weight}, 옛 시즌 기여도는 같은 약점 최근 시즌 값으로 환산({config.value_half_life_days:g}일 앞서면 절반)"
 
 
 def _live_note(seasons: pd.DataFrame) -> str:

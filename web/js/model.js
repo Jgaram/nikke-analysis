@@ -6,7 +6,8 @@
 //
 //   population  servers, ranks 1..topN, rank weighting
 //               -> per season and unit: usage, deck split, lift (기여도)
-//   tiers       cuts (season and element; the overall has its own), recency, prior,
+//   tiers       cuts (season and element; the overall has its own), recency and an old
+//               season's value today, prior,
 //               how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
 //   lifespans   the season tier that counts as used, how long idle - and through how
@@ -37,6 +38,7 @@ export function defaultParams(model) {
     cuts: d.cuts.map(([label, value]) => [label, value]),
     overallCuts: (d.overallCuts || d.cuts).map(([label, value]) => [label, value]),
     halfLifeDays: d.halfLifeDays,
+    valueHalfLifeDays: d.valueHalfLifeDays,
     priorStrength: d.priorStrength,
     overall: d.overall,
     minElementsObserved: d.minElementsObserved,
@@ -68,7 +70,7 @@ export function populationKey(p) {
 }
 
 export function tierKey(p) {
-  return JSON.stringify([p.cuts, p.overallCuts, p.halfLifeDays, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive]);
+  return JSON.stringify([p.cuts, p.overallCuts, p.halfLifeDays, p.valueHalfLifeDays, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive]);
 }
 
 export function lifeKey(p) {
@@ -134,6 +136,15 @@ function decay(ageDays, halfLifeDays) {
 export function seasonWeight(c, moment, params) {
   const at = c.end != null && c.end <= moment ? c.end : moment;
   return decay((moment - at) / DAY_MS, params.halfLifeDays);
+}
+
+// What a counted season's lift is worth now: halved every valueHalfLifeDays before ``latest``,
+// the latest counted season of the same boss weakness (as seasonWeight dates them). Units lose
+// ground as newer ones come out, and weighing an old season less does not undo that (a mean
+// divides the weight back out), so its lift is first brought to the value of that season.
+export function seasonValue(c, moment, latest, params) {
+  const at = c.end != null && c.end <= moment ? c.end : moment;
+  return decay((latest - at) / DAY_MS, params.valueHalfLifeDays);
 }
 
 function nanMean(values) {
@@ -302,10 +313,15 @@ const EMPTY_STANDINGS = (counted) => ({
 export function standings(model, population, moment, params, treasured = null) {
   const counted = countedSeasons(population.summary, moment, params);
   const picked = [];
+  const latest = new Map();
+  for (const c of counted) {
+    const at = c.end != null && c.end <= moment ? c.end : moment;
+    if (!latest.has(c.weak) || at > latest.get(c.weak)) latest.set(c.weak, at);
+  }
   for (const c of counted) {
     if (!ELEMENTS.includes(c.weak)) continue;
-    const w = seasonWeight(c, moment, params);
-    for (const r of population.tables.get(c.season).rows) picked.push({ r, e: ELEMENTS.indexOf(c.weak), w });
+    const w = seasonWeight(c, moment, params), v = seasonValue(c, moment, latest.get(c.weak), params);
+    for (const r of population.tables.get(c.season).rows) picked.push({ r, e: ELEMENTS.indexOf(c.weak), w, v });
   }
   if (treasured == null) treasured = new Set(picked.filter((x) => x.r.treasure).map((x) => x.r.u));
   const rows = picked.filter((x) => x.r.treasure === treasured.has(x.r.u));
@@ -313,7 +329,7 @@ export function standings(model, population, moment, params, treasured = null) {
 
   // per unit: all its seasons, and per boss weakness (slot)
   const per = new Map();
-  for (const { r, e, w } of rows) {
+  for (const { r, e, w, v } of rows) {
     let a = per.get(r.u);
     if (!a) {
       a = {
@@ -325,11 +341,11 @@ export function standings(model, population, moment, params, treasured = null) {
     }
     a.rows.push({ season: r.season, lift: r.lift, e });
     kahan(a.W, a.WC, 0, w);
-    kahan(a.WL, a.WLC, 0, w * r.lift);
+    kahan(a.WL, a.WLC, 0, w * r.lift * v);
     a.seasons++;
     if (r.season > a.last) a.last = r.season;
     kahan(a.sW, a.sWC, e, w);
-    kahan(a.sWL, a.sWLC, e, w * r.lift);
+    kahan(a.sWL, a.sWLC, e, w * r.lift * v);
     a.n[e]++;
   }
   const units = [...per.keys()].sort((x, y) => cmpId(model.units[x].id, model.units[y].id));

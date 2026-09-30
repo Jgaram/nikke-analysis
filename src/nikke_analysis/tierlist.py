@@ -496,9 +496,12 @@ def _cuts(config: tiering.TierConfig, *, overall: bool = False) -> str:
 
 
 def _recency(config: tiering.TierConfig) -> str:
-    if config.half_life_days <= 0:
-        return "속성·종합 티어는 모든 시즌을 똑같이 친다"
-    return f"속성·종합 티어는 최근 시즌일수록 크게 친다({config.half_life_days:g}일 지난 시즌은 절반만)"
+    weight = ("속성·종합 티어는 모든 시즌을 똑같이 친다" if config.half_life_days <= 0 else
+              f"속성·종합 티어는 최근 시즌일수록 크게 친다({config.half_life_days:g}일 지난 시즌은 절반만)")
+    if config.value_half_life_days <= 0:
+        return weight
+    return (f"{weight}. 옛 시즌 기여도는 같은 약점의 가장 최근 시즌 값으로 환산한다"
+            f"({config.value_half_life_days:g}일 앞선 시즌은 절반)")
 
 
 def _header(view: TierView, title: str) -> list[str]:

@@ -166,6 +166,7 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
         "cuts": [[label, value] for label, value in config.cuts],
         "overallCuts": [[label, value] for label, value in config.overall_cuts],
         "halfLifeDays": config.half_life_days,
+        "valueHalfLifeDays": config.value_half_life_days,
         "priorStrength": config.prior_strength,
         "overall": config.overall,
         "minElementsObserved": config.min_elements_observed,

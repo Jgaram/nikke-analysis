@@ -152,12 +152,15 @@ function hero(app, view, element) {
         h("span", { class: "fact" }, h("span", { class: "fact-k" }, "반영"),
           element ? `보스 약점이 ${ELEMENT_KO[element]}인 시즌 ${mine.length}개` : `시즌 ${counted.length}개 (S${first ?? "–"}–S${last ?? "–"})`),
         h("span", { class: "fact" }, h("span", { class: "fact-k" }, "계산"),
-          element ? `그 시즌들의 기여도 평균, 최근일수록 크게 (반감기 ${params.halfLifeDays}일)` : OVERALL_KO[params.overall])),
+          element ? `그 시즌들의 기여도 평균, 최근일수록 크게 (반감기 ${params.halfLifeDays}일${valueNote(params)})` : OVERALL_KO[params.overall])),
       h("div", { class: "hero-sample muted" }, `표본 ${servers} × 상위 ${params.topN}위 · 니케 ${int(tiered)}명`)),
     h("div", { class: "hero-counts", "aria-label": "티어별 인원" }, cuts.map(([k]) => h("span", { class: "count", dataset: { tier: k } },
       h("b", null, k), h("span", null, counts[k] || 0)))),
     seasonCards(app, view, element));
 }
+
+// The value half-life, beside the recency one: old seasons' lifts brought to the latest's value.
+const valueNote = (params) => (params.valueHalfLifeDays > 0 ? ` · 값 반감기 ${params.valueHalfLifeDays}일` : "");
 
 // What each counted season weighs in the tier, for a unit that has met every weakness. Within a
 // weakness: its recency weight over the weakness's own. Overall, times the weakness's part: an
@@ -182,7 +185,7 @@ function seasonCards(app, view, element) {
   const { params } = app.state;
   const shares = seasonShares(view, params, element);
   if (!shares.length) return h("p", { class: "hero-foot note wi-empty" }, "이때까지 반영된 시즌이 없습니다.");
-  const note = element ? `최근일수록 크게 (반감기 ${params.halfLifeDays}일)`
+  const note = element ? `최근일수록 크게 (반감기 ${params.halfLifeDays}일${valueNote(params)})`
     : params.overall === "max" ? "약점마다 따로, 최근일수록 크게"
       : params.overall === "frequency" ? "최근일수록 크게 (반감기 " + params.halfLifeDays + "일)"
         : "약점 다섯 가지가 같은 몫, 그 안에서 최근일수록 크게";

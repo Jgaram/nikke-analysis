@@ -137,7 +137,7 @@ function seasonTable(app, entry, rows) {
     { key: "overall", label: "종합 티어", title: "그 시즌이 끝났을 때의 종합 티어", sort: (r) => history.get(r.u)?.overall,
       cell: (r) => {
         const x = history.get(r.u);
-        return x && !Number.isNaN(x.overall) ? h("span", null, tierBadge(x.overallTier, x.overall), x.provisional ? h("sup", { class: "muted" }, "*") : null)
+        return x && !Number.isNaN(x.overall) ? h("span", null, tierBadge(x.overallTier, x.overall), x.provisional ? h("sup", { class: "muted" }, "?") : null)
           : h("span", { class: "muted" }, "–");
       } },
     { key: "generality", label: "범용도", title: `그 시즌이 끝났을 때의 ${generalityRule(state.params)}`,
@@ -150,5 +150,5 @@ function seasonTable(app, entry, rows) {
       onSort: (key, dir) => { state.sort.season = { key, dir }; app.rerender(); },
       rowAttrs: (r) => ({ class: r.rankers ? null : "dim" }),
     }),
-    h("p", { class: "note" }, "속성·종합 티어·범용도 = 그 시즌이 끝났을 때 기준 (진행 중 시즌은 지금까지). * = 잠정. 열 이름을 누르면 정렬."));
+    h("p", { class: "note" }, "속성·종합 티어·범용도 = 그 시즌이 끝났을 때 기준 (진행 중 시즌은 지금까지). ? = 잠정. 열 이름을 누르면 정렬."));
 }

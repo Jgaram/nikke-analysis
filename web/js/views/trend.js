@@ -150,7 +150,7 @@ function overallBody(app, picked) {
           const x = at(s, u);
           if (!x || Number.isNaN(x.overall)) return h("span", { class: "muted" }, s.byUnit.has(u) ? "–" : "");
           return h("span", null, tierBadge(x.overallTier, x.overall),
-            x.provisional ? h("sup", { class: "muted" }, "*") : null,
+            x.provisional ? h("sup", { class: "muted" }, "?") : null,
             s.byUnit.get(u)?.elementMatch ? h("b", { class: "own-mark", title: "자기 속성 약점 시즌" }, "▶") : null);
         },
       };
@@ -166,7 +166,7 @@ function overallBody(app, picked) {
         sortKey: sort.key, sortDir: sort.dir, caption: "고른 니케의 시즌별 종합 티어",
         onSort: (key, dir) => { state.sort.compareUnits = { key, dir }; app.rerender(); },
       }),
-      h("p", { class: "note" }, "칸 = 그 시즌이 끝났을 때의 종합 티어 (진행 중 시즌은 지금까지) · * = 잠정 · ▶ = 그 니케의 자기 속성 약점 시즌 · "
+      h("p", { class: "note" }, "칸 = 그 시즌이 끝났을 때의 종합 티어 (진행 중 시즌은 지금까지) · ? = 잠정 · ▶ = 그 니케의 자기 속성 약점 시즌 · "
         + "빈칸 = 그땐 없던 니케 · 애장품을 낀 뒤로는 애장품을 낀 시즌만으로 다시 매긴다."))],
   };
 }

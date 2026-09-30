@@ -266,7 +266,7 @@ function profile(app, u, prof, moment) {
     { class: "tile-element", href: app.tierHref(r.element), linkTitle: `같은 시점의 ${ELEMENT_KO[r.element]} 약점 티어표로` }));
   const tiles = o ? [
     tile("종합 티어", o.tier, o.overall, `${prof.units}명 중 ${o.rank}위${o.provisional ? ` · ${provisionalReason(o, prof.slots, state.params)}` : ""}`,
-      { mark: o.provisional ? "*" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 시점의 종합 티어표로" }),
+      { mark: o.provisional ? "?" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 시점의 종합 티어표로" }),
     ...elementTiles,
     lifeTile(app, u, prof.view),
     generalityTile(app, u, prof.view),
@@ -322,7 +322,7 @@ function seasonTable(app, u, records) {
     { key: "element", label: "속성 티어", title: "그 시즌이 끝났을 때 (자기 속성 약점 시즌만)", sort: (r) => (r.hist?.counted ? r.hist.elementLift : null),
       cell: (r) => (r.hist?.counted && !Number.isNaN(r.hist.elementLift) ? tierBadge(r.hist.elementTier, r.hist.elementLift) : h("span", { class: "muted" }, "–")) },
     { key: "overall", label: "종합 티어", title: "그 시즌이 끝났을 때", sort: (r) => r.hist?.overall,
-      cell: (r) => (r.hist && !Number.isNaN(r.hist.overall) ? h("span", null, tierBadge(r.hist.overallTier, r.hist.overall), r.hist.provisional ? h("sup", { class: "muted" }, "*") : null) : "–") },
+      cell: (r) => (r.hist && !Number.isNaN(r.hist.overall) ? h("span", null, tierBadge(r.hist.overallTier, r.hist.overall), r.hist.provisional ? h("sup", { class: "muted" }, "?") : null) : "–") },
   ];
   return h("section", { class: "panel table-panel" },
     h("div", { class: "panel-head" }, h("h3", null, "시즌별 기록"), h("span", { class: "muted small" }, `${records.length}시즌`)),
@@ -332,6 +332,6 @@ function seasonTable(app, u, records) {
       rowAttrs: (r) => ({ class: [r.row.elementMatch && "own-row", !r.season.final && "live-row"].filter(Boolean).join(" ") || null }),
     }),
     h("p", { class: "note" }, "▶ = 보스 약점이 이 니케의 속성인 시즌 · 사용 = 그 니케를 쓴 랭커 비율 · 덱 분포 = 쓴 사람 중 몇 번째 덱에 넣었나 (막대 하나가 덱 하나, 1덱 = 가장 센 덱, 진한 막대와 옆 글 = 가장 많이 넣은 덱) · "
-      + "속성·종합 티어 = 그 시즌이 끝났을 때 (애장품 전과 뒤는 따로 매김) · * = 잠정"));
+      + "속성·종합 티어 = 그 시즌이 끝났을 때 (애장품 전과 뒤는 따로 매김) · ? = 잠정"));
 }
 

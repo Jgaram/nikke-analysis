@@ -29,7 +29,7 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
   h("span", { class: "face" },
     face(unit, 64),
     elementIcon(unit.element, 18, { class: "card-el", title: "" }),
-    provisional ? h("span", { class: "mark prov", "aria-hidden": "true" }, "*") : null,
+    provisional ? h("span", { class: "mark prov", "aria-hidden": "true" }, "?") : null,
     heart ? h("span", { class: "mark heart", "aria-hidden": "true" }, "♥") : null,
     pick?.on ? h("span", { class: "mark check", "aria-hidden": "true" }, "✓") : null,
     value != null && !Number.isNaN(value) ? h("span", { class: "val" }, num(value)) : null),

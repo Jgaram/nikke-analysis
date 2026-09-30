@@ -102,7 +102,7 @@ export function unitPicker(app, { heading, sub, enter, pick = null, note = "", f
       h("div", { class: "panel-head" }, heading ? h("h3", null, heading) : null, h("span", { class: "muted small" }, sub, " · ", count)),
       grid,
       h("p", { class: "note" },
-        "종합 티어가 높은 니케부터 왼쪽 위에서 채운다. 숫자 = 종합 티어의 값 · * = 잠정 · ",
+        "종합 티어가 높은 니케부터 왼쪽 위에서 채운다. 숫자 = 종합 티어의 값 · ? = 잠정 · ",
         h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김 · 흑백 얼굴 = 은퇴",
         untiered.length ? " · – = 출시(애장품) 뒤 치른 시즌이 아직 없어 티어가 없음" : "",
         `. ${note}`)),

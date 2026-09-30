@@ -51,7 +51,7 @@ function overallBody(app, view) {
   const rows = view.standing.overall.filter((o) => app.passes(model.units[o.u]));
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
-    "* = 잠정 (겪은 보스 약점이 적거나 자기 속성 시즌을 아직 못 겪음) · ",
+    "? = 잠정 (겪은 보스 약점이 적거나 자기 속성 시즌을 아직 못 겪음) · ",
     h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, overallTable(app, view, rows), explain);
   const items = rows.map((o) => ({ u: o.u, tier: o.tier, value: o.overall, o }));
@@ -77,7 +77,7 @@ function overallTable(app, view, rows) {
     { key: "rank", label: "#", num: true, sort: (o) => o.rank, firstDir: "asc", cell: (o) => o.rank },
     { key: "unit", label: "니케", head: true, sort: (o) => app.model.units[o.u].ko, firstDir: "asc", cell: (o) => unitInline(app, o.u) },
     { key: "overall", label: "종합", sort: (o) => o.overall,
-      cell: (o) => h("span", null, tierBadge(o.tier, o.overall), o.provisional ? h("sup", { class: "muted", title: provisionalReason(o, view.standing.slots.get(o.u), state.params) }, "*") : null) },
+      cell: (o) => h("span", null, tierBadge(o.tier, o.overall), o.provisional ? h("sup", { class: "muted", title: provisionalReason(o, view.standing.slots.get(o.u), state.params) }, "?") : null) },
     { key: "element", label: "속성 티어", title: "그 니케가 속한 속성에서의 티어", sort: (o) => Math.max(...(mine.get(o.u) || []).map((r) => (r.seasons ? r.lift : -1))),
       cell: (o) => h("span", { class: "el-tiers" }, (mine.get(o.u) || []).map((r) => h("span", { class: "el-tier" },
         elementIcon(r.element, 14), r.seasons ? tierBadge(r.tier, r.lift) : h("span", { class: "muted" }, "미관측")))) },
@@ -246,7 +246,7 @@ function elementTable(app, view, rows, element) {
       cell: (r) => (r.slot.seasons ? tierBadge(r.tier, r.slot.lift) : h("span", { class: "muted" }, "미관측")) },
     { key: "seasons", label: "약점 시즌", title: `겪은 ${ko} 약점 시즌 수`, num: true, sort: (r) => r.slot.seasons, cell: (r) => `${r.slot.seasons}번` },
     { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", null, tierBadge(r.o.tier, r.o.overall),
-      r.o.provisional ? h("sup", { class: "muted" }, "*") : null, h("span", { class: "muted" }, ` ${r.o.rank}위`)) },
+      r.o.provisional ? h("sup", { class: "muted" }, "?") : null, h("span", { class: "muted" }, ` ${r.o.rank}위`)) },
     generalityColumn(app, view),
     curveColumn(app, view),
     ...lifeColumns(app, view),

@@ -193,13 +193,21 @@ export function kindTabs(app) {
   ], app.state.view, (v) => app.go({ view: v }, { replace: true }), { class: "viewtabs", label: "티어 종류" }));
 }
 
-// 티어 변화's views: one unit, or units side by side.
+// 니케's views: one unit, or units side by side.
 export function trendTabs(app) {
   const n = app.state.compare.length;
   return h("nav", { class: "kindbar", "aria-label": "변화 보기" }, segmented([
     { value: "unit", label: "니케 한 명", title: "한 니케의 시즌별 기여도·티어·범용도" },
     { value: "compare", label: n ? `니케 비교 ${n}` : "니케 비교", title: "여러 니케의 종합 티어, 또는 한 보스 약점 시즌들의 기여도를 한 그래프에" },
   ], app.state.trend, (v) => app.go({ trend: v, weak: null }), { class: "viewtabs", label: "변화 보기" }));
+}
+
+// 메타 변화's views: the generality of the units in use, or how many units each tier holds.
+export function metaTabs(app) {
+  return h("nav", { class: "kindbar", "aria-label": "메타 보기" }, segmented([
+    { value: "generality", label: "범용도 분포", title: "쓰인 니케의 범용도, 약점을 따르는 정도, 새 니케의 첫 1년, 생애 곡선" },
+    { value: "tiers", label: "티어 분포", title: "시즌마다 티어별 니케 수 — 시즌 티어 또는 그때의 종합 티어" },
+  ], app.state.meta, (v) => app.go({ meta: v }), { class: "viewtabs", label: "메타 보기" }));
 }
 
 // A search box over the units that have played: typing lists the best matches (Korean or
@@ -385,6 +393,8 @@ export function paramsNote(items) {
 export const PARAM = {
   sample: "표본 (서버 · 서버마다 상위 · 순위 가중)",
   cuts: "티어 컷 · 시즌·속성 티어",
+  overallCuts: "티어 컷 · 종합 티어",
+  combine: "속성·종합 티어 (최근성 · 환산 · 축소 · 종합 방식 · 채우기)",
   live: "속성·종합 티어 · 진행 중 시즌",
   used: "수명 · 쓰인 시즌",
   retire: "수명 · 은퇴 공백 · 놓친 자기 속성 시즌",

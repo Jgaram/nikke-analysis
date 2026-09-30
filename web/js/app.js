@@ -12,16 +12,18 @@ import { unitView } from "./views/unit.js";
 import { pickView } from "./views/pick.js";
 import { compareView, COMPARE_MAX } from "./views/trend.js";
 import { metaView } from "./views/meta.js";
+import { tierMixView } from "./views/tiermix.js";
 
 const TABS = ["tier", "trend", "meta"];
 const TRENDS = ["unit", "compare"];
+const METAS = ["generality", "tiers"];
 const VIEWS = {
   tier: (app) => (app.state.view === "raid" ? seasonView(app) : dateView(app)),
   trend: (app) => ({
     unit: () => (app.state.unit == null ? pickView(app) : unitView(app)),
     compare: () => compareView(app),
   })[app.state.trend](),
-  meta: (app) => metaView(app),
+  meta: (app) => (app.state.meta === "tiers" ? tierMixView(app) : metaView(app)),
 };
 
 const state = {
@@ -32,6 +34,7 @@ const state = {
   mode: "tiers", // 티어표: tiers | table
   trend: "unit", // 변화: unit (the list, or one unit) | compare
   unit: null, // unit index; null on 변화 · unit = the list to pick one from
+  meta: "generality", // 메타 변화: generality | tiers
   compare: [], // the units compared, in the order they were added
   query: "", // the unit list's search
   params: null,
@@ -160,7 +163,7 @@ function hashOf(st) {
     if (st.view !== "overall") extra.v = st.view;
     if (st.mode === "table") extra.m = "table";
   } else if (st.tab === "meta") {
-    path = "#/meta";
+    path = st.meta === "tiers" ? "#/meta/tiers" : "#/meta";
   } else {
     const arg = st.trend === "unit" ? (st.unit != null ? app.model.units[st.unit].id : null) : st.trend;
     path = `#/trend${arg != null ? `/${arg}` : ""}`;
@@ -212,6 +215,7 @@ function readHash() {
     if (state.trend === "unit" && arg != null && arg !== "unit") state.unit = app.unitIndex(decodeURIComponent(arg)) ?? null;
   } else if (tab === "meta") {
     state.tab = "meta";
+    state.meta = METAS.includes(arg) ? arg : "generality";
     state.weak = null;
   } else {
     state.tab = "tier";
@@ -307,10 +311,10 @@ function render() {
   main.replaceChildren(content);
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
-  const place = state.tab === "meta" ? "메타 변화" : state.tab === "tier"
+  const place = state.tab === "meta" ? (state.meta === "tiers" ? "메타 변화 · 티어 분포" : "메타 변화") : state.tab === "tier"
     ? (state.view === "raid" ? "레이드별 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 약점 티어`)
     : state.trend === "compare" ? (state.weak ? `니케 비교 · ${ELEMENT_KO[state.weak]} 약점` : "니케 비교")
-      : state.unit != null ? `${unitName(app.model.units[state.unit])} · 티어 변화` : "티어 변화";
+      : state.unit != null ? `${unitName(app.model.units[state.unit])} · 니케` : "니케";
   document.title = `${place} · 니케 솔로 레이드 티어`;
 }
 

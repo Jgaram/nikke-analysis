@@ -1076,6 +1076,12 @@ a.cmp-head:hover span { color: var(--accent); }
 .s-narrowed { --sc: var(--cv-narrowed); }
 .s-faded { --sc: var(--cv-faded); }
 .s-general { --sc: var(--cv-general); }
+.s-tk0 { --sc: var(--t-SS); }
+.s-tk1 { --sc: var(--t-S); }
+.s-tk2 { --sc: var(--t-A); }
+.s-tk3 { --sc: var(--t-B); }
+.s-tk4 { --sc: var(--t-C); }
+.s-tk5 { --sc: var(--t-D); }
 .traj .line[class*="s-"] { stroke: var(--sc); }
 .traj .dot[class*="s-"], .traj .hover-dot[class*="s-"] { fill: var(--sc); }
 .traj .area { fill: var(--sc); stroke: var(--surface); stroke-width: 2; stroke-linejoin: round; }

@@ -7,7 +7,7 @@ import {
   h, s, num, pct, elementIcon, ELEMENT_KO, unitName, face, showTip, moveTip, hideTip, sortableTable, segmented, infoButton,
 } from "../ui.js";
 import { lineChart, lineLegend } from "../linechart.js";
-import { CURVE_KO, CURVE_HINT, paramsNote, PARAM, unitInline } from "./common.js";
+import { CURVE_KO, CURVE_HINT, paramsNote, PARAM, unitInline, metaTabs } from "./common.js";
 
 const MIX = [
   { key: "specialist", name: "속성 특화", cls: "mix0" },
@@ -90,7 +90,7 @@ export function metaView(app) {
   const { state } = app;
   const params = state.params;
   const rows = app.metaTrend();
-  const root = h("div", { class: "view view-meta" });
+  const root = h("div", { class: "view view-meta" }, metaTabs(app));
   if (!rows.length) {
     root.append(h("div", { class: "panel empty" }, "시즌이 아직 없습니다."));
     return root;
@@ -113,7 +113,7 @@ export function metaView(app) {
 
 // ---------------------------------------------------------------------------
 
-const seasonName = (r) => `S${r.season.season}`;
+export const seasonName = (r) => `S${r.season.season}`;
 
 function intro(app, rows, full, upTo) {
   const params = app.state.params;
@@ -141,7 +141,7 @@ function intro(app, rows, full, upTo) {
         "처음 10시즌 평균 → 최근 10시즌 평균 · 20% = 약점과 무관")));
 }
 
-function seasonTip(r, lines) {
+export function seasonTip(r, lines) {
   const info = r.season.info;
   return h("div", { class: "tip" },
     h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),

@@ -1090,19 +1090,7 @@ a.cmp-head:hover span { color: var(--accent); }
 .lc-host { min-height: 200px; }
 
 /* ---- 메타 변화 ---- */
-.view-meta .meta-intro { display: grid; gap: 10px; }
-.view-meta .meta-intro > p { margin: 0; padding: 0 18px; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
-.meta-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; padding: 4px 18px 18px; }
-.meta-table > summary { display: flex; align-items: center; gap: 8px; padding: 14px 18px; cursor: pointer; list-style: none; }
-.meta-table > summary::-webkit-details-marker { display: none; }
-.meta-table > summary::before { content: "›"; font-weight: 700; color: var(--ink-3); transition: transform .15s; }
-.meta-table[open] > summary::before { transform: rotate(90deg); }
-.meta-table > summary h3 { margin: 0; font-size: 15px; }
-.meta-tile { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius-s); padding: 12px 14px; }
-.meta-tile .mt-label { font-size: 12px; color: var(--ink-3); }
-.meta-tile .mt-value { font: 700 22px var(--display); color: var(--ink); margin-top: 2px; font-variant-numeric: tabular-nums; }
-.meta-tile .mt-value small { font: 500 13px var(--font); color: var(--ink-2); margin-left: 6px; }
-.meta-tile .mt-sub { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.meta-lede { margin: 0; max-width: 90ch; color: var(--ink-2); font-size: 14px; line-height: 1.6; }
 .cohort { display: grid; gap: 8px; padding: 8px 12px 12px; }
 .cohort-row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
 .cohort-bar { display: flex; height: 22px; border-radius: 4px; overflow: hidden; background: var(--surface-3); gap: 2px; }

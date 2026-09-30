@@ -99,10 +99,9 @@ export function metaView(app) {
   const full = (r) => r.season.start - first >= params.metaWindowDays * DAY_MS;
   const chosen = state.season != null ? rows.findIndex((r) => r.season.season === state.season) : -1;
   const markAt = chosen >= 0 ? chosen : null;
-  const upTo = markAt ?? rows.length - 1;
   const points = rows.map((r) => ({ label: r.season.season }));
 
-  root.append(intro(app, rows, full, upTo));
+  root.append(intro(app));
   root.append(mixPanel(app, rows, full, points, markAt));
   root.append(followPanel(app, rows, points, markAt));
   root.append(debutPanel(app));
@@ -115,30 +114,11 @@ export function metaView(app) {
 
 export const seasonName = (r) => `S${r.season.season}`;
 
-function intro(app, rows, full, upTo) {
+// a line on what the charts count
+function intro(app) {
   const params = app.state.params;
-  const then = rows.find(full) || rows[0];
-  const now = rows[upTo];
-  const early = rows.filter((r) => !Number.isNaN(r.similarity)).slice(0, 10);
-  const late = rows.slice(0, upTo + 1).filter((r) => !Number.isNaN(r.similarity)).slice(-10);
-  const mean = (list, f) => list.reduce((a, r) => a + f(r), 0) / Math.max(list.length, 1);
-  const share = (r, k) => (r.units ? r[k] / r.units : NaN);
-  const tile = (label, a, b, sub) => h("div", { class: "meta-tile" },
-    h("div", { class: "mt-label" }, label), h("div", { class: "mt-value" }, a, h("small", null, "→ "), b), h("div", { class: "mt-sub" }, sub));
-  return h("section", { class: "panel meta-intro" },
-    h("div", { class: "panel-head" }, h("h3", null, "메타 변화"),
-      h("span", { class: "muted small" }, `${seasonName(then)} → ${seasonName(now)} · 쓰인 니케 = 시즌 티어 ${params.curveMinTier} 이상`)),
-    h("p", null, "시즌마다, 그때까지 ", h("b", null, `${params.metaWindowDays}일`), " 동안 쓰인 니케를 그 기간의 범용도(자기 속성 시즌 기여도와 "
-      + "다른 속성 시즌 기여도의 비율)로 나눠 셉니다. 그 시즌에 은퇴한 니케는 뺍니다. 속성 특화가 늘고 범용이 줄면 메타가 보스 약점을 더 따르게 된 것입니다. "
-      + "역할(딜러·서포터)이 아니라 쓰임의 모양입니다 — 속성 시즌에만 쓰이는 건 딜 때문일 수도, 그 속성 덱에 주는 버프 때문일 수도 있습니다."),
-    h("div", { class: "meta-tiles" },
-      tile("쓰인 니케 중 속성 특화", pct(share(then, "specialist")), pct(share(now, "specialist")),
-        `${then.specialist}명 / ${then.units}명 → ${now.specialist}명 / ${now.units}명`),
-      tile("범용 니케 수", `${then.generalist}명`, `${now.generalist}명`, `쓰인 니케 중 ${pct(share(then, "generalist"))} → ${pct(share(now, "generalist"))}`),
-      tile("약점 교차 유사도", num(mean(early, (r) => r.similarity)), num(mean(late, (r) => r.similarity)),
-        "처음 10시즌 평균 → 최근 10시즌 평균 · 1 = 약점이 바뀌어도 같은 니케"),
-      tile("약점 속성 니케의 몫", pct(mean(rows.slice(0, 10), (r) => r.ownShare)), pct(mean(rows.slice(Math.max(0, upTo - 9), upTo + 1), (r) => r.ownShare)),
-        "처음 10시즌 평균 → 최근 10시즌 평균 · 20% = 약점과 무관")));
+  return h("p", { class: "meta-lede" }, `시즌마다 그때까지 ${params.metaWindowDays}일 동안 쓰인 니케를 범용도(자기 속성 시즌과 다른 속성 시즌 기여도의 비율)로 나눠 셉니다. `
+    + "속성 특화가 늘고 범용이 줄면 메타가 보스 약점을 더 따르게 된 것입니다. 역할(딜러·서포터)이 아니라 쓰임의 모양입니다.");
 }
 
 export function seasonTip(r, lines) {

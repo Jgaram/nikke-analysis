@@ -524,8 +524,6 @@ CURVE_KO = {"unused": "안 쓰임", "specialist": "처음부터 속성 특화", 
             "faded": "범용인 채로 저묾", "general": "아직 범용", "unknown": "아직 모름"}
 FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성의 평균(다른 속성 기록이 없으면 0), "
              "자기 속성 칸은 0")
-BORROWED_NOTE = ("~ = 그때 아직 못 겪은 쪽(다른 속성 전부, 또는 자기 속성)을 나중 시즌 기록으로 채움 "
-                 "(element.fill_from_later)")
 
 
 def _element_marks(elements: pd.DataFrame) -> dict[str, str]:
@@ -558,13 +556,10 @@ def render(view: TierView, *, show_all: bool = False) -> str:
         marks = _element_marks(view.elements)
 
         def mark(r: pd.Series) -> str:
-            return (("*" if bool(r["provisional"]) else "") + ("~" if bool(r["borrowed"]) else "")
-                    + f"({marks.get(r['unit_id'], '?')})")
+            return ("*" if bool(r["provisional"]) else "") + f"({marks.get(r['unit_id'], '?')})"
 
         out += _tier_lines(view.overall, "overall", "overall_tier", config, show_all=show_all, mark=mark)
         out.append(f"  {_provisional_note(config)} · ? = 그 속성 약점 시즌을 아직 못 겪음")
-        if view.overall["borrowed"].astype(bool).any():
-            out.append(f"  {BORROWED_NOTE}")
         out.append(f"  {FILL_NOTE}")
         out.append("  속성별 비교: nikke tier --element 작열 (" + "·".join(ELEMENT_KO[e] for e in ELEMENTS[1:]) + ")"
                    " · 한 니케 자세히: nikke tier --unit 이름")

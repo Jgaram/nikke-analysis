@@ -18,6 +18,19 @@ function seriesLine(parent, cls, d) {
   parent.append(s("path", { class: "halo", d }), s("path", { class: `line ${cls}`, d }));
 }
 
+// The runs of a line through ``pts`` ([i, v, faint]): a step is faint when either end is an overall
+// that stands on later seasons (fillFromLater), so the line fades where the borrowing is.
+function runs(pts) {
+  const out = [];
+  for (let k = 1; k < pts.length; k++) {
+    const faint = Boolean(pts[k - 1][2] || pts[k][2]);
+    const last = out[out.length - 1];
+    if (last && last.faint === faint) last.pts.push(pts[k]);
+    else out.push({ faint, pts: [pts[k - 1], pts[k]] });
+  }
+  return out;
+}
+
 function barPath(x0, base, w, height, r) {
   if (height <= 0.5) return "";
   const rr = Math.min(r, w / 2, height);
@@ -54,6 +67,8 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
     own.length > 1 ? h("span", { class: "lg" }, h("i", { class: "sw bar own2" }), `${ELEMENT_KO[own[1]]} 약점 시즌`) : null,
     h("span", { class: "lg" }, h("i", { class: "sw bar" }), "다른 시즌 (막대 = 그 시즌 기여도)"),
     h("span", { class: "lg" }, h("i", { class: "sw line ink" }), "종합 (배경 띠가 아닌 종합 컷으로 매김)"),
+    records.some((r) => r.hist?.borrowed)
+      ? h("span", { class: "lg" }, h("i", { class: "sw line ink faint" }), "흐린 선 = 그때 못 겪은 쪽을 나중 시즌 기록으로 채운 종합") : null,
     h("span", { class: "lg" }, h("i", { class: "sw line own1 step" }), own.length > 1 ? `${ELEMENT_KO[own[0]]} 속성 티어` : "속성 티어"),
     own.length > 1 ? h("span", { class: "lg" }, h("i", { class: "sw line own2 step" }), `${ELEMENT_KO[own[1]]} 속성 티어`) : null,
     firstTreasure > 0 ? h("span", { class: "lg" }, h("i", { class: "sw heart" }, "♥"), "애장품") : null,
@@ -177,24 +192,27 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
     }
 
     // lines break at the treasure: its tiers start over from there
-    const segments = (pick) => {
+    const segments = (pick, faint = () => false) => {
       const parts = [];
       let cur = [];
       records.forEach((rec, i) => {
         if (i === firstTreasure && firstTreasure > 0) { if (cur.length) parts.push(cur); cur = []; }
         const v = pick(rec);
         if (v == null || Number.isNaN(v)) { if (cur.length) parts.push(cur); cur = []; return; }
-        cur.push([i, v]);
+        cur.push([i, v, faint(rec)]);
       });
       if (cur.length) parts.push(cur);
       return parts;
     };
-    const overall = segments((rec) => rec.hist?.overall);
+    const path = (pts) => pts.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("");
+    // faint where the overall fills a side the unit had not met yet from later seasons
+    const overall = segments((rec) => rec.hist?.overall, (rec) => Boolean(rec.hist?.borrowed));
     for (const part of overall) {
-      seriesLine(svg, "ink", part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join(""));
+      if (part.length < 2) seriesLine(svg, part[0][2] ? "ink faint" : "ink", path(part));
+      else for (const run of runs(part)) seriesLine(svg, run.faint ? "ink faint" : "ink", path(run.pts));
     }
     const last = overall.length ? overall[overall.length - 1][overall[overall.length - 1].length - 1] : null;
-    if (last) svg.append(s("circle", { class: "dot ink", cx: x(last[0]), cy: y(last[1]), r: 4 }));
+    if (last) svg.append(s("circle", { class: `dot ink${last[2] ? " faint" : ""}`, cx: x(last[0]), cy: y(last[1]), r: 4 }));
 
     // element tiers: set in the seasons of the element, held until the next one
     const steps = own.slice(0, 2).map((element, k) => {
@@ -597,13 +615,15 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
       sr.values.forEach((v, i) => {
         if (i === sr.breakAt && sr.breakAt > 0) { if (cur.length) parts.push(cur); cur = []; }
         if (v == null) { if (cur.length) parts.push(cur); cur = []; return; }
-        cur.push([i, v]);
+        cur.push([i, v, Boolean(sr.faint?.[i])]);
       });
       if (cur.length) parts.push(cur);
       const g = s("g", { class: `sline ${cls}`, "data-u": sr.u });
+      const path = (pts) => pts.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("");
       for (const part of parts) {
-        if (part.length > 1) g.append(s("path", { class: "line", d: part.map(([i, v], k) => `${k ? "L" : "M"}${x(i)},${y(v)}`).join("") }));
-        else g.append(s("circle", { class: "dot", cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
+        if (part.length > 1) {
+          for (const run of runs(part)) g.append(s("path", { class: run.faint ? "line faint" : "line", d: path(run.pts) }));
+        } else g.append(s("circle", { class: part[0][2] ? "dot faint" : "dot", cx: x(part[0][0]), cy: y(part[0][1]), r: 3 }));
       }
       if (sr.breakAt > 0 && sr.values[sr.breakAt] != null) {
         g.append(s("text", { class: "treasure-mark small", x: x(sr.breakAt), y: y(sr.values[sr.breakAt]) - 7, "text-anchor": "middle" }, "♥"));

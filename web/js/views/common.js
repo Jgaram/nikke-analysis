@@ -16,21 +16,21 @@ export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/
 // ``pick`` makes the card a toggle (the comparison's list): {on, href, onclick} in place of
 // the link to the unit.
 // ``band`` is its generality band (속성 특화 · 속성 위주 · 범용), shown as a bar under the name.
-// An overall that stands in part on later seasons (fillFromLater: a side the unit had not met yet at
-// that moment, filled from the seasons it met it later) is shown faint, with this title.
-export const BORROWED_TITLE = "그때 아직 못 겪은 쪽을 나중 시즌 기록으로 채운 값 (반투명)";
+// On the trend pages, an overall that stands in part on later seasons (fillFromLater: a side the unit
+// had not met yet at that moment, filled from the seasons it met it later) is shown faint, with this title.
+export const BORROWED_TITLE = "그때 아직 못 겪은 쪽을 나중 시즌 기록으로 채운 값 (흐리게)";
 export const lent = (o) => (o?.borrowed ? { class: "borrowed", title: BORROWED_TITLE } : null);
 
-export function unitCard(app, u, { value, tier, provisional, borrowed, heart, dim, retired, band, tip, extra, pick = null, nums = true, bands = true } = {}) {
+export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, band, tip, extra, pick = null, nums = true, bands = true } = {}) {
   if (!nums) value = null;
   if (!bands) band = null;
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
   const card = h("a", {
-    class: ["card", dim && "dim", retired && "retired", borrowed && "borrowed", pick && "pickable", pick?.on && "picked"],
+    class: ["card", dim && "dim", retired && "retired", pick && "pickable", pick?.on && "picked"],
     href: pick ? pick.href : app.unitHref(unit.id), dataset: { tier: tier || "D" },
     "aria-pressed": pick ? String(pick.on) : null, onclick: pick ? (e) => { e.preventDefault(); pick.onclick(); } : null,
-    "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}${borrowed ? " 나중 시즌으로 채움" : ""}${band ? ` ${GENERALITY_KO[band]}` : ""}`,
+    "aria-label": `${unitName(unit)}${value != null ? ` ${num(value)}` : ""}${tier ? ` ${tier} 티어` : ""}${retired ? " 은퇴" : ""}${band ? ` ${GENERALITY_KO[band]}` : ""}`,
   },
   h("span", { class: "face" },
     face(unit, 64),

@@ -5,7 +5,7 @@ import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
 import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable, int, kst } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs, numsToggle,
-  generalityColumn, generalityRule, generalityLegend, curveColumn, lent,
+  generalityColumn, generalityRule, generalityLegend, curveColumn,
 } from "./common.js";
 import { timeStrip } from "./when.js";
 
@@ -52,16 +52,13 @@ function overallBody(app, view) {
   const table = state.mode === "table";
   const explain = h("p", { class: "note" },
     "? = 잠정 (겪은 보스 약점이 적거나 자기 속성 시즌을 아직 못 겪음) · ",
-    h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ",
-    state.params.fillFromLater && view.standing.overall.some((o) => o.borrowed)
-      ? "반투명 = 그때 아직 못 겪은 쪽(자기 속성이나 다른 속성)을 나중 시즌 기록으로 채운 값. " : null,
-    lifeNote(app, table));
+    h("span", { class: "heart-text" }, "♥"), " = 애장품을 낀 시즌만으로 매김. ", lifeNote(app, table));
   if (table) return h("div", { class: "panel table-panel" }, overallTable(app, view, rows), explain);
   const items = rows.map((o) => ({ u: o.u, tier: o.tier, value: o.overall, o }));
   return tierBoard(app, items, {
     key: `overall-${state.season ?? "now"}`, cuts: state.params.overallCuts,
     card: (it) => unitCard(app, it.u, {
-      value: it.value, tier: it.tier, provisional: it.o.provisional, borrowed: it.o.borrowed, heart: it.o.treasure,
+      value: it.value, tier: it.tier, provisional: it.o.provisional, heart: it.o.treasure,
       retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band, nums: state.showNums, bands: state.showBands, tip: () => standingTip(app, it.u, view),
     }),
     note: explain,
@@ -80,7 +77,7 @@ function overallTable(app, view, rows) {
     { key: "rank", label: "#", num: true, sort: (o) => o.rank, firstDir: "asc", cell: (o) => o.rank },
     { key: "unit", label: "니케", head: true, sort: (o) => app.model.units[o.u].ko, firstDir: "asc", cell: (o) => unitInline(app, o.u) },
     { key: "overall", label: "종합", sort: (o) => o.overall,
-      cell: (o) => h("span", lent(o), tierBadge(o.tier, o.overall), o.provisional ? h("sup", { class: "muted", title: provisionalReason(o, view.standing.slots.get(o.u), state.params) }, "?") : null) },
+      cell: (o) => h("span", null, tierBadge(o.tier, o.overall), o.provisional ? h("sup", { class: "muted", title: provisionalReason(o, view.standing.slots.get(o.u), state.params) }, "?") : null) },
     { key: "element", label: "속성 티어", title: "그 니케가 속한 속성에서의 티어", sort: (o) => Math.max(...(mine.get(o.u) || []).map((r) => (r.seasons ? r.lift : -1))),
       cell: (o) => h("span", { class: "el-tiers" }, (mine.get(o.u) || []).map((r) => h("span", { class: "el-tier" },
         elementIcon(r.element, 14), r.seasons ? tierBadge(r.tier, r.lift) : h("span", { class: "muted" }, "미관측")))) },
@@ -251,7 +248,7 @@ function elementTable(app, view, rows, element) {
     { key: "lift", label: `${ko} 약점`, title: `${ko} 약점 시즌들의 기여도 (최근일수록 크게)`, sort: (r) => (r.slot.seasons ? r.slot.lift : null),
       cell: (r) => (r.slot.seasons ? tierBadge(r.tier, r.slot.lift) : h("span", { class: "muted" }, "미관측")) },
     { key: "seasons", label: "약점 시즌", title: `겪은 ${ko} 약점 시즌 수`, num: true, sort: (r) => r.slot.seasons, cell: (r) => `${r.slot.seasons}번` },
-    { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", lent(r.o), tierBadge(r.o.tier, r.o.overall),
+    { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", null, tierBadge(r.o.tier, r.o.overall),
       r.o.provisional ? h("sup", { class: "muted" }, "?") : null, h("span", { class: "muted" }, ` ${r.o.rank}위`)) },
     generalityColumn(app, view),
     curveColumn(app, view),

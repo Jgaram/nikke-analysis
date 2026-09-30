@@ -126,6 +126,7 @@ function overallBody(app, picked) {
   const series = picked.map((u) => ({
     u,
     values: seasons.map((s) => { const x = at(s, u); return x && !Number.isNaN(x.overall) ? x.overall : null; }),
+    faint: seasons.map((s) => Boolean(at(s, u)?.borrowed)),
     breakAt: seasons.findIndex((s) => s.byUnit.get(u)?.treasure),
   }));
   const chart = seriesChart(app, {
@@ -158,7 +159,8 @@ function overallBody(app, picked) {
   ];
   const sort = state.sort.compareUnits || { key: "season", dir: "desc" };
   return {
-    chart: chartPanel("종합 티어 변화", `선의 값 = 그 시즌이 끝났을 때의 종합 티어 · 배경 띠 = 종합 컷 · ♥ = 애장품부터 다시 매김 · ${LEGEND}`, chart),
+    chart: chartPanel("종합 티어 변화", `선의 값 = 그 시즌이 끝났을 때의 종합 티어 · 배경 띠 = 종합 컷 · ♥ = 애장품부터 다시 매김${
+      series.some((sr) => sr.faint.some(Boolean)) ? " · 흐린 선 = 그때 못 겪은 쪽을 나중 시즌 기록으로 채운 종합" : ""} · ${LEGEND}`, chart),
     spot: chart,
     rest: [h("section", { class: "panel table-panel compare-panel" },
       h("div", { class: "panel-head" }, h("h3", null, "시즌별 종합 티어"), h("span", { class: "muted small" }, `${rows.length}시즌`)),

@@ -801,10 +801,11 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 .mb-track { flex: 1; width: 16px; display: flex; align-items: flex-end; }
 .mb-fill { width: 100%; background: var(--tc); border-radius: 4px 4px 0 0; }
 .mb.filled .mb-fill { background: transparent; border: 1px solid var(--line-2); border-bottom: 0; }
-/* a slot filled from the seasons the unit met that side later (fillFromLater), and an overall with one */
+/* a slot filled from the seasons the unit met that side later (fillFromLater), an overall with one,
+   and the stretch of a trend line that stands on such overalls */
 .mb.borrowed .mb-val, .mb.borrowed .mb-fill { opacity: .5; }
 span.borrowed, .tile.borrowed .tile-value { opacity: .5; }
-.card.borrowed .face, .card.borrowed .val { opacity: .5; }
+.traj .line.faint, .traj .dot.faint, .sw.line.faint { opacity: .35; }
 .mb-el { display: inline-flex; align-items: center; gap: 2px; height: 18px; }
 
 .chart-panel { padding-bottom: 10px; }

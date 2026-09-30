@@ -38,7 +38,7 @@ export function unitPicker(app, { heading, sub, enter, pick = null, note = "", f
   for (const u of untiered) items.push({ u, tier: null, o: null });
 
   const card = (it) => unitCard(app, it.u, {
-    value: it.o?.overall, tier: it.tier, provisional: it.o?.provisional, borrowed: it.o?.borrowed, heart: it.o?.treasure,
+    value: it.o?.overall, tier: it.tier, provisional: it.o?.provisional, heart: it.o?.treasure,
     retired: view.life.get(it.u)?.retired, tip: () => standingTip(app, it.u, view), pick: pick ? pick(it.u) : null,
   });
   const mark = (tier, n) => h("span", { class: "pick-tier", dataset: { tier: tier || "-" }, title: `${tier ? `${tier} 티어` : "티어 없음"} ${n}명` },

@@ -129,6 +129,8 @@ DEFAULT_OVERALL_CUTS: list[tuple[str, float]] = [
     ("F", 0.0),
 ]
 OVERALL_MODES = ("mean", "max", "frequency")
+# Late enough that a view from it counts every season there is (what a view of the past fills from).
+FAR_FUTURE = pd.Timestamp("2200-01-01", tz="UTC")
 GENERALITY_MAX = 2.0  # generality of a unit fielded only when the weakness is another element's
 
 
@@ -153,6 +155,8 @@ class TierConfig:
     overall: str = "mean"
     min_elements_observed: int = 3
     include_live: bool = True
+    # a view of the past fills a side a unit had not met yet from the seasons it met it later
+    fill_from_later: bool = True
     # lifespan: a season fields a unit when its season tier there is ``min_tier`` or better.
     # None: D - or, with cuts of other labels, the lowest tier above the bottom one.
     min_tier: str | None = None
@@ -249,6 +253,7 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         overall=str(element.get("overall", defaults.overall)),
         min_elements_observed=int(element.get("min_elements_observed", defaults.min_elements_observed)),
         include_live=bool(element.get("include_live", defaults.include_live)),
+        fill_from_later=bool(element.get("fill_from_later", defaults.fill_from_later)),
         min_tier=str(lifespan["min_tier"]) if lifespan.get("min_tier") else None,
         retire_after_days=float(lifespan.get("retire_after_days", defaults.retire_after_days)),
         retire_after_own_seasons=int(lifespan.get("retire_after_own_seasons", defaults.retire_after_own_seasons)),
@@ -283,11 +288,11 @@ def tier_rank(label: str, config: TierConfig | None = None) -> int:
 # where every unit stands: its element tiers and its overall tier
 # --------------------------------------------------------------------------
 
-OVERALL_COLUMNS = ["unit_id", "overall", "overall_tier", "overall_rank", "provisional", "elements_observed",
-                   "seasons_observed", "last_season", "treasure"]
+OVERALL_COLUMNS = ["unit_id", "overall", "overall_tier", "overall_rank", "provisional", "borrowed",
+                   "elements_observed", "seasons_observed", "last_season", "treasure"]
 ELEMENT_COLUMNS = ["unit_id", "element", "source", "element_lift", "element_tier", "element_seasons", "element_rank",
                    "treasure"]
-SLOT_COLUMNS = ["unit_id", "element", "lift", "seasons"]
+SLOT_COLUMNS = ["unit_id", "element", "lift", "seasons", "borrowed"]
 TURN_COLUMNS = ["season", "unit_id", "lift", "own"]
 
 
@@ -393,7 +398,8 @@ def standings(
 
     Only what was known at ``moment`` counts: the seasons over by then and the
     one in progress as far as it had been collected (``counted_seasons``) - the
-    view of the past never uses what happened after it. ``table`` is the season
+    view of the past uses what happened after it only to fill a side a unit had
+    not met yet (``fill_from_later``, ``_later_levels``; marked ``borrowed``). ``table`` is the season
     x unit table (with each unit's own ``element``) and ``seasons`` the season
     summary (it says which seasons are final and when each was collected).
 
@@ -447,9 +453,16 @@ def standings(
     members = members[members["unit_id"].isin(unit.index)].reset_index(drop=True)
     own = (pd.crosstab(members["unit_id"], members["element"]).reindex(index=unit.index, columns=list(ELEMENTS))
            .fillna(0).astype(bool))
-    other_level = level.where(~own).mean(axis=1).fillna(0.0)
-    fill = pd.DataFrame({e: other_level.where(~own[e], 0.0) for e in ELEMENTS})
+    other_seen = level.where(~own).mean(axis=1)  # NaN: no other element met yet
+    later_other = pd.Series(np.nan, index=unit.index)
+    later_own = pd.DataFrame(np.nan, index=unit.index, columns=list(ELEMENTS))
+    if config.fill_from_later:
+        later_other, later_own = _later_levels(table, seasons, counted, moment, treasured, own, config)
+    other_level = other_seen.fillna(later_other).fillna(0.0)
+    fill = pd.DataFrame({e: other_level.where(~own[e], later_own[e].fillna(0.0)) for e in ELEMENTS})
     estimate = level.where(observed, fill)
+    borrowed = ~observed & pd.DataFrame({e: (~own[e] & other_seen.isna() & later_other.notna())
+                                         | (own[e] & later_own[e].notna()) for e in ELEMENTS})
 
     # Element tiers: the slots of the elements a unit counts as, once observed.
     at = (unit.index.get_indexer(members["unit_id"]), [ELEMENTS.index(e) for e in members["element"]])
@@ -480,6 +493,7 @@ def standings(
     n_obs = observed.sum(axis=1).astype(int)
     own_unseen = own.any(axis=1) & ~(observed & own).any(axis=1)
     overall["provisional"] = (n_obs < config.min_elements_observed) | own_unseen
+    overall["borrowed"] = borrowed.any(axis=1) & (config.overall != "max")  # max takes observed slots only
     overall["elements_observed"] = n_obs
     overall["seasons_observed"] = unit["seasons_observed"].astype(int)
     overall["last_season"] = unit["last_season"].astype(int)
@@ -487,11 +501,54 @@ def standings(
     overall = overall.reset_index()[OVERALL_COLUMNS]
     overall = overall.sort_values(["overall", "unit_id"], ascending=[False, True]).reset_index(drop=True)
     slots = (estimate.rename_axis(index="unit_id", columns="element").stack().rename("lift").to_frame()
-             .join(count.rename_axis(index="unit_id", columns="element").stack().rename("seasons")).reset_index())
+             .join(count.rename_axis(index="unit_id", columns="element").stack().rename("seasons"))
+             .join(borrowed.rename_axis(index="unit_id", columns="element").stack().rename("borrowed")).reset_index())
     mine = set(zip(members["unit_id"], members["element"]))
     turns = rows.assign(own=[(u, e) in mine for u, e in zip(rows["unit_id"], rows["weak_element"])])
     return Standings(overall, elements[ELEMENT_COLUMNS].reset_index(drop=True), slots[SLOT_COLUMNS],
                      turns[TURN_COLUMNS].sort_values(["unit_id", "season"]).reset_index(drop=True))
+
+
+def _later_levels(
+    table: pd.DataFrame,
+    seasons: pd.DataFrame,
+    counted: pd.DataFrame,
+    moment: pd.Timestamp,
+    treasured: set,
+    own: pd.DataFrame,
+    config: TierConfig,
+) -> tuple[pd.Series, pd.DataFrame]:
+    """What each unit did after ``moment``, for the sides it had not met by then.
+
+    A view of the past knows nothing of a side a unit had not met yet: a unit out in its own
+    element's season has no other-element slot, one out in other elements' seasons none of its
+    own, and the view counts them 0 - low for a unit that went on to carry both. What the unit
+    did later can stand in: the seasons counted today that the view at ``moment`` did not count,
+    on the same side of its treasure, each weighted as far ahead of ``moment`` as recency weighs
+    a season behind it (``half_life_days``), and taken as they were - not raised to the value
+    at ``moment``, so that a later season never lifts a unit above what it went on to do.
+
+    Returns the other-element level per unit (all other elements pooled, as the fill of an
+    unseen other slot is one value) and the level per unit and own element; NaN where the unit
+    met none later.
+    """
+    ahead = counted_seasons(seasons, FAR_FUTURE, config)
+    ahead = ahead[~ahead["season"].isin(counted["season"]) & ahead["weak_element"].isin(ELEMENTS)]
+    columns = ["season", "unit_id", "lift"] + (["treasure"] if "treasure" in table.columns else [])
+    rows = table.loc[table["season"].isin(ahead["season"]) & table["unit_id"].isin(own.index), columns]
+    rows = rows.merge(ahead[["season", "end_at", "weak_element"]], on="season")
+    rows = rows[played_with_treasure(rows) == rows["unit_id"].isin(treasured)]
+    other = pd.Series(np.nan, index=own.index)
+    mine = pd.DataFrame(np.nan, index=own.index, columns=list(ELEMENTS))
+    if rows.empty:
+        return other, mine
+    rows = rows.assign(w=_decay((rows["end_at"] - moment).dt.total_seconds() / 86400.0, config.half_life_days))
+    rows["wl"] = rows["w"] * rows["lift"]
+    sums = rows.groupby(["unit_id", "weak_element"])[["w", "wl"]].sum()
+    w = sums["w"].unstack().reindex(index=own.index, columns=list(ELEMENTS))
+    wl = sums["wl"].unstack().reindex(index=own.index, columns=list(ELEMENTS))
+    other = wl.where(~own).sum(axis=1, min_count=1) / w.where(~own).sum(axis=1, min_count=1)
+    return other, (wl / w).where(own)
 
 
 # --------------------------------------------------------------------------

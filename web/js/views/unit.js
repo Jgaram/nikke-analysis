@@ -7,7 +7,7 @@ import {
 } from "../ui.js";
 import {
   provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, GENERALITY_KO, trendTabs, unitSearch, CURVE_KO, CURVE_HINT,
-  paramsNote, PARAM,
+  paramsNote, PARAM, lent, BORROWED_TITLE,
 } from "./common.js";
 import { timeStrip, whenLabel } from "./when.js";
 import { trajectoryChart, generalityChart } from "../chart.js";
@@ -110,14 +110,16 @@ function slotChart(app, slots, overallMode) {
   return h("div", { class: "tile slots-tile" },
     h("div", { class: "tile-label" }, "보스 약점별"),
     h("div", { class: "mini-bars", role: "img", "aria-label": slots.map((s) => `${ELEMENT_KO[s.element]} ${num(s.lift)}${s.seasons ? "" : "(채운 값)"}`).join(", ") },
-      slots.map((sl) => h("a", { class: ["mb", !sl.seasons && "filled", sl.own && "own"], href: app.weakHref(sl.element), title: `${sl.seasons
+      slots.map((sl) => h("a", { class: ["mb", !sl.seasons && "filled", sl.borrowed && "borrowed", sl.own && "own"], href: app.weakHref(sl.element), title: `${sl.seasons
         ? `${ELEMENT_KO[sl.element]} 약점 시즌 ${sl.seasons}번의 기여도 가중 평균 ${num(sl.lift)}`
-        : `${ELEMENT_KO[sl.element]} 약점 시즌을 아직 못 겪어 채운 값 ${num(sl.lift)}`} · 누르면 이 약점의 시즌 비교로` },
+        : sl.borrowed ? `${ELEMENT_KO[sl.element]} 약점 시즌을 이때 아직 못 겪어 나중 시즌 기록으로 채운 값 ${num(sl.lift)}`
+          : `${ELEMENT_KO[sl.element]} 약점 시즌을 아직 못 겪어 채운 값 ${num(sl.lift)}`} · 누르면 이 약점의 시즌 비교로` },
       h("span", { class: "mb-val" }, sl.seasons ? num(sl.lift) : `(${num(sl.lift)})`),
       h("span", { class: "mb-track" }, h("span", { class: "mb-fill", dataset: { tier: assignTier(sl.lift, cuts) },
         style: { height: `${Math.max(2, (sl.lift / top) * 100)}%` } })),
       h("span", { class: "mb-el" }, elementIcon(sl.element, 15), sl.own ? h("b", { class: "own-mark" }, "▶") : null)))),
-    h("div", { class: "tile-sub" }, overallMode === "mean" ? "종합 = 다섯 칸의 평균 · 괄호 = 못 겪어서 채운 값 · ▶ = 자기 속성"
+    h("div", { class: "tile-sub" }, overallMode === "mean" ? `종합 = 다섯 칸의 평균 · 괄호 = 못 겪어서 채운 값${
+      slots.some((sl) => sl.borrowed) ? "(반투명 = 나중 시즌 기록으로)" : ""} · ▶ = 자기 속성`
       : overallMode === "frequency" ? "종합 = 최근 자주 나온 약점일수록 크게 친 평균 · ▶ = 자기 속성"
         : "종합 = 겪어 본 칸 중 가장 큰 값 · ▶ = 자기 속성"));
 }
@@ -265,8 +267,10 @@ function profile(app, u, prof, moment) {
       : `미관측 — ${prof.treasured ? "애장품" : "출시"} 뒤 ${ELEMENT_KO[r.element]} 약점 시즌이 아직 없음`,
     { class: "tile-element", href: app.tierHref(r.element), linkTitle: `같은 시점의 ${ELEMENT_KO[r.element]} 약점 티어표로` }));
   const tiles = o ? [
-    tile("종합 티어", o.tier, o.overall, `${prof.units}명 중 ${o.rank}위${o.provisional ? ` · ${provisionalReason(o, prof.slots, state.params)}` : ""}`,
-      { mark: o.provisional ? "?" : null, class: "tile-overall", href: app.tierHref("overall"), linkTitle: "같은 시점의 종합 티어표로" }),
+    tile("종합 티어", o.tier, o.overall, `${prof.units}명 중 ${o.rank}위${o.provisional ? ` · ${provisionalReason(o, prof.slots, state.params)}` : ""}`
+      + (o.borrowed ? " · 못 겪은 쪽은 나중 시즌 기록으로 채움" : ""),
+      { mark: o.provisional ? "?" : null, class: o.borrowed ? "tile-overall borrowed" : "tile-overall", href: app.tierHref("overall"),
+        linkTitle: o.borrowed ? `같은 시점의 종합 티어표로 · ${BORROWED_TITLE}` : "같은 시점의 종합 티어표로" }),
     ...elementTiles,
     lifeTile(app, u, prof.view),
     generalityTile(app, u, prof.view),
@@ -322,7 +326,7 @@ function seasonTable(app, u, records) {
     { key: "element", label: "속성 티어", title: "그 시즌이 끝났을 때 (자기 속성 약점 시즌만)", sort: (r) => (r.hist?.counted ? r.hist.elementLift : null),
       cell: (r) => (r.hist?.counted && !Number.isNaN(r.hist.elementLift) ? tierBadge(r.hist.elementTier, r.hist.elementLift) : h("span", { class: "muted" }, "–")) },
     { key: "overall", label: "종합 티어", title: "그 시즌이 끝났을 때", sort: (r) => r.hist?.overall,
-      cell: (r) => (r.hist && !Number.isNaN(r.hist.overall) ? h("span", null, tierBadge(r.hist.overallTier, r.hist.overall), r.hist.provisional ? h("sup", { class: "muted" }, "?") : null) : "–") },
+      cell: (r) => (r.hist && !Number.isNaN(r.hist.overall) ? h("span", lent(r.hist), tierBadge(r.hist.overallTier, r.hist.overall), r.hist.provisional ? h("sup", { class: "muted" }, "?") : null) : "–") },
   ];
   return h("section", { class: "panel table-panel" },
     h("div", { class: "panel-head" }, h("h3", null, "시즌별 기록"), h("span", { class: "muted small" }, `${records.length}시즌`)),

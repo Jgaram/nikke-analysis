@@ -524,6 +524,8 @@ CURVE_KO = {"unused": "안 쓰임", "specialist": "처음부터 속성 특화", 
             "faded": "범용인 채로 저묾", "general": "아직 범용", "unknown": "아직 모름"}
 FILL_NOTE = ("못 겪은 약점 칸: 다른 속성 칸은 겪은 다른 속성의 평균(다른 속성 기록이 없으면 0), "
              "자기 속성 칸은 0")
+BORROWED_NOTE = ("~ = 그때 아직 못 겪은 쪽(다른 속성 전부, 또는 자기 속성)을 나중 시즌 기록으로 채움 "
+                 "(element.fill_from_later)")
 
 
 def _element_marks(elements: pd.DataFrame) -> dict[str, str]:
@@ -556,10 +558,13 @@ def render(view: TierView, *, show_all: bool = False) -> str:
         marks = _element_marks(view.elements)
 
         def mark(r: pd.Series) -> str:
-            return ("*" if bool(r["provisional"]) else "") + f"({marks.get(r['unit_id'], '?')})"
+            return (("*" if bool(r["provisional"]) else "") + ("~" if bool(r["borrowed"]) else "")
+                    + f"({marks.get(r['unit_id'], '?')})")
 
         out += _tier_lines(view.overall, "overall", "overall_tier", config, show_all=show_all, mark=mark)
         out.append(f"  {_provisional_note(config)} · ? = 그 속성 약점 시즌을 아직 못 겪음")
+        if view.overall["borrowed"].astype(bool).any():
+            out.append(f"  {BORROWED_NOTE}")
         out.append(f"  {FILL_NOTE}")
         out.append("  속성별 비교: nikke tier --element 작열 (" + "·".join(ELEMENT_KO[e] for e in ELEMENTS[1:]) + ")"
                    " · 한 니케 자세히: nikke tier --unit 이름")
@@ -626,7 +631,7 @@ def _slot_lines(profile: dict[str, Any], config: tiering.TierConfig) -> list[str
         return []
     mine = {s["element"] for s in own}
     parts = [f"{'▶' if s['element'] in mine else ''}{_element(s['element'])} "
-             + (f"{s['lift']:.2f}" if s["seasons"] else f"({s['lift']:.2f})")
+             + (f"{s['lift']:.2f}" if s["seasons"] else f"({'~' if s.get('borrowed') else ''}{s['lift']:.2f})")
              for s in sorted(own + other, key=lambda s: ELEMENTS.index(s["element"]))]
     how = {"mean": "의 평균", "frequency": "을 최근 자주 나온 약점일수록 크게 친 평균",
            "max": " 중 괄호 없는 가장 큰 값"}.get(config.overall, "")
@@ -634,9 +639,11 @@ def _slot_lines(profile: dict[str, Any], config: tiering.TierConfig) -> list[str
     filled = []
     if any(not s["seasons"] for s in other):
         filled.append("다른 속성은 겪은 다른 속성의 평균" if any(s["seasons"] for s in other)
+                      else "다른 속성은 나중에 겪은 다른 속성 시즌들로(~)" if any(s.get("borrowed") for s in other)
                       else "다른 속성은 기록이 없어 0")
     if any(not s["seasons"] for s in own):
-        filled.append("자기 속성은 0")
+        filled.append("자기 속성은 나중에 겪은 시즌들로(~)" if all(s.get("borrowed") for s in own if not s["seasons"])
+                      else "자기 속성은 0")
     if filled:
         lines.append(f"  {pad('', 9)}    괄호 = 아직 못 겪어서 채운 값: {', '.join(filled)} · ▶ = 자기 속성")
     return lines

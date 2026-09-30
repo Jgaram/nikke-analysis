@@ -1,5 +1,7 @@
 """Season tiers, element tiers and overall tiers, against the synthetic world."""
 
+from dataclasses import replace
+
 import pandas as pd
 import pytest
 
@@ -389,6 +391,44 @@ def test_old_seasons_inform_but_do_not_inflate():
     assert gap(tiers.TierConfig(value_half_life_days=300)).abs().max() == pytest.approx(0.0, abs=1e-12)
     as_they_were = gap(tiers.TierConfig(value_half_life_days=0))
     assert (as_they_were[["u0", "u1", "u2", "u3", "u4"]] > 0.01).all()  # the units with seasons over a year old
+
+
+def test_a_view_of_the_past_fills_a_side_not_met_yet_from_later_seasons():
+    """Seen at the end of its first season, a unit that met only its own element has no other
+    element to go on; the seasons it met them later stand in, weighted as far ahead as recency
+    weighs behind (half-life 180 days) and taken as they were. The same for an own element not
+    met yet. A side met already, or a view with nothing later, is left as it was."""
+    start = pd.Timestamp("2025-01-01T00:00:00Z")
+    weak = ["Fire", "Water", "Wind", "Water"]
+    summary = pd.DataFrame({"season": [1, 2, 3, 4], "weak_element": weak, "final": True,
+                            "end_at": [start + pd.Timedelta(days=30 * i) for i in range(4)]})
+    lifts = {"fire": [1.0, 0.8, 0.6, 0.4], "water": [0.5, 0.2, 0.3, 0.9]}
+    rows = pd.DataFrame([{"season": n, "unit_id": u, "lift": lift[n - 1], "element": u.title(), "extra_elements": ""}
+                         for u, lift in lifts.items() for n in range(1, 5)])
+    config = tiers.TierConfig(value_half_life_days=0)
+
+    def at(season, **change):
+        moment = summary.loc[season - 1, "end_at"]
+        standing = tiers.standings(rows, summary, moment, replace(config, **change))
+        return standing.overall.set_index("unit_id"), standing.slots.set_index(["unit_id", "element"])
+
+    overall, slots = at(1)
+    w = [0.5 ** (30 * k / 180) for k in (1, 2, 3)]
+    other = (0.8 * w[0] + 0.6 * w[1] + 0.4 * w[2]) / sum(w)  # Fire's later Water, Wind, Water
+    assert overall.loc["fire", "overall"] == pytest.approx((1.0 + 4 * other) / 5)
+    assert bool(overall.loc["fire", "borrowed"]) and bool(overall.loc["fire", "provisional"])
+    assert bool(slots.loc[("fire", "Iron"), "borrowed"]) and not bool(slots.loc[("fire", "Fire"), "borrowed"])
+    own = (0.2 * w[0] + 0.9 * w[2]) / (w[0] + w[2])  # Water met its own element later, in 2 and 4
+    assert slots.loc[("water", "Water"), "lift"] == pytest.approx(own)
+    assert bool(slots.loc[("water", "Water"), "borrowed"]) and not bool(slots.loc[("water", "Wind"), "borrowed"])
+
+    overall, _ = at(1, fill_from_later=False)
+    assert overall.loc["fire", "overall"] == pytest.approx(0.2) and not overall["borrowed"].any()
+    overall, slots = at(2)  # Fire has met Water now: its other slots come from that, not from later
+    assert overall.loc["fire", "overall"] == pytest.approx((1.0 + 4 * 0.8) / 5)
+    assert not slots.loc["fire", "borrowed"].any()
+    overall, _ = at(4)  # nothing later to borrow from
+    assert not overall["borrowed"].any()
 
 
 def test_recent_seasons_weigh_more(world, built):

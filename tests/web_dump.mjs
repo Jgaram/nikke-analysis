@@ -30,7 +30,7 @@ for (const s of population.summary) {
       in_deck_1: r.inDeck[0], in_deck_2: r.inDeck[1], in_deck_3: r.inDeck[2], in_deck_4: r.inDeck[3],
       in_deck_5: r.inDeck[4], avg_deck: r.avgDeck, usage_rate: r.usageRate, usage_rank: r.usageRank,
       lift: r.lift, tier: M.assignTier(r.lift, params.cuts), treasure: r.treasure, element_match: r.elementMatch,
-      overall: h.overall, overall_tier: h.overallTier, provisional: h.provisional,
+      overall: h.overall, overall_tier: h.overallTier, provisional: h.provisional, borrowed: h.borrowed,
       elements_observed: h.elementsObserved, element_lift: h.elementLift, element_tier: h.elementTier,
       element_seasons: h.elementSeasons, generality: h.generality,
     });
@@ -42,6 +42,7 @@ const overall = view.standing.overall.map((r) => {
   const g = view.generality.get(r.u);
   return {
     overall_rank: r.rank, unit_id: r.id, overall: r.overall, overall_tier: r.tier, provisional: r.provisional,
+    borrowed: r.borrowed,
     elements_observed: r.elementsObserved, seasons_observed: r.seasonsObserved, last_season: r.lastSeason,
     treasure: r.treasure, generality: g.generality, generality_band: g.band,
     curve: view.curves.get(r.u)?.curve ?? "", curve_g_peak: view.curves.get(r.u)?.gPeak ?? NaN,

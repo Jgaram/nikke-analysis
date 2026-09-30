@@ -84,7 +84,8 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
         hist && hist.counted && !Number.isNaN(hist.elementLift) ? [h("dt", null, `${ELEMENT_KO[info.weak]} 티어`),
           h("dd", null, tierBadge(hist.elementTier, hist.elementLift), h("span", { class: "muted" }, ` 시즌 끝 · ${hist.elementSeasons}번째`))] : null,
         hist && !Number.isNaN(hist.overall) ? [h("dt", null, "종합 티어"),
-          h("dd", null, tierBadge(hist.overallTier, hist.overall), h("span", { class: "muted" }, hist.provisional ? " 시즌 끝 · 잠정" : " 시즌 끝"))] : null),
+          h("dd", null, tierBadge(hist.overallTier, hist.overall), h("span", { class: "muted" },
+            (hist.provisional ? " 시즌 끝 · 잠정" : " 시즌 끝") + (hist.borrowed ? " · 못 겪은 쪽은 나중 시즌으로 채움" : "")))] : null),
       i === firstTreasure && treasureAt != null ? h("div", { class: "tip-notes" },
         h("span", { class: "pill heart" }, `♥ 애장품 ${day(treasureAt)} — 여기부터 애장품을 낀 시즌만으로`)) : null);
   }

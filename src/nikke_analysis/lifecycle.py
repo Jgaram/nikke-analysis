@@ -36,6 +36,7 @@ Nothing computed only here feeds the tiers, the committed tables or the tier sit
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Callable
 
 import numpy as np
@@ -157,7 +158,12 @@ def moments(seasons: pd.DataFrame) -> dict[int, pd.Timestamp]:
 
 def replay(history: pd.DataFrame, seasons: pd.DataFrame, config: tiers.TierConfig,
            treasured: Callable[[pd.Timestamp], Any] | None = None) -> pd.DataFrame:
-    """Where every unit stood at the end of every season: its overall tier, generality and lifespan."""
+    """Where every unit stood at the end of every season: its overall tier, generality and lifespan.
+
+    A replay asks what could be told then, and its rules are scored against what came after, so
+    it borrows nothing from later seasons (``fill_from_later`` off).
+    """
+    config = replace(config, fill_from_later=False)
     parts = []
     for season, moment in moments(seasons).items():
         standing = tiers.standings(history, seasons, moment, config,

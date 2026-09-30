@@ -35,6 +35,7 @@ export function encodeParams(p, d) {
   if (p.overall !== d.overall) q.ov = p.overall;
   if (p.minElementsObserved !== d.minElementsObserved) q.min = String(p.minElementsObserved);
   if (p.includeLive !== d.includeLive) q.live = p.includeLive ? "1" : "0";
+  if (p.fillFromLater !== d.fillFromLater) q.later = p.fillFromLater ? "1" : "0";
   if (p.minTier !== d.minTier) q.use = p.minTier;
   if (p.retireAfterDays !== d.retireAfterDays) q.ret = String(p.retireAfterDays);
   if (p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) q.rown = String(p.retireAfterOwnSeasons);
@@ -72,6 +73,7 @@ export function decodeParams(q, d, model) {
   if (OVERALL_MODES.includes(q.get("ov"))) p.overall = q.get("ov");
   p.minElementsObserved = Math.round(number(q.get("min"), 1, 5) ?? d.minElementsObserved);
   if (q.has("live")) p.includeLive = q.get("live") === "1";
+  if (q.has("later")) p.fillFromLater = q.get("later") === "1";
   if (tierChoices(d).includes(q.get("use"))) p.minTier = q.get("use");
   const ret = number(q.get("ret"), 0, 3650);
   if (ret != null) p.retireAfterDays = Math.round(ret);
@@ -112,6 +114,7 @@ export function changedParams(p, d) {
   if (p.overall !== d.overall) out.push("종합 방식");
   if (p.minElementsObserved !== d.minElementsObserved) out.push("잠정 기준");
   if (p.includeLive !== d.includeLive) out.push("진행 중 시즌");
+  if (p.fillFromLater !== d.fillFromLater) out.push("나중 시즌으로 채움");
   if (p.minTier !== d.minTier) out.push("쓰인 기준");
   if (p.retireAfterDays !== d.retireAfterDays || p.retireAfterOwnSeasons !== d.retireAfterOwnSeasons) out.push("은퇴 기준");
   if (!same(p.generalityBands, d.generalityBands)) out.push("범용도 띠");
@@ -269,7 +272,12 @@ export function buildParams(app, body) {
         (v) => { app.setParams({ minElementsObserved: v }); buildParams(app, body); }, { label: "잠정 기준" }),
       "겪은 보스 약점이 이보다 적거나 자기 속성 시즌을 아직 못 겪었으면 종합 티어가 잠정(?)."),
       field("진행 중 시즌", toggle("지금까지 수집분으로 포함", p.includeLive, (v) => app.setParams({ includeLive: v })),
-        "진행 중인 시즌의 순위도 속성·종합 티어와 수명에 잠정으로 넣습니다. 끄면 끝난 시즌만.")),
+        "진행 중인 시즌의 순위도 속성·종합 티어와 수명에 잠정으로 넣습니다. 끄면 끝난 시즌만."),
+      field("못 겪은 쪽", toggle("지난 시점은 나중 시즌 기록으로 채움", p.fillFromLater, (v) => app.setParams({ fillFromLater: v })),
+        "지난 시점에서 아직 못 겪은 쪽(출시 직후 자기 속성 시즌만 겪었으면 다른 속성, 다른 속성만 겪었으면 자기 속성)은 "
+        + "원래 0 으로 칩니다. 켜면 그 니케가 나중에 그쪽을 겪은 시즌들로 채웁니다(그 시점에서 가까운 시즌일수록 크게, "
+        + "반감기는 위 최근성과 같음). 그렇게 채운 종합은 반투명으로 보입니다. 지금 시점에는 나중 시즌이 없어 그대로입니다. "
+        + "끄면 그때 알 수 있던 것만.")),
     h("section", { class: "psec" },
       h("h3", null, "수명", h("small", null, "언제부터 쓰였고 아직 쓰이나 · 시즌 티어로")),
       field("쓰인 시즌", segmented(tierChoices(d).map((label) => ({ value: label, label: `${label} 이상` })), p.minTier,

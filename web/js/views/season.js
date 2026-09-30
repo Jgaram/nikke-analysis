@@ -5,7 +5,7 @@ import { assignTier } from "../model.js";
 import {
   h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, tierBadge, deckSplit, sortableTable, toggle, kst,
 } from "../ui.js";
-import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs, numsToggle, generalityTag, generalityRule } from "./common.js";
+import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs, numsToggle, generalityTag, generalityRule, lent } from "./common.js";
 import { timeStrip } from "./when.js";
 
 const END_KO = { suspended: "중단", extended: "연장", superseded: "일정 변경", scheduled: "" };
@@ -137,7 +137,7 @@ function seasonTable(app, entry, rows) {
     { key: "overall", label: "종합 티어", title: "그 시즌이 끝났을 때의 종합 티어", sort: (r) => history.get(r.u)?.overall,
       cell: (r) => {
         const x = history.get(r.u);
-        return x && !Number.isNaN(x.overall) ? h("span", null, tierBadge(x.overallTier, x.overall), x.provisional ? h("sup", { class: "muted" }, "?") : null)
+        return x && !Number.isNaN(x.overall) ? h("span", lent(x), tierBadge(x.overallTier, x.overall), x.provisional ? h("sup", { class: "muted" }, "?") : null)
           : h("span", { class: "muted" }, "–");
       } },
     { key: "generality", label: "범용도", title: `그 시즌이 끝났을 때의 ${generalityRule(state.params)}`,

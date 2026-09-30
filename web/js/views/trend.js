@@ -9,7 +9,7 @@ import { assignTier, ELEMENTS } from "../model.js";
 import {
   h, num, int, face, elementIcon, ELEMENT_KO, tierBadge, sortableTable, segmented, unitName, day,
 } from "../ui.js";
-import { trendTabs, unitInline } from "./common.js";
+import { trendTabs, unitInline, lent } from "./common.js";
 import { timeStrip } from "./when.js";
 import { unitPicker } from "./pick.js";
 import { seriesChart } from "../chart.js";
@@ -149,7 +149,7 @@ function overallBody(app, picked) {
         cell: (s) => {
           const x = at(s, u);
           if (!x || Number.isNaN(x.overall)) return h("span", { class: "muted" }, s.byUnit.has(u) ? "–" : "");
-          return h("span", null, tierBadge(x.overallTier, x.overall),
+          return h("span", lent(x), tierBadge(x.overallTier, x.overall),
             x.provisional ? h("sup", { class: "muted" }, "?") : null,
             s.byUnit.get(u)?.elementMatch ? h("b", { class: "own-mark", title: "자기 속성 약점 시즌" }, "▶") : null);
         },

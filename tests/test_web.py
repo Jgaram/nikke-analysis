@@ -34,7 +34,7 @@ DUMP = REPO / "tests" / "web_dump.mjs"
 CONFIGS = {
     "defaults": {},
     "servers-top-uniform": {"exclude_servers": ("S2",), "top_n": 8, "rank_weighting": "uniform"},
-    "flat-frequency-prior": {"half_life_days": 0.0, "value_half_life_days": 0.0, "overall": "frequency", "prior_strength": 2.0,
+    "flat-frequency-prior": {"half_life_days": 0.0, "value_half_life_days": 0.0, "fill_from_later": False, "overall": "frequency", "prior_strength": 2.0,
                              "min_elements_observed": 2, "min_tier": "B", "retire_after_days": 40.0,
                              "retire_after_own_seasons": 0,
                              "generality_bands": (0.4, 1.2), "curve_min_tier": "B", "curve_wide": 0.8,
@@ -173,6 +173,7 @@ def js_params(config: tiers.TierConfig, servers: list[str]) -> dict:
         "valueHalfLifeDays": config.value_half_life_days,
         "priorStrength": config.prior_strength, "overall": config.overall,
         "minElementsObserved": config.min_elements_observed, "includeLive": config.include_live,
+        "fillFromLater": config.fill_from_later,
         "minTier": config.min_tier, "retireAfterDays": config.retire_after_days,
         "retireAfterOwnSeasons": config.retire_after_own_seasons,
         "generalityBands": list(config.generality_bands),
@@ -222,7 +223,7 @@ def compare(tables: Path, page: dict, config: tiers.TierConfig) -> None:
     for column in ("rankers", "best_rank", "usage_rank", "in_deck_1", "in_deck_2", "in_deck_3", "in_deck_4",
                    "in_deck_5", "tier", "overall_tier", "element_tier", "element_seasons", "elements_observed"):
         _same(both[f"{column}_py"], both[f"{column}_js"], f"season rows: {column}")
-    for column in ("treasure", "element_match", "provisional"):
+    for column in ("treasure", "element_match", "provisional", "borrowed"):
         _flags(both[f"{column}_py"], both[f"{column}_js"], f"season rows: {column}")
 
     seasons = _table(tables / "metrics_seasons.csv")
@@ -241,7 +242,7 @@ def compare(tables: Path, page: dict, config: tiers.TierConfig) -> None:
     for column in ("overall_rank", "overall_tier", "elements_observed", "seasons_observed", "last_season",
                    "generality_band", "curve"):
         _same(overall[column], theirs[column], f"overall table: {column}")
-    for column in ("provisional", "treasure"):
+    for column in ("provisional", "borrowed", "treasure"):
         _flags(overall[column], theirs[column], f"overall table: {column}")
 
     life = overall.merge(pd.DataFrame(page["life"]), on="unit_id", how="left", suffixes=("_py", "_js"))

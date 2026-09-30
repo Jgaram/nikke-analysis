@@ -171,6 +171,7 @@ def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
         "overall": config.overall,
         "minElementsObserved": config.min_elements_observed,
         "includeLive": config.include_live,
+        "fillFromLater": config.fill_from_later,
         "minTier": config.min_tier,
         "retireAfterDays": config.retire_after_days,
         "retireAfterOwnSeasons": config.retire_after_own_seasons,

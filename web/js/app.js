@@ -37,7 +37,8 @@ const state = {
   params: null,
   filters: { elements: new Set(), bursts: new Set(), classes: new Set(), weapons: new Set(), makers: new Set() },
   showUnused: false,
-  showNums: false, // 티어표 cards: their number and generality bar
+  showNums: false, // 티어표 cards: their number (기여도)
+  showBands: false, // 티어표 cards: their generality bar
   expanded: new Set(),
   sort: {},
 };

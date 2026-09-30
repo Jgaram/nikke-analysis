@@ -41,7 +41,7 @@ function lifeNote(app, table) {
   return table
     ? `시즌별 사용 = 시즌 하나가 칸 하나, 칠한 칸은 시즌 티어 ${minTier} 이상인 시즌(색 = 그 시즌 티어) · 수명 = 지금 쓰이는 흐름이 `
       + `언제부터 얼마나 이어졌나 · 은퇴 = ${retired} · 복귀 = 은퇴한 뒤 다시 쓰임. ${general}`
-    : !app.state.showNums ? `흑백 얼굴 = 은퇴(${retired}). `
+    : !app.state.showBands ? `흑백 얼굴 = 은퇴(${retired}). `
     : [`흑백 얼굴 = 은퇴(${retired}). 이름 아래 띠 = 범용도, 속성 색이 찰수록 자기 속성 약점에서만 쓰임: `, generalityLegend(),
       ` (범용도 ${app.state.params.generalityBands.map((v) => v.toFixed(2)).join(" · ")}에서 나눔). `];
 }
@@ -59,7 +59,7 @@ function overallBody(app, view) {
     key: `overall-${state.season ?? "now"}`, cuts: state.params.overallCuts,
     card: (it) => unitCard(app, it.u, {
       value: it.value, tier: it.tier, provisional: it.o.provisional, heart: it.o.treasure,
-      retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band, nums: state.showNums, tip: () => standingTip(app, it.u, view),
+      retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band, nums: state.showNums, bands: state.showBands, tip: () => standingTip(app, it.u, view),
     }),
     note: explain,
   });
@@ -217,7 +217,7 @@ function elementBody(app, view, element) {
     key: `element-${element}-${state.season ?? "now"}`,
     card: (it) => unitCard(app, it.u, {
       value: it.value, tier: it.tier, heart: it.r.o.treasure, retired: view.life.get(it.u)?.retired, band: view.generality.get(it.u)?.band,
-      nums: state.showNums,
+      nums: state.showNums, bands: state.showBands,
       tip: () => standingTip(app, it.u, view, { element }),
     }),
     note: explain,

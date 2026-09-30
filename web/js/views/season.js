@@ -32,7 +32,7 @@ export function seasonView(app) {
     filterRow(app),
     h("div", { class: "toolbar-end" },
       unused ? toggle(`안 쓴 니케 ${unused}명도`, state.showUnused, (v) => { state.showUnused = v; app.rerender(); }) : null,
-      state.mode === "table" ? null : numsToggle(app),
+      state.mode === "table" ? null : numsToggle(app, { bands: false }),
       modeSwitch(app))));
   if (state.mode === "table") {
     root.append(seasonTable(app, entry, shown));

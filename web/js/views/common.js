@@ -16,8 +16,9 @@ export const fold = (text) => (text || "").toLowerCase().replace(/[\s:·\-_.()]/
 // ``pick`` makes the card a toggle (the comparison's list): {on, href, onclick} in place of
 // the link to the unit.
 // ``band`` is its generality band (속성 특화 · 속성 위주 · 범용), shown as a bar under the name.
-export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, band, tip, extra, pick = null, nums = true } = {}) {
-  if (!nums) { value = null; band = null; }
+export function unitCard(app, u, { value, tier, provisional, heart, dim, retired, band, tip, extra, pick = null, nums = true, bands = true } = {}) {
+  if (!nums) value = null;
+  if (!bands) band = null;
   const unit = app.model.units[u];
   const [first, second] = nameLines(unit);
   const card = h("a", {
@@ -158,9 +159,14 @@ export function filterRow(app) {
   return h("div", { class: "filters", role: "group", "aria-label": "필터" }, groups, clear);
 }
 
-// Whether the tier board's cards show their number and generality bar (hidden by default).
-export function numsToggle(app) {
-  return toggle("숫자·범용도", app.state.showNums, (v) => { app.state.showNums = v; app.rerender(); });
+// Whether the tier board's cards show their number (기여도) and, where they have one, their
+// generality bar: each hidden by default.
+export function numsToggle(app, { bands = true } = {}) {
+  const { state } = app;
+  return [
+    toggle("기여도", state.showNums, (v) => { state.showNums = v; app.rerender(); }),
+    bands ? toggle("범용도", state.showBands, (v) => { state.showBands = v; app.rerender(); }) : null,
+  ];
 }
 
 // Tiers or the list (the same units as a table, with their columns).

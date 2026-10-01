@@ -31,7 +31,8 @@ multiple. Splitting the deck's damage into the members' own damage needs
 damage per unit, which the rankings do not give - the same wall as the role
 (CLAUDE.md), and the study does not try.
 
-Nothing computed here feeds the tiers, the committed tables or the tier site.
+Nothing computed here feeds the tiers or the committed tables. The tier site draws it (메타 변화 ·
+체급) from ``site``, computed once when the site is built: the page's parameters do not move it.
 """
 
 from __future__ import annotations
@@ -302,7 +303,7 @@ def swap_check(result: Fit, *, ridge: float = RIDGE) -> dict[str, float]:
 # the report
 # --------------------------------------------------------------------------
 
-def load(data_dir=None):
+def load(data_dir=None, config=None):
     """raid_entries (Solo Raid, the configured servers), the committed season x unit table and the roster."""
     from .analyze.pipeline import load_inputs
     from .paths import processed_dir
@@ -316,10 +317,52 @@ def load(data_dir=None):
     entries = inputs["entries"]
     if "content" in entries.columns:
         entries = entries[entries["content"] == "soloraid"]
-    config = book.config
+    config = config or book.config
     entries = metrics.select_population(entries, top_n=config.top_n, servers=config.servers,
                                         exclude=config.exclude_servers)
     return entries, book.history, inputs["roster"], config
+
+
+def payload(entries: pd.DataFrame, history: pd.DataFrame, *, weighting: str = "dcg",
+            reference: tuple[str, str] = REFERENCE) -> dict | None:
+    """What the site's 메타 변화 · 체급 view draws: every cell (``log`` weight against ``reference``,
+    ``se``, ``decks``, ``status``, the partner of a pair and the pair's ``pairLog``), the field season
+    by season (``TOP`` strongest cells out then, geometric mean) and the season each unit's treasure
+    first played. None when the reference never played (no scale to put the weights on)."""
+    result = fit(cells(entries, history), weighting=weighting)
+    if f"{reference[0]}:{reference[1]}" not in result.cells:
+        return None
+    table = weights(result, reference=reference)
+    field = field_strength(table, history)
+    played = history[tiers.played_with_treasure(history).to_numpy()]
+    treasure_from = played.groupby(played["unit_id"].astype(str))["season"].min()
+    rounded = lambda v: round(float(v), 4) if np.isfinite(v) else None
+    return {
+        "reference": reference[0],
+        "decks": int(len(result.decks)),
+        "top": TOP,
+        "minDecks": MIN_DECKS,
+        "maxSe": MAX_SE,
+        "cells": [{"unit": str(r.unit_id), "own": bool(r.own), "treasure": bool(r.treasure), "log": rounded(r.log),
+                   "se": rounded(r.se), "decks": int(r.decks), "status": str(r.status),
+                   "partner": str(r.partner).split(":")[0].rstrip("T") if r.status == "pair" else None,
+                   "pairLog": rounded(np.log(r.pair_weight)) if r.status == "pair" else None}
+                  for r in table.sort_values("cell").itertuples()],
+        "field": [[int(season), rounded(value)] for season, value in field.items()],
+        "treasureFrom": {unit: int(season) for unit, season in sorted(treasure_from.items())},
+    }
+
+
+def site(data_dir=None, config=None) -> dict | None:
+    """``payload`` from the processed tables (the site's ``data/power.json``), None without the metric tables."""
+    from .paths import processed_dir
+
+    directory = data_dir or processed_dir()
+    if not (directory / "metrics_unit_season.csv").is_file():
+        return None
+    entries, history, _roster, config = load(directory, config)
+    history = history.assign(season=pd.to_numeric(history["season"]).astype(int))
+    return payload(entries, history, weighting=config.rank_weighting)
 
 
 def report(data_dir=None) -> str:

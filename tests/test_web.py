@@ -91,6 +91,8 @@ def test_build_writes_the_page_its_data_and_icons(site, world_dir):
     assert len(ranker) == 2 + 5 and all(len(deck) == 6 and deck[0] > 0 for deck in ranker[2:])
     fire = next(u for u in model["units"] if u["id"] == world.element_dps["Fire"])
     assert fire["treasure"] is not None and fire["treasureElements"] == ["Iron"]
+    # the 체급 study needs its reference unit (홍련), which the synthetic world does not have
+    assert json.loads((out / "data" / "power.json").read_text(encoding="utf-8")) is None
 
 
 def test_a_season_shows_once_a_notice_schedules_it(world_dir, tmp_path):

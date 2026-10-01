@@ -13,17 +13,18 @@ import { pickView } from "./views/pick.js";
 import { compareView, COMPARE_MAX } from "./views/trend.js";
 import { metaView } from "./views/meta.js";
 import { tierMixView } from "./views/tiermix.js";
+import { powerView } from "./views/power.js";
 
 const TABS = ["tier", "trend", "meta"];
 const TRENDS = ["unit", "compare"];
-const METAS = ["generality", "tiers"];
+const METAS = ["generality", "tiers", "power"];
 const VIEWS = {
   tier: (app) => (app.state.view === "raid" ? seasonView(app) : dateView(app)),
   trend: (app) => ({
     unit: () => (app.state.unit == null ? pickView(app) : unitView(app)),
     compare: () => compareView(app),
   })[app.state.trend](),
-  meta: (app) => (app.state.meta === "tiers" ? tierMixView(app) : metaView(app)),
+  meta: (app) => ({ tiers: tierMixView, power: powerView }[app.state.meta] || metaView)(app),
 };
 
 const state = {
@@ -34,7 +35,7 @@ const state = {
   mode: "tiers", // 티어표: tiers | table
   trend: "unit", // 변화: unit (the list, or one unit) | compare
   unit: null, // unit index; null on 변화 · unit = the list to pick one from
-  meta: "generality", // 메타 변화: generality | tiers
+  meta: "generality", // 메타 변화: generality | tiers | power
   compare: [], // the units compared, in the order they were added
   query: "", // the unit list's search
   params: null,
@@ -46,7 +47,7 @@ const state = {
   sort: {},
 };
 
-const app = { state, model: null, decks: null, defaults: null };
+const app = { state, model: null, decks: null, power: null, defaults: null };
 const cache = { pop: null, popKey: null, hist: null, histKey: null, views: new Map(), meta: null, metaKey: null, elems: null, elemsKey: null };
 
 // ---------------------------------------------------------------------------
@@ -182,7 +183,7 @@ function hashOf(st) {
     if (st.view !== "overall") extra.v = st.view;
     if (st.mode === "table") extra.m = "table";
   } else if (st.tab === "meta") {
-    path = st.meta === "tiers" ? "#/meta/tiers" : "#/meta";
+    path = st.meta === "generality" ? "#/meta" : `#/meta/${st.meta}`;
   } else {
     const arg = st.trend === "unit" ? (st.unit != null ? app.model.units[st.unit].id : null) : st.trend;
     path = `#/trend${arg != null ? `/${arg}` : ""}`;
@@ -330,7 +331,7 @@ function render() {
   main.replaceChildren(content);
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
-  const place = state.tab === "meta" ? (state.meta === "tiers" ? "메타 변화 · 티어 분포" : "메타 변화") : state.tab === "tier"
+  const place = state.tab === "meta" ? ({ tiers: "메타 변화 · 티어 분포", power: "메타 변화 · 체급" }[state.meta] || "메타 변화") : state.tab === "tier"
     ? (state.view === "raid" ? "레이드별 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 약점 티어`)
     : state.trend === "compare" ? (state.weak ? `니케 비교 · ${ELEMENT_KO[state.weak]} 약점` : "니케 비교")
       : state.unit != null ? `${unitName(app.model.units[state.unit])} · 니케` : "니케";
@@ -388,6 +389,8 @@ async function boot() {
   try {
     const model = await (await fetch("data/model.json", { cache: "no-cache" })).json();
     const decks = await (await fetch(`data/decks.json?v=${model.dataVersion}`)).json();
+    // the 체급 study, precomputed: the page goes on without it (its subtab says so)
+    app.power = await fetch(`data/power.json?v=${model.dataVersion}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
     model.byId = new Map(model.units.map((u, i) => [u.id, i]));
     model.bySeason = new Map(model.seasons.map((s) => [s.season, s]));
     app.model = model;

@@ -1092,6 +1092,24 @@ a.cmp-head:hover span { color: var(--accent); }
 .cohort-seg { background: var(--sc); color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center;
   justify-content: center; min-width: 0; overflow: hidden; white-space: nowrap; }
 .cohort-rest { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.s-field { --sc: var(--ink-2); }
+.power-dots .dot-unit { cursor: pointer; }
+.power-dots .dot-unit circle { fill: currentColor; stroke: var(--surface); stroke-width: 1.5; }
+.power-dots .dot-unit.hollow circle { fill: var(--surface); stroke: currentColor; stroke-width: 2; }
+.power-dots .dot-unit.out { opacity: .22; }
+.power-dots .dot-unit.on circle { stroke: var(--ink); stroke-width: 2.5; }
+.power-dots .dot-unit:focus-visible circle { stroke: var(--accent); stroke-width: 3; }
+.power-dots .fit { stroke: var(--ink); stroke-width: 2; pointer-events: none; }
+.power-dots .fit.q75 { stroke: var(--accent); stroke-dasharray: 6 4; }
+.power-dots .fit.q90 { stroke: var(--accent-2); stroke-dasharray: 2 4; stroke-width: 2.5; stroke-linecap: round; }
+.power-dots .fit-label { font-weight: 700; }
+.table-note { margin: 0; padding: 0 18px 8px; }
+.power-unit { display: inline-flex; align-items: center; gap: 8px; }
+.power-dots .fit-label.q75 { fill: var(--accent); }
+.power-dots .fit-label.q90 { fill: var(--accent-2); }
+.sw.fit-sw.q75 { background: repeating-linear-gradient(90deg, var(--accent) 0 6px, transparent 6px 9px); }
+.sw.fit-sw.q90 { background: repeating-linear-gradient(90deg, var(--accent-2) 0 3px, transparent 3px 6px); }
+.sw.dot-sw { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--ink-2); }
 .debut-dots .dot-unit { cursor: pointer; }
 .debut-dots .dot-unit circle { stroke: var(--surface); stroke-width: 1.5; }
 .curve-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }

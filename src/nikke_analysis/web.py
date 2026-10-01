@@ -13,6 +13,10 @@ step). This module gives it its data and puts the two together:
                      config/tiers.yaml
 ``data/decks.json``  every ranked player's fought decks, season by season: the
                      server, the rank, and each deck's damage and units
+``data/power.json``  the 체급 study (power.py ``site``): every unit's weight, the
+                     field season by season - computed here once with the default
+                     parameters, so the page draws it as it is (null when it
+                     cannot be computed)
 ``icons/``           the unit faces, boss pictures and attribute icons of
                      data/assets/icons/
 
@@ -41,6 +45,7 @@ from typing import Any
 
 import pandas as pd
 
+from . import power
 from .analyze import metrics, tiers
 from .paths import REPO_ROOT, boss_icon_path, icons_dir, processed_dir
 from .servers import SERVER_KO, ordered
@@ -255,7 +260,8 @@ def build(
         raise RuntimeError(f"no page to build: {source / 'index.html'} is missing")
     model, decks = export(data_dir, config, icons)
     model_text, decks_text = _dump(model), _dump(decks)
-    data_stamp = hashlib.sha256((model_text + decks_text).encode("utf-8")).hexdigest()[:12]
+    power_text = _dump(power.site(data_dir, config))
+    data_stamp = hashlib.sha256((model_text + decks_text + power_text).encode("utf-8")).hexdigest()[:12]
     model["dataVersion"] = data_stamp
     model_text = _dump(model)
 
@@ -279,6 +285,7 @@ def build(
     (target / "data").mkdir(exist_ok=True)
     (target / "data" / "model.json").write_text(model_text, encoding="utf-8")
     (target / "data" / "decks.json").write_text(decks_text, encoding="utf-8")
+    (target / "data" / "power.json").write_text(power_text, encoding="utf-8")
     (target / ".nojekyll").write_text("", encoding="utf-8")
 
     icon_root = icons or icons_dir()
@@ -304,7 +311,8 @@ def build(
         "icons": copied,
         "data_version": data_stamp,
         "code_version": stamp,
-        "bytes": {"model.json": len(model_text.encode("utf-8")), "decks.json": len(decks_text.encode("utf-8"))},
+        "bytes": {"model.json": len(model_text.encode("utf-8")), "decks.json": len(decks_text.encode("utf-8")),
+                  "power.json": len(power_text.encode("utf-8"))},
     }
     log.info("site built in %s: %s seasons, %s rankers", target, summary["ranked_seasons"], rankers)
     return summary

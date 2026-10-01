@@ -5,7 +5,7 @@
 //   points  [{label (the x tick), key (what the tooltip names)}]
 //   series  [{name, cls (colour class: s-<cls>), values: one per point, null for none}]
 //   stacked areas, each on the ones before it (values are counts or shares)
-//   max, ticks, format   the y axis: 0 to max, the grid lines, how a value reads
+//   min, max, ticks, format   the y axis: min (0 unless given) to max, the grid lines, how a value reads
 //   zones   [{from, to, cls, label}] behind the marks (the generality bands)
 //   tip(i)  the tooltip of point i; mark (a point index) a dashed line after it
 
@@ -13,7 +13,7 @@ import { h, s, showTip, moveTip, hideTip } from "./ui.js";
 
 const MARGIN = { l: 40, r: 70, t: 14, b: 30 };
 
-export function lineChart({ points, series, stacked = false, max, ticks, format = String, zones = [], tip, mark = null,
+export function lineChart({ points, series, stacked = false, min = 0, max, ticks, format = String, zones = [], tip, mark = null,
   height = 220, label, xLabel = "시즌" }) {
   const host = h("div", { class: "chart-host lc-host", tabindex: "0", role: "img", "aria-label": label,
     style: { minHeight: `${height}px` } });
@@ -60,8 +60,8 @@ export function lineChart({ points, series, stacked = false, max, ticks, format 
     const ih = height - m.t - m.b;
     const step = iw / Math.max(n, 1);
     const x = (i) => m.l + step * (i + 0.5);
-    const y = (v) => m.t + ih * (1 - Math.min(v, max) / max);
-    const base = y(0);
+    const y = (v) => m.t + ih * (1 - (Math.min(v, max) - min) / (max - min));
+    const base = y(min);
     const svg = s("svg", { width, height, viewBox: `0 0 ${width} ${height}`, class: "traj lc" });
 
     const back = s("g", { class: "bands" });
@@ -72,7 +72,7 @@ export function lineChart({ points, series, stacked = false, max, ticks, format 
       }
     }
     for (const v of ticks) {
-      back.append(s("line", { class: v === 0 ? "axis" : "grid", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }));
+      back.append(s("line", { class: v === min ? "axis" : "grid", x1: m.l, x2: m.l + iw, y1: y(v), y2: y(v) }));
       back.append(s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, format(v)));
     }
     svg.append(back);

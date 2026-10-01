@@ -108,3 +108,30 @@ def test_the_field_is_the_strongest_cells_out_that_season():
     table = pd.DataFrame({"cell": ["a:own", "b:other", "a:other", "c:own"], "log": [np.log(2), 0.0, 0.0, np.log(4)]})
     top = power.field_strength(table, history)
     assert top[1] == pytest.approx(np.sqrt(2)) and top[2] == pytest.approx(4 ** (1 / 3))
+
+
+def test_the_site_gets_every_cell_and_the_field():
+    entries, table = world()
+    data = power.payload(entries, table, reference=("u00", "other"))
+    by_cell = {(c["unit"], c["own"], c["treasure"]): c for c in data["cells"]}
+    weights = power.weights(power.fit(power.cells(entries, table)), reference=("u00", "other")).set_index("cell")
+    assert by_cell[("u00", False, False)]["log"] == 0.0
+    assert by_cell[("u05", False, False)]["log"] == pytest.approx(weights.at["u05:other", "log"], abs=1e-4)
+    pair = by_cell[("p0", False, False)]
+    assert pair["status"] == "pair" and pair["partner"] == "p1"
+    assert pair["pairLog"] == pytest.approx(np.log(weights.at["p0:other", "pair_weight"]), abs=1e-4)
+    assert [season for season, _ in data["field"]] == [1, 2] and all(v > 1 for _, v in data["field"])
+    assert data["treasureFrom"] == {}
+
+
+def test_the_site_gets_the_season_a_treasure_first_played():
+    entries, table = world()
+    table.loc[(table["unit_id"] == "u03") & (table["season"] == 2), "treasure"] = True
+    data = power.payload(entries, table, reference=("u00", "other"))
+    assert data["treasureFrom"] == {"u03": 2}
+    assert {(c["unit"], c["treasure"]) for c in data["cells"] if c["unit"] == "u03"} == {("u03", False), ("u03", True)}
+
+
+def test_no_site_data_without_the_reference():
+    entries, table = world()
+    assert power.payload(entries, table, reference=("zz", "own")) is None

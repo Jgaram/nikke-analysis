@@ -39,7 +39,7 @@
 | 시즌 사용률 `nikke raid` | ✅ 시즌별 사용 순위·사용률·덱 순위 분포(1덱~5덱), 서버·순위로 좁히기 |
 | 서버 선택 | ✅ 기본은 6개 서버 전체. `--server`(그 서버만) · `--exclude`(그 서버만 빼고)를 `tier`·`raid`·`analyze`·`viz` 에서, 기본 표본은 `config/tiers.yaml` 에서 |
 | 티어 사이트 | ✅ GitHub Pages (`web/`, `nikke web`). 티어표(종합 · 보스 약점별 · 레이드별, 니케마다 수명, 보스 줄이 시간축) · 니케(니케 한 명 · 니케 비교) · 메타 변화(범용도 분포 · 티어 분포). `config/tiers.yaml` 의 인자를 전부 페이지에서 바꾸면 브라우저가 바로 다시 계산한다 |
-| CI 자동 갱신 | ✅ 주 2회 (`.github/workflows/refresh.yml`) |
+| CI 자동 갱신 | ✅ 매일 + 시즌 종료 뒤 매시간 확인 (`.github/workflows/refresh.yml`) |
 | 작업 반영 | ✅ 브랜치는 `main` 하나. 세션 브랜치(`claude/*`)에 push 하면 테스트 통과 후 main 에 자동 병합, 브랜치 삭제 (`.github/workflows/merge-to-main.yml`) |
 
 `data/processed/` 의 표들은 실제로 생성된 데이터다. 테스트 305개.
@@ -71,7 +71,7 @@ pytest -q
 ### 티어 사이트
 
 같은 티어를 브라우저에서 보는 페이지(`web/`)다. GitHub Pages 에 올라가고
-(`.github/workflows/pages.yml`), main 이 바뀔 때마다 — 주 2회 데이터 갱신 포함 — 다시 만들어진다.
+(`.github/workflows/pages.yml`), main 이 바뀔 때마다 — 매일 데이터 갱신 포함 — 다시 만들어진다.
 
 탭은 셋이다. **티어표**는 한 시점에 누가 어디 서 있나, **니케**는 한 니케(또는 여럿)가 시간에 따라 어떻게 움직였나, **메타 변화**는 메타 자체가 보스 약점을 얼마나 따르게 됐나(범용도 분포)와 티어마다 니케가 몇 명인가(티어 분포).
 어느 화면이든 위의 보스 줄이 시간축이다: 시즌(보스)을 고르면 모든 화면이 그 시즌이 끝났을 때 기준이 되고, 안 고르면
@@ -373,7 +373,7 @@ nikke refresh        # 또는 python -m nikke_analysis refresh
 
 이 한 줄이 공지·로스터·enikk 를 새로 받고 모든 표를 다시 만든다. 공지 해석은 전부
 고정 규칙(정규식)이고 런타임에 AI·LLM 호출은 없다. 같은 입력이면 결과가 바이트
-단위로 같다. GitHub Actions 가 주 2회(월·목) 이 명령을 돌려 결과를 커밋하므로,
+단위로 같다. GitHub Actions 가 매일(15시경 KST) 이 명령을 돌려 결과를 커밋하므로,
 평소에는 아무것도 실행하지 않아도 `git pull` 만 하면 최신이다.
 
 그 사이에는 매시간 `nikke due` 가 랭킹만 보고 갱신이 필요한지 묻는다. 진행 중인 시즌은

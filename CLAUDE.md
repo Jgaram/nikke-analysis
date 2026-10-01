@@ -14,7 +14,7 @@
   push 한 뒤 Actions 의 `merge-to-main` 실행 결과를 확인하고, 실패했으면
   `git fetch origin main && git merge origin/main` 으로 최신 main 을 받아 고친 뒤
   다시 push 한다.
-- main 에는 `refresh` 워크플로도 주 2회 데이터 커밋을 올린다. 세션이 길어졌으면
+- main 에는 `refresh` 워크플로도 매일(시즌이 막 끝났으면 매시간) 데이터 커밋을 올린다. 세션이 길어졌으면
   push 전에 위 명령으로 main 을 따라잡는다.
 - 새 브랜치를 따로 만들지 않는다. 자동 병합은 `claude/` 나 `ccr-` 로 시작하는 브랜치만 한다
   (세션이 받은 브랜치 이름 그대로 push 하면 된다).

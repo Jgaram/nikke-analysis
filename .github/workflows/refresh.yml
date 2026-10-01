@@ -12,15 +12,14 @@ name: refresh
 
 on:
   schedule:
-    # Monday and Thursday, 06:00 UTC (15:00 KST): update notices go up early in
-    # the week and updates land on Thursday mornings KST, so both a new notice
-    # and the maintenance that follows it are caught within a few days.
-    - cron: "0 6 * * 1,4"
+    # Every day, 06:11 UTC (15:11 KST): the whole refresh, so a new notice, a
+    # new unit or a changed season date is in within a day. A quiet day commits
+    # nothing. Off the hour, when scheduled runs are least delayed.
+    - cron: "11 6 * * *"
     # Every hour, a cheap check (`nikke due`) that runs the refresh only when
     # the rankings need it: a season being played, once a day; a season that
-    # just ended, until enikk posts its final ranking (at most a week). Off the
-    # hour, when scheduled runs are least delayed. Keep in step with the `if`
-    # in the `due` job below.
+    # just ended, until enikk posts its final ranking (at most a week). Keep in
+    # step with the `if` in the `due` job below.
     - cron: "23 * * * *"
   workflow_dispatch:
     inputs:

@@ -1,8 +1,8 @@
 """Is a refresh due now? The hourly check behind the scheduled workflow.
 
-The full ``nikke refresh`` runs on Monday and Thursday whatever happens, which
-is what picks up a new notice. Between those, the rankings have two moments a
-few days' wait would cost:
+The full ``nikke refresh`` runs once a day whatever happens, which is what
+picks up a new notice. Between those, the rankings have two moments worth not
+waiting for:
 
 * a season being played - its tiers are only as current as the last read, so
   it is read once a day (``LIVE_EVERY``).
@@ -89,7 +89,7 @@ def decide(
 
 def check(now: datetime, directory: Path | None = None) -> Due:
     """``decide`` on what is on disk and enikk's season list. When enikk cannot be reached the answer
-    is "not due": the Monday/Thursday refresh is the one that reports an outage."""
+    is "not due": the daily refresh is the one that reports an outage."""
     from .collect import enikk
     from .config import load_enikk_config
     from .util.http import Fetcher

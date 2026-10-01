@@ -1104,6 +1104,15 @@ a.cmp-head:hover span { color: var(--accent); }
 .power-dots .fit.q90 { stroke: var(--accent-2); stroke-dasharray: 2 4; stroke-width: 2.5; stroke-linecap: round; }
 .power-dots .fit-label { font-weight: 700; }
 .table-note { margin: 0; padding: 0 18px 8px; }
+.caution { border: 1px solid color-mix(in srgb, var(--t-S) 45%, var(--line)); border-left: 4px solid var(--t-S);
+  background: color-mix(in srgb, var(--t-S) 9%, var(--surface)); border-radius: var(--radius); padding: 10px 14px;
+  font-size: 13.5px; line-height: 1.6; color: var(--ink-2); }
+.caution p { margin: 0; }
+.caution b { color: var(--ink); }
+.caution b::before { content: "⚠ "; color: var(--t-S); }
+.caution summary { cursor: pointer; margin-top: 4px; font-size: 12.5px; color: var(--ink-3); width: fit-content; }
+.caution summary:hover { color: var(--ink); }
+.caution ul { margin: 6px 0 2px; padding-left: 18px; display: grid; gap: 3px; font-size: 12.5px; }
 .power-unit { display: inline-flex; align-items: center; gap: 8px; }
 .power-dots .fit-label.q75 { fill: var(--accent); }
 .power-dots .fit-label.q90 { fill: var(--accent-2); }

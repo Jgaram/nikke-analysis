@@ -32,7 +32,7 @@ damage per unit, which the rankings do not give - the same wall as the role
 (CLAUDE.md), and the study does not try.
 
 Nothing computed here feeds the tiers or the committed tables. The tier site draws it (메타 변화 ·
-체급) from ``site``, computed once when the site is built: the page's parameters do not move it.
+파워 인플레) from ``site``, computed once when the site is built: the page's parameters do not move it.
 """
 
 from __future__ import annotations
@@ -325,7 +325,7 @@ def load(data_dir=None, config=None):
 
 def payload(entries: pd.DataFrame, history: pd.DataFrame, *, weighting: str = "dcg",
             reference: tuple[str, str] = REFERENCE) -> dict | None:
-    """What the site's 메타 변화 · 체급 view draws: every cell (``log`` weight against ``reference``,
+    """What the site's 메타 변화 · 파워 인플레 view draws: every cell (``log`` weight against ``reference``,
     ``se``, ``decks``, ``status``, the partner of a pair and the pair's ``pairLog``), the field season
     by season (``TOP`` strongest cells out then, geometric mean) and the season each unit's treasure
     first played. None when the reference never played (no scale to put the weights on)."""

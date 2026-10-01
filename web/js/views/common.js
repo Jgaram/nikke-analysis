@@ -200,12 +200,12 @@ export function trendTabs(app) {
   ], app.state.trend, (v) => app.go({ trend: v, weak: null }), { class: "viewtabs", label: "변화 보기" }));
 }
 
-// 메타 변화's views: the generality of the units in use, how many units each tier holds, or the 체급.
+// 메타 변화's views: the generality of the units in use, how many units each tier holds, or the power creep.
 export function metaTabs(app) {
   return h("nav", { class: "kindbar", "aria-label": "메타 보기" }, segmented([
     { value: "generality", label: "범용도 분포", title: "쓰인 니케의 범용도, 약점을 따르는 정도, 새 니케의 첫 1년, 생애 곡선" },
     { value: "tiers", label: "티어 분포", title: "시즌마다 티어별 니케 수 — 그때의 종합 티어 · 속성 티어, 또는 시즌 티어" },
-    { value: "power", label: "체급", title: "니케마다 시즌과 무관한 체급(홍련 자리에 넣으면 덱 대미지가 몇 배)을 출시일 순으로 — 파워 인플레와 판의 세기" },
+    { value: "power", label: "파워 인플레", title: "니케마다 시즌과 무관한 체급(홍련 자리에 넣으면 덱 대미지가 몇 배)을 출시일 순으로, 그리고 시즌별 파워 — 실험적인 지표" },
   ], app.state.meta, (v) => app.go({ meta: v }), { class: "viewtabs", label: "메타 보기" }));
 }
 

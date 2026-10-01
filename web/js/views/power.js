@@ -1,4 +1,4 @@
-// 메타 변화 · 체급: every unit's 체급 (power.py, docs/power.md) by release date, and the field
+// 메타 변화 · 파워 인플레: every unit's 체급 (power.py, docs/power.md) by release date, and the field
 // season by season. The 체급 is computed once when the site is built (data/power.json, the default
 // parameters): the page's parameters move only the tier filter here, never the weights.
 // It is a deck multiple - a floor under the unit's own damage multiple - and not a role.
@@ -18,11 +18,15 @@ const SIDES = {
 const YEAR_MS = 365.25 * DAY_MS;
 const QUANTILES = [0.75, 0.9];
 const TICKS = [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4];
-const STATUS_KO = { ok: "잘 잼", provisional: "잠정", pair: "짝으로만" };
 
 const help = (name, ...body) => h("div", { class: "tip tip-help" }, h("div", { class: "tip-name" }, name), ...body);
 const times = (log) => (log == null ? "–" : `${num(Math.exp(log))}`);
-const perYear = (b) => (b == null || Number.isNaN(b) ? "–" : `×${Math.exp(b).toFixed(3)}`);
+// a year's later release, as a percent: +15%
+const perYear = (b) => {
+  if (b == null || Number.isNaN(b)) return "–";
+  const p = Math.round(Math.expm1(b) * 100);
+  return `${p >= 0 ? "+" : "−"}${Math.abs(p)}%`;
+};
 
 // ---------------------------------------------------------------------------
 // fits: y = a + b x, least squares and quantiles (iteratively reweighted)
@@ -108,40 +112,56 @@ function fits(list) {
 // ---------------------------------------------------------------------------
 
 function powerHelp(app, data) {
-  return help("체급",
+  return help("출시일과 체급",
     h("p", null, h("b", null, "체급 = 홍련 자리에 이 니케를 넣으면 덱 대미지가 몇 배가 되나"), " (홍련이 자기 속성 시즌에 쓰일 때 = 1). "
-      + "같은 랭커의 다섯 덱끼리만 비교해서(계정 육성·실력·보스가 지워진다) 전 시즌 덱을 한 번에 풉니다. "
-      + "니케 하나에 칸이 넷 — 자기 속성 시즌 / 다른 속성 시즌 × 애장품 전 / 뒤. 이 그래프는 애장품 전 칸입니다."),
-    h("p", null, "체급은 시즌과 무관한 고정 값입니다. 그래서 출시일 순으로 늘어놓으면 새 니케가 얼마나 세게 나왔는지(파워 인플레)가 기울기로 보입니다. "
-      + "선은 출시가 1년 늦을 때 체급이 몇 배인지: 평균(최소제곱)과 75% · 90% 분위선. 분위선은 아래쪽에 깔린, 레이드에 거의 안 쓰인 니케에 덜 흔들립니다."),
-    h("p", null, h("b", null, "덱 대미지 배수"), "라 니케 자기 딜 배수의 하한입니다(자기 딜이 2배여도 덱의 절반 몫이면 덱은 1.5배). 역할(딜러·서포터)을 뜻하지 않습니다."),
-    h("p", { class: "muted" }, `잘 잰 칸(덱 ${data.minDecks}개 이상, 표준오차 ±${Math.round(data.maxSe * 100)}% 이하)만 선에 넣습니다. 잠정 칸은 속이 빈 점, `
-      + "늘 같이 쓰인 짝은 짝으로만 잴 수 있어 선에서 뺍니다. 덱에 한 번도 안 들어간 니케는 체급이 없습니다(0이 아니라 모름)."),
-    h("p", { class: "muted" }, `체급은 사이트를 만들 때 기본 설정으로 한 번 계산한 값입니다(덱 ${int(data.decks)}개). 아래 인자는 티어 필터만 움직입니다. `
-      + "자세한 건 docs/power.md."),
-    paramsNote([
-      [PARAM.cuts, "티어 필터의 시즌 티어 컷"],
-      [PARAM.sample, "티어 필터의 기여도 (체급은 그대로)"],
-    ]));
+      + "같은 랭커의 다섯 덱끼리만 비교해서(계정 육성·실력·보스가 지워진다) 전 시즌 덱을 한 번에 풉니다. 시즌과 무관한 고정 값이고, "
+      + "자기 속성 시즌 / 다른 속성 시즌, 애장품 전 / 뒤를 따로 잽니다. 이 그래프는 애장품 전입니다."),
+    h("p", null, "점 하나가 니케 하나(색 = 속성), 세로축은 로그 눈금입니다. 선 끝의 숫자는 출시가 1년 늦을 때 체급이 몇 % 높은가 — 이게 파워 인플레입니다. "
+      + "평균선과, 그보다 위쪽을 따라가는 상위 25% · 상위 10% 선(분위 회귀)을 그립니다. 위쪽 선은 레이드에 거의 안 쓰인 니케가 아래에 깔려도 덜 흔들립니다."),
+    h("p", null, "점을 누르면 아래 시즌별 파워 그래프에 그 니케가 같이 그려집니다."),
+    h("p", { class: "muted" }, `덱 ${data.minDecks}개 이상이고 표준오차 ±${Math.round(data.maxSe * 100)}% 이하인 칸만 선에 넣습니다. 속이 빈 점은 잠정이거나, `
+      + "늘 같이 쓰여 둘을 묶어서만 잴 수 있는 니케입니다(선에서 뺌). 덱에 한 번도 안 들어간 니케는 점이 없습니다(0이 아니라 모름)."),
+    h("p", { class: "muted" }, `사이트를 만들 때 기본 설정으로 한 번 계산한 값입니다(덱 ${int(data.decks)}개). 자세한 건 docs/power.md.`));
 }
 
 function filterHelp() {
-  return help("시즌 티어로 거르기",
+  return help("선에 넣을 니케",
     h("p", null, "레이드용이 아닌 니케를 빼 보려고, 어느 시즌에서든 시즌 티어를 그 이상 찍은 적 있는 니케만 선에 넣습니다. 빠진 니케는 흐리게 남깁니다."),
     h("p", null, "시즌 티어는 그 시즌 안의 몫이라 시대가 달라도 \"그때 레이드에서 쓰였나\"를 같은 뜻으로 묻습니다. 다만 체급과 독립은 아닙니다:"),
     h("ul", null,
       h("li", null, "같은 랭킹에서 나온 값이라 결과로 고르는 셈입니다."),
-      h("li", null, "판이 세질수록 같은 티어를 찍는 데 필요한 체급이 올라, 새 니케가 더 세게 걸러집니다(기울기를 키우는 쪽)."),
+      h("li", null, "시즌 파워가 오를수록 같은 티어를 찍는 데 필요한 체급이 올라, 새 니케가 더 세게 걸러집니다(인플레를 키우는 쪽)."),
       h("li", null, "오래된 니케는 시즌을 많이 겪어 한 번이라도 높게 찍을 기회가 많습니다.")),
-    h("p", { class: "muted" }, "그래서 하나의 답보다 필터마다 기울기가 얼마나 움직이는지를 보세요. 자기 속성 시즌 기울기는 거의 안 움직이고, 다른 속성 시즌 기울기는 크게 움직입니다."));
+    h("p", { class: "muted" }, "필터를 바꿔 가며 선이 얼마나 움직이는지 보세요. 자기 속성 시즌은 거의 안 움직이고, 다른 속성 시즌은 꽤 움직입니다."),
+    paramsNote([
+      [PARAM.cuts, "시즌 티어 컷"],
+      [PARAM.sample, "시즌 티어의 기여도 (체급은 그대로)"],
+    ]));
 }
 
 function fieldHelp(data) {
-  return help("판의 세기",
-    h("p", null, `시즌마다 그 시즌 시작 때 나와 있던 니케의 그 시즌 칸(약점이 맞으면 자기 속성, 애장품이 있으면 애장품 뒤) 중 체급 상위 ${data.top}칸의 평균(기하평균).`),
-    h("p", null, "니케를 고르면 그 니케의 체급을 같이 그립니다. 체급은 고정이라 선이 평평하고(애장품이 나오면 한 번 오름), 판이 올라가면서 차이가 좁혀집니다 — "
+  return help("시즌별 파워",
+    h("p", null, `시즌마다 그 시즌 시작 때 나와 있던 니케의 그 시즌 체급(약점이 맞으면 자기 속성, 애장품이 있으면 애장품 뒤) 중 상위 ${data.top}칸의 평균(기하평균).`),
+    h("p", null, "니케를 고르면 그 니케의 체급을 같이 그립니다. 체급은 고정이라 선이 평평하고, 시즌 파워가 올라가면서 차이가 좁혀집니다 — "
       + "니케가 안 쓰이게 되는 건 체급이 줄어서가 아니라 더 센 니케가 들어와서입니다."),
     h("p", { class: "muted" }, "출시 뒤 경과별로 덱 대미지의 빗나감이 ±1% 안이고 추세가 없어, 체급을 고정으로 둔 것이 데이터로 받쳐집니다(docs/power.md)."));
+}
+
+// The warning on top: the 체급 is the roughest number on the site.
+function caution() {
+  return h("div", { class: "caution", role: "note" },
+    h("p", null, h("b", null, "실험적인 지표입니다. "), "체급은 랭커들의 덱 대미지에서 거꾸로 추정한 값이라, 계산 방식 때문에 왜곡이 클 수 있습니다. "
+      + "다른 탭의 지표보다 거칠게 읽어 주세요."),
+    h("details", null, h("summary", null, "왜 그런가"),
+      h("ul", null,
+        h("li", null, "덱 대미지를 다섯 멤버 체급의 곱으로 놓았습니다. 합으로 놓아도 데이터에 똑같이 맞아서, \"몇 배\"의 크기가 이 가정에 걸려 있습니다."),
+        h("li", null, "덱 대미지 배수입니다. 니케 자기 딜이 몇 배인지가 아니라 그 하한이고, 역할(딜러·서포터)을 뜻하지 않습니다."),
+        h("li", null, "랭커들이 실제로 한 자리만 바꾼 덱들로 맞혀 보면, 실제 차이가 예측의 0.74배쯤입니다 — 배수가 부풀어 있을 수 있습니다."),
+        h("li", null, "늘 같이 쓰인 니케끼리는 체급을 나눠 갖습니다. 한쪽이 부풀고 다른 쪽이 줄 수 있습니다."),
+        h("li", null, "덱은 랭커가 고른 것입니다. 가진 니케, 육성, 손에 맞는 조합 같은 이유는 데이터에 없습니다."),
+        h("li", null, "보스마다 맞는 니케가 다른 것은 자기 / 다른 속성 시즌 두 갈래로만 나눕니다."),
+        h("li", null, "상위 랭커가 덱에 넣은 니케만 잴 수 있습니다."),
+        h("li", null, "사이트를 만들 때 기본 설정으로 한 번 계산한 값이라, 인자 패널은 시즌 티어 필터만 움직입니다."))));
 }
 
 // ---------------------------------------------------------------------------
@@ -161,16 +181,16 @@ export function powerView(app) {
   const list = points(app, data, side, floor);
 
   root.append(
+    caution(),
     h("div", { class: "toolbar" },
       segmented(Object.entries(SIDES).map(([value, k]) => ({ value, label: k.name, title: k.hint })), side,
         (v) => { state.powerSide = v; app.rerender(); }, { label: "어느 시즌" }),
-      segmented([{ value: null, label: "거르지 않음", title: "잘 잰 칸 모두" },
-        ...labels.map((l, k) => ({ value: k, label: `${l} 이상 찍은 니케`, title: `어느 시즌에서든 시즌 티어 ${l} 이상을 찍은 적 있는 니케만` }))],
-      floor, (v) => { state.powerFloor = v; app.rerender(); }, { label: "선에 넣을 니케" })),
-    h("p", { class: "meta-lede" }, "체급 = 홍련 자리에 넣으면 덱 대미지가 몇 배가 되나(시즌과 무관한 고정 값). 출시일 순으로 늘어놓은 기울기가 파워 인플레입니다. "
-      + "덱 대미지 배수라 니케 자기 딜 배수의 하한이고, 역할을 뜻하지 않습니다."),
-    scatterPanel(app, data, side, list, floor == null ? null : labels[floor]),
-    compareFilters(app, data, labels),
+      h("span", { class: "head-title" },
+        segmented([{ value: null, label: "전체", title: "잘 잰 니케 모두" },
+          ...labels.map((l, k) => ({ value: k, label: `${l} 이상`, title: `어느 시즌에서든 시즌 티어 ${l} 이상을 찍은 적 있는 니케만` }))],
+        floor, (v) => { state.powerFloor = v; app.rerender(); }, { label: "선에 넣을 니케" }),
+        infoButton("선에 넣을 니케", () => filterHelp()))),
+    scatterPanel(app, data, side, list),
     fieldPanel(app, data),
     tablePanel(app, data),
   );
@@ -180,14 +200,14 @@ export function powerView(app) {
 // ---------------------------------------------------------------------------
 // the scatter: release date x 체급, one dot per unit, and the fitted lines
 
-function scatterPanel(app, data, side, list, floorLabel) {
+function scatterPanel(app, data, side, list) {
   const { model, state } = app;
   const f = fits(list);
   const host = h("div", { class: "chart-host lc-host", style: { minHeight: "320px" }, role: "img",
     "aria-label": `니케마다 출시일과 ${SIDES[side].name} 체급` });
   const lines = [
     { name: "평균", cls: "mean", fit: f.mean },
-    ...f.quantiles.map(({ q, fit }) => ({ name: `${Math.round(q * 100)}% 분위`, cls: `q${Math.round(q * 100)}`, fit })),
+    ...f.quantiles.map(({ q, fit }) => ({ name: `상위 ${Math.round((1 - q) * 100)}%`, cls: `q${Math.round(q * 100)}`, fit })),
   ];
   const ys = list.map((p) => p.y);
   const lo = Math.log(0.8) > Math.min(...ys) ? Math.min(...ys) - 0.05 : Math.log(0.8);
@@ -200,7 +220,7 @@ function scatterPanel(app, data, side, list, floorLabel) {
     const width = Math.max(300, Math.floor(host.clientWidth));
     const height = 350;
     const narrow = width < 560;
-    const m = { l: narrow ? 36 : 44, r: narrow ? 64 : 84, t: 26, b: 30 };
+    const m = { l: narrow ? 36 : 44, r: narrow ? 40 : 64, t: 26, b: 30 };
     const iw = width - m.l - m.r, ih = height - m.t - m.b;
     const x = (v) => m.l + iw * (v - x0) / (x1 - x0);
     const y = (v) => m.t + ih * (1 - (v - lo) / (hi - lo));
@@ -212,7 +232,7 @@ function scatterPanel(app, data, side, list, floorLabel) {
         s("text", { class: "ax", x: m.l - 6, y: y(v) + 4, "text-anchor": "end" }, String(t)));
     }
     svg.append(s("text", { class: "ax", x: m.l - 6, y: m.t - 10, "text-anchor": "end" }, "배"),
-      s("text", { class: "ax", x: m.l + 2, y: m.t - 10 }, "홍련(자기 속성 시즌) = 1"));
+      s("text", { class: "ax", x: m.l + 2, y: m.t - 10 }, "홍련 = 1"));
     // the years
     const launch = new Date(model.launch);
     for (let year = launch.getUTCFullYear() + 1; ; year++) {
@@ -260,7 +280,7 @@ function scatterPanel(app, data, side, list, floorLabel) {
       for (let j = 1; j < ends.length; j++) if (ends[j].y - ends[j - 1].y < 13) ends[j].y = ends[j - 1].y + 13;
       for (const e of ends) {
         svg.append(s("text", { class: `ax end-label fit-label ${e.line.cls}`, x: x(b) + 8, y: e.y + 4 },
-          narrow ? perYear(e.line.fit.b) : `${e.line.name} ${perYear(e.line.fit.b)}`));
+          `${perYear(e.line.fit.b)}${narrow ? "" : "/년"}`));
       }
     }
     host.replaceChildren(svg);
@@ -270,15 +290,12 @@ function scatterPanel(app, data, side, list, floorLabel) {
     if (w && w !== lastWidth) { lastWidth = w; draw(); }
   }).observe(host);
 
-  const dropped = list.filter((p) => !p.passes).length;
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" },
-      h("span", { class: "head-title" }, h("h3", null, `출시일과 체급 · ${SIDES[side].name}`), infoButton("체급", () => powerHelp(app, data))),
-      h("span", { class: "muted small" }, `점 하나가 니케 하나(색 = 속성, 애장품 전) · 세로축은 배수(로그 눈금) · 선 = 출시가 1년 늦을 때 체급 · `
-        + `선에 넣은 칸 ${f.n}개${floorLabel ? ` (시즌 티어 ${floorLabel} 이상 찍은 니케, ${dropped}명 흐리게)` : ""} · 누르면 아래 그래프에`)),
+      h("span", { class: "head-title" }, h("h3", null, `출시일과 체급 · ${SIDES[side].name}`), infoButton("출시일과 체급", () => powerHelp(app, data)))),
     h("div", { class: "legend" },
-      ...lines.map((l) => h("span", { class: "lg" }, h("i", { class: `sw line fit-sw ${l.cls}` }), `${l.name} ${perYear(l.fit?.b)}/년`)),
-      h("span", { class: "lg" }, h("i", { class: "sw dot-sw hollow" }), "잠정 · 짝 (선에서 뺌)")),
+      ...lines.map((l) => h("span", { class: "lg" }, h("i", { class: `sw line fit-sw ${l.cls}` }), l.name)),
+      h("span", { class: "lg" }, h("i", { class: "sw dot-sw hollow" }), "잠정")),
     host);
 }
 
@@ -286,8 +303,8 @@ function unitTip(app, data, u, cell, cutList, best) {
   const unit = app.model.units[u];
   const mine = data.cells.filter((c) => c.unit === unit.id);
   const row = (own, treasure) => mine.find((c) => c.own === own && c.treasure === treasure);
-  const value = (c) => (!c ? "–" : c.status === "pair" ? `짝으로만 (${times(c.pairLog)}, 짝 ${partnerName(app, c)})`
-    : `${times(c.log)}${c.status === "provisional" ? "?" : ""} ±${num(Math.exp(c.log) * (c.se ?? 0))} · 덱 ${int(c.decks)}`);
+  const value = (c) => (!c ? "–" : c.status === "pair" ? `${partnerName(app, c)}와 묶어서 ${times(c.pairLog)}배`
+    : `${times(c.log)}배${c.status === "provisional" ? " (잠정)" : ""}`);
   const lines = [
     ["출시", day(unit.release)],
     ["자기 속성 시즌", value(row(true, false))],
@@ -297,7 +314,6 @@ function unitTip(app, data, u, cell, cutList, best) {
     lines.push(["애장품 뒤 자기", value(row(true, true))], ["애장품 뒤 다른", value(row(false, true))]);
   }
   lines.push(["최고 시즌 티어", best != null ? cutList[best][0] : "–"]);
-  if (cell.status !== "ok") lines.push(["", STATUS_KO[cell.status]]);
   return h("div", { class: "tip" },
     h("div", { class: "tip-name" }, face(unit, 28), unitName(unit), elementIcon(unit.element, 14)),
     h("dl", { class: "tip-list" }, lines.flatMap(([k, v]) => [h("dt", null, k), h("dd", null, v)])));
@@ -306,27 +322,6 @@ function unitTip(app, data, u, cell, cutList, best) {
 function partnerName(app, c) {
   const u = c.partner != null ? app.model.byId.get(c.partner) : null;
   return u != null ? unitName(app.model.units[u]) : "?";
-}
-
-// ---------------------------------------------------------------------------
-// the slopes under every filter, both sides: how much the answer leans on the choice
-
-function compareFilters(app, data, labels) {
-  const rows = [null, ...labels.map((_, k) => k)].map((floor) => {
-    const out = { floor, label: floor == null ? "거르지 않음" : `시즌 티어 ${labels[floor]} 이상 찍은 니케` };
-    for (const side of Object.keys(SIDES)) out[side] = fits(points(app, data, side, floor));
-    return out;
-  });
-  const cell = (f) => h("span", null, perYear(f.mean?.b), h("span", { class: "muted" }, ` · ${f.quantiles.map((q) => perYear(q.fit?.b)).join(" · ")} · ${f.n}칸`));
-  const chosen = app.state.powerFloor ?? null;
-  return h("section", { class: "panel table-panel" },
-    h("div", { class: "panel-head" },
-      h("span", { class: "head-title" }, h("h3", null, "거르는 기준마다 기울기"), infoButton("시즌 티어로 거르기", () => filterHelp())),
-      h("span", { class: "muted small" }, "출시가 1년 늦을 때 체급: 평균 · 75% · 90% 분위 · 선에 넣은 칸 수")),
-    h("div", { class: "table-wrap" }, h("table", { class: "grid" },
-      h("thead", null, h("tr", null, h("th", null, "선에 넣은 니케"), ...Object.values(SIDES).map((k) => h("th", null, k.name)))),
-      h("tbody", null, rows.map((r) => h("tr", { class: r.floor === chosen ? "own-row" : null },
-        h("th", null, r.label), ...Object.keys(SIDES).map((side) => h("td", null, cell(r[side])))))))));
 }
 
 // ---------------------------------------------------------------------------
@@ -347,7 +342,7 @@ function fieldPanel(app, data) {
     return c && c.log != null ? Math.exp(c.status === "pair" ? NaN : c.log) : null;
   };
   const out = (s0) => unit && unit.release != null && s0.start != null && unit.release <= s0.start;
-  const series = [{ name: "판", cls: "field", values: seasons.map((s0) => field.get(s0.season)) }];
+  const series = [{ name: "시즌 파워", cls: "field", values: seasons.map((s0) => field.get(s0.season)) }];
   if (unit) {
     for (const own of [true, false]) {
       const values = seasons.map((s0) => { const v = out(s0) ? weightIn(own, s0.season) : null; return Number.isNaN(v) ? null : v; });
@@ -367,25 +362,25 @@ function fieldPanel(app, data) {
   });
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" },
-      h("span", { class: "head-title" }, h("h3", null, "판의 세기"), infoButton("판의 세기", () => fieldHelp(data))),
+      h("span", { class: "head-title" }, h("h3", null, "시즌별 파워"), infoButton("시즌별 파워", () => fieldHelp(data))),
       picker,
       unit ? h("span", { class: "power-unit" }, unitInline(app, u, { size: 24 }),
         h("button", { type: "button", class: "btn small ghost", onclick: () => { state.powerUnit = null; app.rerender(); } }, "빼기")) : null,
-      h("span", { class: "muted small" }, `판 = 시즌마다 그때 나와 있던 니케 중 체급 상위 ${data.top}칸의 평균 · 니케를 고르면(위 점을 눌러도) 그 니케의 자기 속성 · 다른 속성 시즌 체급을 같이`)),
+    ),
     lineLegend(series),
     lineChart({
       points: seasons.map((s0) => ({ label: s0.season })), series, min, max, ticks, height: 240, mark: chosen >= 0 ? chosen : null,
-      format: (v) => num(v), label: "시즌별 판의 세기(쓸 수 있던 상위 칸의 평균 체급)",
+      format: (v) => num(v), label: "시즌별 파워(쓸 수 있던 상위 칸의 평균 체급)",
       tip: (i) => {
         const s0 = seasons[i];
         const f = field.get(s0.season);
-        const lines = [["판", num(f)]];
+        const lines = [["시즌 파워", num(f)]];
         if (unit && out(s0)) {
           const row = s0.rows.find((r) => r.u === u);
           const own = row ? row.elementMatch : null;
           for (const k of [true, false]) {
             const v = weightIn(k, s0.season);
-            if (v != null && !Number.isNaN(v)) lines.push([`${k ? "자기" : "다른"} 속성${own === k ? " (이 시즌)" : ""}`, `${num(v)} · 판의 ${num(v / f)}배`]);
+            if (v != null && !Number.isNaN(v)) lines.push([`${k ? "자기" : "다른"} 속성${own === k ? " (이 시즌)" : ""}`, `${num(v)} · 시즌 파워의 ${num(v / f)}배`]);
           }
         }
         return seasonTip({ season: s0 }, lines);
@@ -417,7 +412,7 @@ function tablePanel(app, data) {
   ];
   return h("details", { class: "panel table-panel meta-table" },
     h("summary", null, h("h3", null, "숫자로 보기")),
-    h("p", { class: "muted small table-note" }, `덱에 들어간 니케 ${rows.length}명 · ? = 잠정 · 짝 = 늘 같이 쓰인 짝이라 둘이서만 잼(마우스를 올리면 짝과 둘의 체급)`),
+    h("p", { class: "muted small table-note" }, `덱에 들어간 니케 ${rows.length}명 · ? = 잠정 · 짝 = 늘 같이 쓰여 둘을 묶어서만 잼`),
     sortableTable(columns, rows, {
       sortKey: sort.key, sortDir: sort.dir, caption: "니케별 체급",
       onSort: (key, dir) => { state.sort.power = { key, dir }; app.rerender(); },

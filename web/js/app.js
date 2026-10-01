@@ -331,7 +331,7 @@ function render() {
   main.replaceChildren(content);
   main.classList.remove("busy");
   main.dataset.ms = String(Math.round(performance.now() - started));
-  const place = state.tab === "meta" ? ({ tiers: "메타 변화 · 티어 분포", power: "메타 변화 · 체급" }[state.meta] || "메타 변화") : state.tab === "tier"
+  const place = state.tab === "meta" ? ({ tiers: "메타 변화 · 티어 분포", power: "메타 변화 · 파워 인플레" }[state.meta] || "메타 변화") : state.tab === "tier"
     ? (state.view === "raid" ? "레이드별 티어" : state.view === "overall" ? "종합 티어" : `${ELEMENT_KO[state.view]} 약점 티어`)
     : state.trend === "compare" ? (state.weak ? `니케 비교 · ${ELEMENT_KO[state.weak]} 약점` : "니케 비교")
       : state.unit != null ? `${unitName(app.model.units[state.unit])} · 니케` : "니케";

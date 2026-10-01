@@ -47,6 +47,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from .. import power
 from .. import servers as server_names
 from ..paths import interim_dir, processed_dir
 from ..servers import ServerFilter
@@ -239,6 +240,7 @@ def run(
     chosen = config.server_filter
     if chosen:
         chosen.check(entries["server"].unique())  # a misspelt server must not pass as "every server"
+    split = power.split_weights(entries, roster, seasons)  # on every ranked deck, whatever the sample below
     entries = metrics.select_population(
         entries, top_n=config.top_n, servers=config.servers, exclude=config.exclude_servers
     )
@@ -246,7 +248,8 @@ def run(
         raise RuntimeError(f"no raid entries for content={content!r} in the configured population")
 
     summary_table = metrics.season_summary(entries, seasons, weighting=config.rank_weighting)
-    table = metrics.unit_season(entries, roster, seasons, weighting=config.rank_weighting, ridge=config.deck_effect_ridge)
+    table = metrics.unit_season(entries, roster, seasons, weighting=config.rank_weighting, ridge=config.deck_effect_ridge,
+                                split=split)
     table = tiers.season_tiers(table, config)
     history = tiers.tier_history(table, summary_table, config)
     newest = summary_table["collected_until"].max()
@@ -320,7 +323,7 @@ def _fingerprint(directory: Path, config: tiers.TierConfig, content: str) -> dic
             stat = path.stat()
             inputs[name] = [stat.st_size, stat.st_mtime_ns]
     code = hashlib.sha256()
-    for module in (metrics.__file__, tiers.__file__, __file__, server_names.__file__):
+    for module in (metrics.__file__, tiers.__file__, __file__, server_names.__file__, power.__file__):
         code.update(Path(module).read_bytes())
     stamp = {
         "data_dir": str(directory.resolve()),

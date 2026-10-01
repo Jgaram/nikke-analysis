@@ -196,3 +196,28 @@ def test_a_ranking_collected_on_the_last_day_but_before_the_end_is_not_final():
         None,
     ], utc=True))
     assert list(metrics.ranking_final(end, until, seen)) == [False, True, True, True]
+
+
+def test_a_deck_is_split_by_its_members_weights(world, seasons):
+    """A member gets its deck's share in proportion to its 체급; one without a weight gets the mean
+    log weight of its deck-mates; without weights the split is equal. Credit still sums to one."""
+    entries = world.entries[world.entries["season"] == 1]
+    first = entries.iloc[0]
+    deck = entries[(entries["server"] == first["server"]) & (entries["player"] == first["player"])
+                   & (entries["deck"] == first["deck"])]
+    units = list(deck["unit_id"])
+    split = pd.DataFrame({"season": 1, "unit_id": units[:4], "weight": [np.log(3), 0.0, 0.0, np.log(2)]})
+    member = deck.merge(metrics.deck_table(entries)[metrics.DECK_KEYS + ["size"]], on=metrics.DECK_KEYS)
+    fractions = pd.Series(metrics.split_fractions(member, split), index=member["unit_id"])
+    fifth = np.exp((np.log(3) + np.log(2)) / 4)  # no weight: the mean of the four that have one
+    expected = np.array([3, 1, 1, 2, fifth]) / (7 + fifth)
+    assert fractions[units].to_numpy() == pytest.approx(expected)
+    assert metrics.split_fractions(member, None) == pytest.approx(np.full(5, 0.2))
+
+    even = metrics.unit_season(entries, world.roster, seasons).set_index("unit_id")
+    weights = pd.DataFrame({"season": 1, "unit_id": sorted(entries["unit_id"].unique())})
+    weights["weight"] = np.where(weights["unit_id"] == world.element_dps["Fire"], np.log(4), 0.0)
+    weighed = metrics.unit_season(entries, world.roster, seasons, split=weights).set_index("unit_id")
+    assert weighed["credit"].sum() == pytest.approx(1.0)
+    assert weighed.at[world.element_dps["Fire"], "lift"] > even.at[world.element_dps["Fire"], "lift"]
+    assert (weighed["rankers"] == even.reindex(weighed.index)["rankers"]).all()  # only the credit moves

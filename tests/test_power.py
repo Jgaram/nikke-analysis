@@ -135,3 +135,29 @@ def test_the_site_gets_the_season_a_treasure_first_played():
 def test_no_site_data_without_the_reference():
     entries, table = world()
     assert power.payload(entries, table, reference=("zz", "own")) is None
+
+
+def _rows(entries):
+    """The roster and season table the split needs: one element, no treasure, bosses weak to another."""
+    units = sorted(entries["unit_id"].unique())
+    roster = pd.DataFrame({"unit_id": units, "element": "Fire", "release_date": "2022-11-04"})
+    seasons = pd.DataFrame({"season": sorted(entries["season"].unique())})
+    seasons["start_at"] = pd.to_datetime("2023-01-01", utc=True) + pd.to_timedelta(28 * seasons["season"], unit="D")
+    seasons["end_at"] = seasons["start_at"] + pd.Timedelta(days=7)
+    seasons = seasons.assign(weak_element="Water", boss_en="", boss_ko="")
+    return roster, seasons
+
+
+def test_the_tiers_split_by_the_weights_the_decks_had_shown_by_then():
+    entries, _ = world(seasons=3)
+    roster, seasons = _rows(entries)
+    split = power.split_weights(entries, roster, seasons).set_index(["season", "unit_id"])["weight"]
+    # the ridge holds the weights back while the decks are few, less with every season that comes in
+    gaps = [split[(season, "u10")] - split[(season, "u00")] for season in (1, 2, 3)]
+    assert 0.8 * np.log(TRUE["u10"] / TRUE["u00"]) < gaps[0] < gaps[1] < gaps[2] < np.log(TRUE["u10"] / TRUE["u00"])
+    pair = split[(3, "p0")] + split[(3, "p1")] - 2 * split[(3, "u00")]  # a pair: only the two together
+    assert pair == pytest.approx(np.log(TRUE["p0"] * TRUE["p1"] / TRUE["u00"] ** 2), rel=0.1)
+    # a season's weights do not move when later seasons come in
+    early = power.split_weights(entries[entries["season"] == 1], roster, seasons).set_index(["season", "unit_id"])
+    assert split.loc[1].to_numpy() == pytest.approx(early["weight"].loc[1].to_numpy())
+    assert "n0" not in split.index.get_level_values("unit_id")  # nobody decked it: no weight

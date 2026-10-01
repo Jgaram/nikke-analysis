@@ -194,8 +194,10 @@ class RaidBook:
         return self.season_of(first), second
 
     def _inputs(self) -> dict[str, pd.DataFrame]:
-        """raid_entries (Solo Raid only), the roster and the season table, read once."""
+        """raid_entries (Solo Raid only), the roster, the season table and the 체급 the decks are split by
+        (measured on every deck, like the committed table's), read once."""
         if self._loaded is None:
+            from . import power
             from .analyze.pipeline import load_inputs
 
             if not (self.directory / "raid_entries.csv").is_file():
@@ -204,6 +206,7 @@ class RaidBook:
             entries = inputs["entries"]
             if "content" in entries.columns:
                 inputs["entries"] = entries[entries["content"] == "soloraid"]
+            inputs["split"] = power.split_weights(inputs["entries"], inputs["roster"], inputs["seasons"])
             self._loaded = inputs
         return self._loaded
 
@@ -245,7 +248,8 @@ class RaidBook:
             if population.empty:
                 raise QueryError(f"시즌 {number} 에서 그 조건에 맞는 랭커가 없다")
             rows = metrics.unit_season(population, inputs["roster"], inputs["seasons"],
-                                       weighting=self.config.rank_weighting, ridge=self.config.deck_effect_ridge)
+                                       weighting=self.config.rank_weighting, ridge=self.config.deck_effect_ridge,
+                                       split=inputs["split"])
             rows = tiers.season_tiers(rows, self.config)
             decks_table = metrics.deck_table(population)
             rankers, decks = decks_table.drop_duplicates(metrics.RANKER_KEYS).shape[0], len(decks_table)

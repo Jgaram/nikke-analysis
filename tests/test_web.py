@@ -89,6 +89,10 @@ def test_build_writes_the_page_its_data_and_icons(site, world_dir):
     # every ranker: server, rank, then five decks of damage and five units
     ranker = decks["seasons"]["1"][0]
     assert len(ranker) == 2 + 5 and all(len(deck) == 6 and deck[0] > 0 for deck in ranker[2:])
+    # the 체급 each season's decks are split by: every fielded unit of the season, by its index
+    fielded = world.entries[world.entries["season"] == 1]["unit_id"].unique()
+    index = {u["id"]: str(i) for i, u in enumerate(model["units"])}
+    assert set(decks["split"]["1"]) == {index[u] for u in fielded}
     fire = next(u for u in model["units"] if u["id"] == world.element_dps["Fire"])
     assert fire["treasure"] is not None and fire["treasureElements"] == ["Iron"]
     # the 체급 study needs its reference unit (홍련), which the synthetic world does not have

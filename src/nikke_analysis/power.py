@@ -31,13 +31,15 @@ multiple. Splitting the deck's damage into the members' own damage needs
 damage per unit, which the rankings do not give - the same wall as the role
 (CLAUDE.md), and the study does not try.
 
-Nothing computed here feeds the tiers or the committed tables. The tier site draws it (메타 변화 ·
-파워 인플레) from ``site``, computed once when the site is built: the page's parameters do not move it.
+The tiers use one thing from here: ``split_weights``, the 체급 a deck's share is split by among its
+members (season by season, from the decks up to that season). The study itself - the weights against
+홍련, the creep, the field - feeds no table. The tier site draws it (메타 변화 · 파워 인플레) from ``site``,
+computed once when the site is built: the page's parameters do not move it.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 import pandas as pd
@@ -52,6 +54,7 @@ FREE = 1e-3  # the uncertainty is judged without that pull, so it shows what the
 MIN_DECKS = 30  # a cell from fewer decks is provisional
 MAX_SE = 0.10  # ... and so is one whose log weight is less certain than this (about +-10%)
 TOGETHER = 0.95  # two cells decked together this often, both ways, can only be weighed as a pair
+SPLIT_TOP = 50  # the tiers' split is measured on these ranks of every server, whatever the tiers count
 TOP = 25  # the field: the strongest this many cells available in a season
 LAUNCH = pd.Timestamp("2022-11-04")
 AGES = [0, 0.25, 0.5, 1, 1.5, 2, 2.5, 10]  # years since release, for the drift check
@@ -90,6 +93,7 @@ class Fit:
     entries: pd.DataFrame  # the entries that went in, with ``row`` (their deck in ``decks``)
     decks: pd.DataFrame  # one row per deck: DECK_KEYS, ``w``, ``yd`` (log damage against the player's average)
     coef: np.ndarray | None = None  # log weight per cell, then the combat power term
+    seasons: dict[int, tuple[np.ndarray, np.ndarray]] = field(default_factory=dict)  # the sums, season by season
 
     @property
     def index(self) -> dict[str, int]:
@@ -97,14 +101,12 @@ class Fit:
 
     def solve(self, servers=None, *, ridge: float = RIDGE, invest: bool = True) -> np.ndarray:
         A, b, _, _ = self.sums(servers)
-        p = len(self.cells)
-        if not invest:
-            A, b = A[:p, :p], b[:p]
-        penalty = ridge * np.eye(len(b))
-        if invest:
-            penalty[p, p] = 1e-9  # the combat power term is not pulled - only kept solvable when it never varies
-        coef = np.linalg.solve(A + penalty, b)
-        return coef if invest else np.append(coef, 0.0)
+        return _solve(A, b, len(self.cells), ridge=ridge, invest=invest)
+
+    def through(self, season: int, *, ridge: float = RIDGE) -> np.ndarray:
+        """The solve on the seasons up to ``season`` only - what the decks had shown by then."""
+        chosen = [self.seasons[s] for s in self.seasons if s <= season]
+        return _solve(sum(a for a, _ in chosen), sum(b for _, b in chosen), len(self.cells), ridge=ridge)
 
     def sums(self, servers=None):
         chosen = [s for s in self.blocks if servers is None or s in servers]
@@ -131,6 +133,16 @@ class Fit:
         return f - pd.Series(f).groupby(self.decks["ranker"].to_numpy()).transform("mean").to_numpy()
 
 
+def _solve(A: np.ndarray, b: np.ndarray, p: int, *, ridge: float, invest: bool = True) -> np.ndarray:
+    if not invest:
+        A, b = A[:p, :p], b[:p]
+    penalty = ridge * np.eye(len(b))
+    if invest:
+        penalty[p, p] = 1e-9  # the combat power term is not pulled - only kept solvable when it never varies
+    coef = np.linalg.solve(A + penalty, b)
+    return coef if invest else np.append(coef, 0.0)
+
+
 def fit(entries: pd.DataFrame, *, weighting: str = "dcg") -> Fit:
     """The normal equations of every deck that did damage (``entries`` from ``cells``)."""
     entries = entries[pd.to_numeric(entries["deck_score"], errors="coerce") > 0]
@@ -145,6 +157,7 @@ def fit(entries: pd.DataFrame, *, weighting: str = "dcg") -> Fit:
     e["col"] = e["cell"].map(col)
     p = len(names) + 1
     blocks: dict[str, tuple] = {}
+    by_season: dict[int, tuple[np.ndarray, np.ndarray]] = {}
     members = dict(tuple(e.groupby(["season", "server"])))
     for (season, server), d in decks.groupby(["season", "server"]):
         m = members[(season, server)]
@@ -155,9 +168,12 @@ def fit(entries: pd.DataFrame, *, weighting: str = "dcg") -> Fit:
         np.add.at(X[:, -1], r, m["invest"].to_numpy())
         X -= pd.DataFrame(X).groupby(d["ranker"].to_numpy()).transform("mean").to_numpy()
         yd, w = d["yd"].to_numpy(), d["w"].to_numpy()
+        dA, db = X.T @ (w[:, None] * X), X.T @ (w * yd)
         A, b, yy, ww = blocks.get(server, (np.zeros((p, p)), np.zeros(p), 0.0, 0.0))
-        blocks[server] = (A + X.T @ (w[:, None] * X), b + X.T @ (w * yd), yy + float(w @ (yd * yd)), ww + float(w.sum()))
-    out = Fit(cells=names, blocks=blocks, entries=e, decks=decks)
+        blocks[server] = (A + dA, b + db, yy + float(w @ (yd * yd)), ww + float(w.sum()))
+        sA, sb = by_season.get(int(season), (np.zeros((p, p)), np.zeros(p)))
+        by_season[int(season)] = (sA + dA, sb + db)
+    out = Fit(cells=names, blocks=blocks, entries=e, decks=decks, seasons=by_season)
     out.coef = out.solve()
     return out
 
@@ -202,6 +218,32 @@ def weights(result: Fit, *, reference: tuple[str, str] = REFERENCE, coef: np.nda
 def unobserved(entries: pd.DataFrame, table: pd.DataFrame) -> list[str]:
     """Units in the season table that no deck ever fielded: no weight, which is not a weight of 0."""
     return sorted(set(table["unit_id"].astype(str)) - set(entries["unit_id"].astype(str)))
+
+
+# --------------------------------------------------------------------------
+# the tiers' split of a deck's share
+# --------------------------------------------------------------------------
+
+def split_weights(entries: pd.DataFrame, roster: pd.DataFrame, seasons: pd.DataFrame) -> pd.DataFrame:
+    """Per season and unit fielded in it, the log 체급 its deck's share is split by (metrics.unit_season):
+    the unit's cell that season, solved on the decks of the seasons up to it - what the decks had shown
+    by then, so a past tier never leans on a later season. Measured once on every ranked deck (every
+    server, ranks 1-``SPLIT_TOP``, rank weighted): the tiers' parameters choose whose decks count, not
+    how a deck is split. Empty without decks."""
+    entries = metrics.select_population(entries, top_n=SPLIT_TOP)
+    if entries.empty:
+        return pd.DataFrame(columns=["season", "unit_id", "weight"])
+    entries = entries.assign(unit_id=entries["unit_id"].astype(str))
+    pairs = entries[["season", "unit_id"]].drop_duplicates().reset_index(drop=True)
+    result = fit(cells(entries, metrics.season_rows(pairs, roster, seasons)))
+    index = result.index
+    used = result.entries.drop_duplicates(["season", "unit_id"])
+    frames = []
+    for season, rows in used.groupby("season"):
+        coef = result.through(int(season))
+        frames.append(pd.DataFrame({"season": int(season), "unit_id": rows["unit_id"].to_numpy(),
+                                    "weight": coef[rows["cell"].map(index).to_numpy()]}))
+    return pd.concat(frames, ignore_index=True).sort_values(["season", "unit_id"]).reset_index(drop=True)
 
 
 # --------------------------------------------------------------------------

@@ -10,9 +10,13 @@ meta roster and cannot rank it. What does separate units is *which deck* they
 carry: the main deck does a third of a player's damage, the fifth deck an eighth.
 
 **Credit.** Each player's damage is split over their decks by each deck's share,
-and a deck's share equally over its members. A unit's credit in a season is the
-rank-weighted average of what it receives, so over all units credit sums to one:
-it is the share of the top players' damage that the unit took part in.
+and a deck's share over its members in proportion to their 체급 (power.py
+``split_weights``: how much a deck does with the unit in it, from the decks up to
+that season). A unit's credit in a season is the rank-weighted average of what it
+receives, so over all units credit sums to one: it is the share of the top
+players' damage that the unit took part in. Without the weights a deck's share
+is split equally - which hands a weak unit in a strong deck part of its
+deck-mates' credit.
 
 **Lift.** Credit times the number of slots a player fields (25). 1.0 is what an
 average member of the meta roster carries; a unit in every main deck of a
@@ -233,6 +237,21 @@ def ranking_final(end: pd.Series, collected_until: pd.Series, seen: pd.Series) -
     return end.notna() & (collected_until >= end) & (by_day | (seen >= end))
 
 
+def split_fractions(member: pd.DataFrame, split: pd.DataFrame | None) -> np.ndarray:
+    """Each member's part of its deck's share: in proportion to its weight that season (``split``:
+    ``season``, ``unit_id``, ``weight`` = log 체급), equal without weights. A member without a weight
+    gets the mean log weight of its deck-mates that have one (equal when none has)."""
+    if split is None or split.empty or member.empty:
+        return 1.0 / member["size"].to_numpy(dtype=float)
+    keyed = split.assign(season=split["season"].astype(int), unit_id=split["unit_id"].astype(str))
+    log_weight = member[["season", "unit_id"]].assign(unit_id=member["unit_id"].astype(str)).merge(
+        keyed[["season", "unit_id", "weight"]], on=["season", "unit_id"], how="left")["weight"].to_numpy()
+    deck = pd.factorize(pd.MultiIndex.from_frame(member[DECK_KEYS]))[0]
+    known = pd.Series(log_weight).groupby(deck).transform("mean").fillna(0.0).to_numpy()
+    weight = np.exp(np.where(np.isnan(log_weight), known, log_weight))
+    return weight / np.bincount(deck, weights=weight)[deck]
+
+
 def unit_season(
     entries: pd.DataFrame,
     roster: pd.DataFrame,
@@ -240,8 +259,10 @@ def unit_season(
     *,
     weighting: str = "dcg",
     ridge: float = 20.0,
+    split: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
-    """One row per season and unit available in it, with every measurement.
+    """One row per season and unit available in it, with every measurement. A deck's share goes
+    to its members in proportion to their ``split`` weights (``split_fractions``).
 
     Columns:
       ``rankers``         players fielding the unit
@@ -268,7 +289,7 @@ def unit_season(
     member = entries[DECK_KEYS + ["unit_id", "unit_cp"]].merge(
         decks[DECK_KEYS + ["rank", "share", "size", "is_main", "w"]], on=DECK_KEYS
     )
-    member["credit_part"] = member["w"] * member["share"] / member["size"]
+    member["credit_part"] = member["w"] * member["share"] * split_fractions(member, split)
     rankers = decks.drop_duplicates(RANKER_KEYS)
     season_w = rankers.groupby("season")["w"].sum()
     slots = entries.groupby(RANKER_KEYS).size().groupby("season").median()
@@ -318,7 +339,14 @@ def unit_season(
     table["usage_rank"] = table.groupby("season")["rankers"].rank(method="min", ascending=False).astype(int)
     table["slots"] = table["season"].map(slots).fillna(25.0)
     table["lift"] = table["credit"] * table["slots"]
+    table = season_rows(table, roster, seasons)
+    return table.sort_values(["season", "lift", "unit_id"], ascending=[True, False, True]).reset_index(drop=True)
 
+
+def season_rows(table: pd.DataFrame, roster: pd.DataFrame, seasons: pd.DataFrame) -> pd.DataFrame:
+    """Season x unit rows (``season``, ``unit_id``) with the unit's roster columns, the season's boss,
+    and the two flags: ``treasure`` (its treasure was out when the season started) and
+    ``element_match`` (the boss was weak to its element, or to one its skill or treasure adds)."""
     info = roster.drop_duplicates("unit_id").set_index("unit_id")
     table = table.join(info[[c for c in UNIT_INFO if c in info.columns]], on="unit_id")
     meta = seasons.set_index("season")[["boss_en", "boss_ko", "weak_element", "start_at", "end_at"]]
@@ -334,7 +362,7 @@ def unit_season(
             skill = [weak in listed_elements(extra) for weak, extra in zip(table["weak_element"], table[column])]
             table["element_match"] |= pd.Series(skill, index=table.index) & holds
     table["treasure"] = played
-    return table.sort_values(["season", "lift", "unit_id"], ascending=[True, False, True]).reset_index(drop=True)
+    return table
 
 
 def deck_effects(entries: pd.DataFrame, decks: pd.DataFrame, *, ridge: float = 20.0) -> pd.DataFrame:

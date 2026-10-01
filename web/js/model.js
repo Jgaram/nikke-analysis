@@ -169,6 +169,24 @@ const cmpId = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 // ---------------------------------------------------------------------------
 // population: per season and unit (analyze/metrics.py unit_season, season_summary)
 
+// Each member's part of its deck's share (analyze/metrics.py split_fractions): in proportion to its 체급
+// that season (``split``: log weight by unit index), equal without weights. A member without one gets the
+// mean log weight of its deck-mates that have one.
+function splitFractions(deck, split) {
+  const n = deck.length - 1;
+  const logs = [];
+  let sum = 0, known = 0;
+  for (let j = 1; j <= n; j++) {
+    const v = split[deck[j]];
+    logs.push(v);
+    if (v != null) { sum += v; known++; }
+  }
+  const fill = known ? sum / known : 0;
+  const weights = logs.map((v) => Math.exp(v ?? fill));
+  const total = weights.reduce((a, b) => a + b, 0);
+  return weights.map((v) => v / total);
+}
+
 export function computeTables(model, decks, params) {
   const U = model.units.length;
   const keep = model.servers.map((s) => params.servers.includes(s));
@@ -177,6 +195,7 @@ export function computeTables(model, decks, params) {
   for (const info of model.seasons) {
     const list = decks.seasons[String(info.season)];
     if (!list) continue;
+    const split = decks.split?.[String(info.season)] ?? {};
     const credit = new Float64Array(U), creditC = new Float64Array(U);
     const wUsed = new Float64Array(U), wUsedC = new Float64Array(U);
     const wShare = new Float64Array(U), wShareC = new Float64Array(U);
@@ -211,11 +230,11 @@ export function computeTables(model, decks, params) {
         const size = deck.length - 1;
         slots += size;
         const share = total > 0 ? deck[0] / total : 0;
-        const part = (w * share) / size;
+        const fractions = splitFractions(deck, split);
         const main = deckRank[d] === 1 ? w : 0;
         for (let j = 1; j < deck.length; j++) {
           const u = deck[j];
-          kahan(credit, creditC, u, part);
+          kahan(credit, creditC, u, w * share * fractions[j - 1]);
           if (seenBy[u] !== stamp) {
             seenBy[u] = stamp;
             users[u]++;

@@ -12,7 +12,9 @@ step). This module gives it its data and puts the two together:
                      rankings were collected) and the defaults of
                      config/tiers.yaml
 ``data/decks.json``  every ranked player's fought decks, season by season: the
-                     server, the rank, and each deck's damage and units
+                     server, the rank, and each deck's damage and units; and the
+                     log 체급 each season's decks are split by (power.py
+                     ``split_weights``, the same whatever the page's parameters)
 ``data/power.json``  the 체급 study (power.py ``site``): every unit's weight, the
                      field season by season - computed here once with the default
                      parameters, so the page draws it as it is (null when it
@@ -46,7 +48,7 @@ from typing import Any
 import pandas as pd
 
 from . import power
-from .analyze import metrics, tiers
+from .analyze import metrics, pipeline, tiers
 from .paths import REPO_ROOT, boss_icon_path, icons_dir, processed_dir
 from .servers import SERVER_KO, ordered
 
@@ -148,11 +150,13 @@ def _seasons(seasons: pd.DataFrame, periods: pd.DataFrame, entries: pd.DataFrame
     return sorted(out, key=lambda s: s["season"])
 
 
-def _decks(entries: pd.DataFrame, units: list[dict[str, Any]], servers: list[str]) -> dict[str, Any]:
+def _decks(entries: pd.DataFrame, units: list[dict[str, Any]], servers: list[str],
+           split: pd.DataFrame | None = None) -> dict[str, Any]:
     """Every ranked player's fought decks, per season, in the table's order:
     ``[server, rank, [damage, unit, ...], ...]`` with the server and the units as
     indexes into ``servers`` and ``units``. Decks that dealt no damage were not
-    fought and never count, so they are left out."""
+    fought and never count, so they are left out. ``split``: per season, each
+    fielded unit's log 체급 by its index (``split_weights``)."""
     index = {u["id"]: i for i, u in enumerate(units)}
     at = {s: i for i, s in enumerate(servers)}
     fought = entries[(entries["deck_score"] > 0) & (entries["rank"] >= 1)]
@@ -162,7 +166,11 @@ def _decks(entries: pd.DataFrame, units: list[dict[str, Any]], servers: list[str
         for _deck, deck in rows.sort_values(["deck", "slot"]).groupby("deck", sort=True):
             ranker.append([int(deck["deck_score"].iloc[0])] + [index[u] for u in deck["unit_id"]])
         seasons.setdefault(str(int(season)), []).append(ranker)
-    return {"seasons": seasons}
+    weights: dict[str, dict[str, float]] = {}
+    if split is not None:
+        for season, unit_id, weight in split[["season", "unit_id", "weight"]].itertuples(index=False):
+            weights.setdefault(str(int(season)), {})[str(index[str(unit_id)])] = float(weight)
+    return {"seasons": seasons, "split": weights}
 
 
 def _defaults(config: tiers.TierConfig) -> dict[str, Any]:
@@ -221,7 +229,11 @@ def export(data_dir: Path | None = None, config: tiers.TierConfig | None = None,
         raise RuntimeError(f"raid_entries.csv has units the roster does not: {', '.join(missing)}")
     servers = ordered(entries["server"].unique())
     season_list = _seasons(seasons, periods, entries, icons)
-    decks = _decks(entries, units, servers)
+    inputs = pipeline.load_inputs(directory)
+    ranked = inputs["entries"]
+    if "content" in ranked.columns:
+        ranked = ranked[ranked["content"] == "soloraid"]
+    decks = _decks(entries, units, servers, power.split_weights(ranked, inputs["roster"], inputs["seasons"]))
     newest = max((s["collected"] for s in season_list if s["collected"] is not None), default=None)
     model = {
         "asOf": newest + 86_400_000 - 1_000 if newest is not None else None,

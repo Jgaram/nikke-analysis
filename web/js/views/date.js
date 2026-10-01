@@ -2,7 +2,7 @@
 // seasons whose boss was weak to one element - and how long each has been in use.
 
 import { ELEMENTS, assignTier, seasonWeight } from "../model.js";
-import { h, elementIcon, ELEMENT_KO, shortDay, tierBadge, sortableTable, int, kst } from "../ui.js";
+import { h, elementIcon, ELEMENT_KO, shortDay, pendingLabel, pendingStatus, tierBadge, sortableTable, int, kst } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs, numsToggle,
   generalityColumn, generalityRule, generalityLegend, curveColumn,
@@ -116,9 +116,10 @@ function hero(app, view, element) {
   const chosen = state.season != null ? model.bySeason.get(state.season) : null;
   const entry = chosen && app.population().tables.get(chosen.season);
   const t = kst(view.moment);
-  const liveNote = view.live.length ? `진행 중 S${view.live.join("·S")} ${shortDay(app.population().tables.get(view.live[0])?.collectedOn)} 수집분까지 (잠정)` : null;
+  const pending = view.live.length ? app.population().tables.get(view.live[0]) : null;
+  const liveNote = pending ? `S${view.live.join("·S")} ${shortDay(pending.collectedOn)} 수집분까지 (잠정)` : null;
   const status = chosen && entry?.final ? h("span", { class: "status done" }, `S${chosen.season} 종료 · ${t.y}-${t.m}-${t.d}`)
-    : liveNote ? h("span", { class: "status live" }, h("i", { class: "pulse", "aria-hidden": "true" }), chosen ? liveNote : `지금 · ${liveNote}`)
+    : liveNote ? pendingStatus(pending.end, ` ${liveNote}`)
       : h("span", { class: "status done" }, "지금");
   const counted = view.standing.counted;
   const mine = element ? counted.filter((c) => c.weak === element) : counted;
@@ -198,7 +199,7 @@ function seasonCards(app, view, element) {
         : h("span", { class: "wb-img none", "aria-hidden": "true" }),
       h("span", { class: "wb-text" },
         h("span", { class: "wb-top" }, h("b", null, `S${s.season}`), element ? null : elementIcon(s.weak, 13, { title: `약점 ${ELEMENT_KO[s.weak] || "?"}` }),
-          live ? h("span", { class: "pill live" }, "진행 중") : h("span", { class: "wb-when muted" }, shortDay(s.start))),
+          live ? h("span", { class: "pill live" }, pendingLabel(s.end)) : h("span", { class: "wb-when muted" }, shortDay(s.start))),
         h("span", { class: "wb-name" }, boss),
         h("span", { class: "wb-share", "aria-label": `비중 ${pct}%` },
           h("i", { style: { width: `${Math.max(3, (share / top) * 70)}%` } }), h("small", null, `${pct}%`))));

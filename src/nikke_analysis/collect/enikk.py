@@ -281,13 +281,13 @@ def _summaries(fetcher: Fetcher, base_url: str) -> dict[int, str]:
 
 
 def _stored_rankings() -> dict[int, dict[str, Any]]:
-    """Newest stored snapshot per season: its ``lastupdated`` and byte digest."""
+    """Newest stored snapshot per season: its ``lastupdated``, byte digest and when it was fetched."""
     stored: dict[int, dict[str, Any]] = {}
     for run in list_runs(SOURCE):  # oldest first; later wins
         for entry in run.entries:
             meta = entry.get("meta") or {}
             if meta.get("kind") == "rankings" and meta.get("raid"):
-                stored[int(meta["raid"])] = {**meta, "sha256": entry.get("sha256", "")}
+                stored[int(meta["raid"])] = {**meta, "sha256": entry.get("sha256", ""), "fetched_at": entry.get("fetched_at", "")}
     return stored
 
 

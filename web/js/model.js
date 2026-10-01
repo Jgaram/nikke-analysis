@@ -94,6 +94,15 @@ export function tierIndex(label, cuts) {
   return i < 0 ? cuts.length : i;
 }
 
+// Is a season's stored ranking its last word? enikk dates a collection by its UTC day, so a collection
+// on the day the season ended also covers the hours before the end; enikk's own stamp (`seen`) settles
+// it where it has a time of day. The oldest seasons are stamped by the day only (00:00 UTC): the day
+// rule stands for those. Mirrors analyze.metrics.ranking_final.
+export function rankingFinal(end, collectedUntil, seen) {
+  if (end == null || collectedUntil == null || collectedUntil < end) return false;
+  return seen == null || seen % DAY_MS === 0 || seen >= end;
+}
+
 export function rankWeight(rank, scheme) {
   const r = rank < 1 ? 1 : rank;
   if (scheme === "uniform") return 1;
@@ -266,7 +275,7 @@ export function computeTables(model, decks, params) {
       weak: info.weak,
       collectedOn,
       collectedUntil,
-      final: info.end != null && collectedUntil != null && collectedUntil >= info.end,
+      final: rankingFinal(info.end, collectedUntil, info.seen),
       rankers,
       decks: fielded,
       slots,

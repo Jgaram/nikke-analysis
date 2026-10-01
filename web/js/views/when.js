@@ -3,7 +3,7 @@
 // (the newest season's chip is lit). Each chip: number, weakness, boss, the day it ended;
 // a flag over it for a half anniversary (the raid that counts for it) or a new year.
 
-import { h, elementIcon, ELEMENT_KO, kst, noonKst, shortDay } from "../ui.js";
+import { h, elementIcon, ELEMENT_KO, kst, noonKst, shortDay, pendingLabel } from "../ui.js";
 
 const DAY_MS = 86400000;
 const RAID_AFTER_DAYS = 21; // an anniversary's raid opens within three weeks of the day, if not on it
@@ -54,7 +54,7 @@ export function timeStrip(app, { weak = null, compact = false, hint = "보스를
     const live = entry && !entry.final;
     const title = [`시즌 ${s.season} · ${boss} · 약점 ${ELEMENT_KO[s.weak] || "?"}`,
       s.start != null ? `${shortDay(s.start)} ~ ${s.end != null ? shortDay(s.end) : "?"}` : "일정 미정",
-      marks.get(s.season), live ? "진행 중" : null, !entry ? "랭킹 없음" : null].filter(Boolean).join(" · ");
+      marks.get(s.season), live ? pendingLabel(entry.end) : null, !entry ? "랭킹 없음" : null].filter(Boolean).join(" · ");
     const body = [
       flags.length ? h("span", { class: "flags" }, flags) : null,
       h("span", { class: "schip-top" }, h("span", { class: "schip-n" }, s.season), elementIcon(s.weak, 12, { title: "" })),

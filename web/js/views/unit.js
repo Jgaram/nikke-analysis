@@ -3,7 +3,7 @@
 import { assignTier, unitSeasons, ELEMENTS, GENERALITY_MAX } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
-  WEAPON_KO, MAKER_KO, day, tierBadge, deckSplit, sortableTable, unitName, segmented, infoButton,
+  WEAPON_KO, MAKER_KO, day, pendingLabel, tierBadge, deckSplit, sortableTable, unitName, segmented, infoButton,
 } from "../ui.js";
 import {
   provisionalReason, lifeText, lifeSub, lifeStrip, returnTag, GENERALITY_KO, trendTabs, unitSearch, CURVE_KO, CURVE_HINT,
@@ -317,7 +317,7 @@ function seasonTable(app, u, records) {
     { key: "boss", label: "보스 · 약점", sort: (r) => r.season.weak, cell: (r) => h("span", { class: "boss-cell" },
       h("span", { class: "boss-name" }, r.season.info.bossKo || r.season.info.bossEn || "?"),
       elementIcon(r.season.weak, 15), r.row.elementMatch ? h("b", { class: "own-mark", title: "자기 속성 약점 시즌" }, "▶") : null,
-      !r.season.final ? h("span", { class: "pill live" }, "진행 중") : null,
+      !r.season.final ? h("span", { class: "pill live" }, pendingLabel(r.season.end)) : null,
       r.season.season === firstTreasure ? h("span", { class: "pill heart", title: `애장품 ${day(unit.treasure)}` }, "♥ 애장품부터") : null) },
     { key: "usage", label: "사용", num: true, sort: (r) => r.row.usageRate, cell: (r) => (r.row.rankers ? pct(r.row.usageRate) : h("span", { class: "muted" }, "0%")) },
     { key: "split", label: "덱 분포", title: "쓴 사람 중 몇 번째 덱에 넣었나 — 막대 하나가 덱 하나(1덱 = 가장 센 덱), 진한 막대 = 가장 많이 넣은 덱",

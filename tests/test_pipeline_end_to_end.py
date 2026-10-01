@@ -243,7 +243,8 @@ def test_raid_view_defaults_to_the_newest_season(processed):
     ranks = list(usage.used["usage_rank"])
     assert ranks == sorted(ranks) and ranks[0] == 1
     text = raidstats.render_season(usage)
-    assert "진행 중인 시즌" in text and "Newcomer(ko)" in text
+    # the synthetic season ended in 2025 with no ranking from after its end: over, waiting for it
+    assert "집계 대기" in text and "Newcomer(ko)" in text
 
 
 def test_raid_view_takes_a_moment_and_a_unit_in_either_order(processed):

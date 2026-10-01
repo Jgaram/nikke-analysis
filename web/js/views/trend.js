@@ -7,7 +7,7 @@
 
 import { assignTier, ELEMENTS } from "../model.js";
 import {
-  h, num, int, face, elementIcon, ELEMENT_KO, tierBadge, sortableTable, segmented, unitName, day,
+  h, num, int, face, elementIcon, ELEMENT_KO, tierBadge, sortableTable, segmented, unitName, day, pendingLabel,
 } from "../ui.js";
 import { trendTabs, unitInline, lent } from "./common.js";
 import { timeStrip } from "./when.js";
@@ -141,7 +141,7 @@ function overallBody(app, picked) {
       cell: (s) => h("a", { class: "link", href: app.seasonHref(s.season) }, `S${s.season}`) },
     { key: "boss", label: "보스 · 약점", sort: (s) => s.weak, cell: (s) => h("span", { class: "boss-cell" },
       h("span", { class: "boss-name" }, s.info.bossKo || s.info.bossEn || "?"), elementIcon(s.weak, 15),
-      !s.final ? h("span", { class: "pill live" }, "진행 중") : null) },
+      !s.final ? h("span", { class: "pill live" }, pendingLabel(s.end)) : null) },
     ...picked.map((u) => {
       const unit = model.units[u];
       return {
@@ -223,7 +223,7 @@ function weakBody(app, weak, picked, toggle) {
       cell: (r) => h("span", null, int(r.fielded), h("span", { class: "muted" }, `/${seasons.length}`)) },
     ...newest.map((s) => ({
       key: `s${s.season}`, class: "cmp-season",
-      title: `시즌 ${s.season} · ${s.info.bossKo || s.info.bossEn || "?"} · ${day(s.start)}${s.final ? "" : " · 진행 중"}`,
+      title: `시즌 ${s.season} · ${s.info.bossKo || s.info.bossEn || "?"} · ${day(s.start)}${s.final ? "" : ` · ${pendingLabel(s.end)}`}`,
       label: h("span", { class: "cmp-head" },
         s.info.bossImage ? h("img", { src: `icons/bosses/${s.info.bossImage}.webp`, alt: "", width: 28, height: 28, loading: "lazy" }) : null,
         h("span", null, `S${s.season}`)),

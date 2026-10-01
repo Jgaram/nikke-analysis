@@ -135,6 +135,9 @@ def _seasons(seasons: pd.DataFrame, periods: pd.DataFrame, entries: pd.DataFrame
             "periods": spans.get(number, []),
             "disrupted": _text(row.get("disrupted")) == "1",
             "collected": _ms(collected.get(number)) if number in collected.index else None,
+            # enikk's own stamp of its last collection: settles whether a ranking collected on the
+            # day the season ended came after the end (see analyze.metrics.ranking_final)
+            "seen": _ms(row.get("enikk_last_seen")),
             "servers": list(servers.get(number, [])),
         })
     return sorted(out, key=lambda s: s["season"])

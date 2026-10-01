@@ -184,3 +184,15 @@ def test_usage_rate_and_rank_count_players_without_weights(world, table):
     for _, group in table.groupby("season"):
         expected = group["rankers"].rank(method="min", ascending=False).astype(int)
         assert (group["usage_rank"] == expected).all()  # ties share a rank: 1, 1, 3
+
+
+def test_a_ranking_collected_on_the_last_day_but_before_the_end_is_not_final():
+    end = pd.Series(pd.to_datetime(["2026-09-30T19:59:59Z"] * 4, utc=True))
+    until = pd.Series(pd.to_datetime(["2026-09-30T23:59:59Z"] * 4, utc=True))  # collected on the end's UTC day
+    seen = pd.Series(pd.to_datetime([
+        "2026-09-30T16:00:00Z",  # 01:00 KST, four hours before the end
+        "2026-09-30T21:01:00Z",  # after the end
+        "2026-09-30T00:00:00Z",  # stamped by the day only, as the oldest seasons are
+        None,
+    ], utc=True))
+    assert list(metrics.ranking_final(end, until, seen)) == [False, True, True, True]

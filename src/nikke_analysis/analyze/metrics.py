@@ -107,6 +107,7 @@ def season_frame(rows: pd.DataFrame) -> pd.DataFrame:
             "weak_element": rows.get("weak_element", ""),
             "start_at": pd.to_datetime(rows.get("start_at"), errors="coerce", utc=True),
             "end_at": pd.to_datetime(rows.get("end_at"), errors="coerce", utc=True),
+            "enikk_last_seen": pd.to_datetime(rows.get("enikk_last_seen"), errors="coerce", utc=True),
         }
     )
     out = out.dropna(subset=["season"])
@@ -212,8 +213,24 @@ def season_summary(entries: pd.DataFrame, seasons: pd.DataFrame, *, weighting: s
         .reset_index()
     )
     out = out.merge(seasons, on="season", how="left")
-    out["final"] = out["end_at"].notna() & (out["collected_until"] >= out["end_at"])
+    seen = out["enikk_last_seen"] if "enikk_last_seen" in out.columns else pd.Series(pd.NaT, index=out.index)
+    out["final"] = ranking_final(out["end_at"], out["collected_until"], seen)
     return out
+
+
+def ranking_final(end: pd.Series, collected_until: pd.Series, seen: pd.Series) -> pd.Series:
+    """Is the stored ranking the season's last word?
+
+    enikk dates a collection by its UTC day, so ``collected_until`` reaching the
+    end means "collected on the day it ended" - which for an end at 04:59 KST
+    (19:59 UTC) also covers the hours before it. enikk's own stamp
+    (``enikk_last_seen``) settles it where it has a time of day: a collection
+    stamped before the end is not final. The oldest seasons are stamped by the
+    day only (00:00 UTC); for those the day rule stands.
+    """
+    seen = pd.to_datetime(seen, errors="coerce", utc=True)
+    by_day = seen.isna() | (seen == seen.dt.floor("D"))
+    return end.notna() & (collected_until >= end) & (by_day | (seen >= end))
 
 
 def unit_season(

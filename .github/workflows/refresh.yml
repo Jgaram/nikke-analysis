@@ -16,6 +16,12 @@ on:
     # the week and updates land on Thursday mornings KST, so both a new notice
     # and the maintenance that follows it are caught within a few days.
     - cron: "0 6 * * 1,4"
+    # Every hour, a cheap check (`nikke due`) that runs the refresh only when
+    # the rankings need it: a season being played, once a day; a season that
+    # just ended, until enikk posts its final ranking (at most a week). Off the
+    # hour, when scheduled runs are least delayed. Keep in step with the `if`
+    # in the `due` job below.
+    - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
       seasons:
@@ -31,7 +37,31 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The hourly schedule only asks; every other trigger refreshes outright.
+  due:
+    runs-on: ubuntu-latest
+    outputs:
+      due: ${{ steps.hourly.outputs.due || 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        if: github.event.schedule == '23 * * * *'
+
+      - uses: actions/setup-python@v5
+        if: github.event.schedule == '23 * * * *'
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Is a refresh due?
+        id: hourly
+        if: github.event.schedule == '23 * * * *'
+        run: |
+          pip install -q -e .
+          nikke due
+
   refresh:
+    needs: due
+    if: needs.due.outputs.due == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

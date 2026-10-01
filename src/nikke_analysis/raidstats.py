@@ -33,6 +33,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -43,6 +44,7 @@ from .paths import processed_dir
 from .servers import ServerError, ServerFilter, describe, ordered
 from .tierlist import ELEMENT_KO, find_unit, load_index
 from .timeline import Season, Timeline, resolve_moment
+from .util.kdate import KST
 from .util.names import NameIndex
 from .util.text import pad, rjust, width
 
@@ -305,7 +307,12 @@ def _header(usage: SeasonUsage) -> list[str]:
     where = describe(usage.server_filter, usage.server_names) if usage.server_names else f"{usage.servers}개 서버"
     scope = f"{usage.top}위까지" if usage.top else "상위 50위"
     sample = f"표본  {where} {scope} = {usage.rankers:,}명 · 덱 {usage.decks:,}개 (enikk {usage.collected_on} 수집"
-    sample += ", 진행 중인 시즌이라 그때까지의 순위)" if not usage.final else ")"
+    if usage.final:
+        sample += ")"
+    elif season is not None and season.end and datetime.now(KST) >= season.end:
+        sample += ", 끝났지만 끝난 뒤의 순위를 아직 못 받은 집계 대기라 그때까지의 순위)"
+    else:
+        sample += ", 진행 중인 시즌이라 그때까지의 순위)"
     return [head, sample]
 
 

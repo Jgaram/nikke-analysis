@@ -4,7 +4,7 @@
 
 import { GENERALITY_MAX, DAY_MS } from "../model.js";
 import {
-  h, s, num, pct, elementIcon, ELEMENT_KO, unitName, face, showTip, moveTip, hideTip, sortableTable, segmented, infoButton,
+  h, s, num, pct, elementIcon, ELEMENT_KO, unitName, face, pendingLabel, showTip, moveTip, hideTip, sortableTable, segmented, infoButton,
 } from "../ui.js";
 import { lineChart, lineLegend } from "../linechart.js";
 import { CURVE_KO, CURVE_HINT, paramsNote, PARAM, unitInline, metaTabs } from "./common.js";
@@ -126,7 +126,7 @@ export function seasonTip(r, lines) {
   return h("div", { class: "tip" },
     h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
     h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
-      !r.season.final ? h("span", { class: "muted" }, " · 진행 중") : null),
+      !r.season.final ? h("span", { class: "muted" }, ` · ${pendingLabel(r.season.end)}`) : null),
     h("dl", { class: "tip-list" }, lines.flatMap(([k, v]) => [h("dt", null, k), h("dd", null, v)])));
 }
 

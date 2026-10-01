@@ -5,7 +5,7 @@
 // are the season/element cuts; the overall line is tiered by the overall's own, lower cuts.
 
 import { assignTier, GENERALITY_MAX } from "./model.js";
-import { h, s, num, pct, elementIcon, ELEMENT_KO, day, shortDay, showTip, moveTip, hideTip, tierBadge, unitName, kst } from "./ui.js";
+import { h, s, num, pct, elementIcon, ELEMENT_KO, day, shortDay, pendingLabel, showTip, moveTip, hideTip, tierBadge, unitName, kst } from "./ui.js";
 
 const HEIGHT = 300;
 const MARGIN = { l: 40, r: 34, t: 24, b: 44 };
@@ -90,7 +90,7 @@ export function trajectoryChart(app, u, records, { own, treasureAt = null, at = 
       h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
       h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
         rec.row.elementMatch ? h("span", { class: "pill" }, "▶ 자기 속성") : null,
-        h("span", { class: "muted" }, ` · ${day(info.start)}${live ? ` · 진행 중(${shortDay(rec.season.collectedOn)} 수집분)` : ""}`)),
+        h("span", { class: "muted" }, ` · ${day(info.start)}${live ? ` · ${pendingLabel(rec.season.end)}(${shortDay(rec.season.collectedOn)} 수집분)` : ""}`)),
       h("dl", { class: "tip-list" },
         h("dt", null, "기여도"), h("dd", null, tierBadge(tier, rec.row.lift), h("span", { class: "muted" }, " 그 시즌")),
         h("dt", null, "사용"), h("dd", null, rec.row.rankers
@@ -353,7 +353,7 @@ export function generalityChart(app, u, records, { treasureAt = null, at = null 
       h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
       h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
         rec.row.elementMatch ? h("span", { class: "pill" }, "▶ 자기 속성") : null,
-        !rec.season.final ? h("span", { class: "muted" }, " · 진행 중") : null),
+        !rec.season.final ? h("span", { class: "muted" }, ` · ${pendingLabel(rec.season.end)}`) : null),
       h("dl", { class: "tip-list" },
         h("dt", null, "범용도"), h("dd", null, g != null ? h("b", null, `${BAND_KO[bandOf(g)]} ${num(g)}`)
           : h("span", { class: "muted" }, "없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임"))),
@@ -517,7 +517,7 @@ export function seriesChart(app, { points, series, cuts, valueLabel, ariaLabel, 
     return h("div", { class: ["tip", rows.length > 10 && "tip-wide"] },
       h("div", { class: "tip-name" }, `시즌 ${info.season}`, h("span", { class: "muted" }, info.bossKo || info.bossEn || "")),
       h("div", { class: "tip-attrs" }, "약점 ", elementIcon(info.weak, 14), ELEMENT_KO[info.weak] || "?",
-        h("span", { class: "muted" }, ` · ${day(info.start)}${points[i].season.final ? "" : " · 진행 중"} · ${valueLabel}`)),
+        h("span", { class: "muted" }, ` · ${day(info.start)}${points[i].season.final ? "" : ` · ${pendingLabel(points[i].season.end)}`} · ${valueLabel}`)),
       h("div", { class: "tip-rows" }, rows.map(({ sr, v }) => h("div", { class: ["tip-row", sr.u === lit && "on"] },
         h("img", { class: "tip-face", src: `icons/units/${unitOf(sr).id}.webp`, alt: "", width: 20, height: 20 }),
         h("span", { class: "tip-row-name" }, unitName(unitOf(sr))), tierBadge(assignTier(v, cuts), v)))),

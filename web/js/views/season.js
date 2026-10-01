@@ -3,7 +3,7 @@
 
 import { assignTier } from "../model.js";
 import {
-  h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, tierBadge, deckSplit, sortableTable, toggle, kst,
+  h, num, pct, int, elementIcon, ELEMENT_KO, shortDay, pendingStatus, tierBadge, deckSplit, sortableTable, toggle, kst,
 } from "../ui.js";
 import { unitCard, tierBoard, filterRow, modeSwitch, seasonTip, unitInline, kindTabs, numsToggle, generalityTag, generalityRule } from "./common.js";
 import { timeStrip } from "./when.js";
@@ -63,7 +63,7 @@ function header(app, info, entry) {
   const cuts = app.state.params.cuts;
   const boss = info.bossKo || info.bossEn || "?";
   const status = entry ? (entry.final ? h("span", { class: "status done" }, "종료")
-    : h("span", { class: "status live" }, h("i", { class: "pulse", "aria-hidden": "true" }), `진행 중 · ${shortDay(entry.collectedOn)} 수집분까지 (잠정)`))
+    : pendingStatus(entry.end, ` · ${shortDay(entry.collectedOn)} 수집분까지 (잠정)`))
     : h("span", { class: "status" }, "랭킹 없음");
   const counts = {};
   let used = 0;

@@ -192,3 +192,18 @@ def test_missing_rankings_are_reported_without_any_metric_table(tmp_path):
     ])
     issues = health.ranking_issues(processed, datetime(2026, 9, 28, tzinfo=KST))
     assert [(i.level, i.code) for i in issues] == [("error", "ranking_missing")]
+
+
+def test_a_season_ranked_only_before_its_end_is_reported_after_a_week(tmp_path):
+    processed = tmp_path / "processed"
+    processed.mkdir()
+    write(processed / "metrics_seasons.csv", [
+        {"season": "40", "rankers": "300", "end_at": "2026-08-27T04:59:59+09:00", "final": "False",
+         "collected_on": "2026-08-25T09:00:00+09:00"},
+        {"season": "41", "rankers": "300", "end_at": "2026-09-24T04:59:59+09:00", "final": "False",
+         "collected_on": "2026-09-22T09:00:00+09:00"},
+        {"season": "39", "rankers": "300", "end_at": "2026-07-23T04:59:59+09:00", "final": "True"},
+    ])
+    issues = health.ranking_issues(processed, datetime(2026, 9, 28, tzinfo=KST))
+    # 40 is a month past its end; 41 is four days past, still inside the week the hourly check asks
+    assert [(i.level, i.code, i.subject) for i in issues] == [("error", "ranking_not_final", "시즌 40")]

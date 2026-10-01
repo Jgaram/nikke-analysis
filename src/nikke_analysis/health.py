@@ -136,8 +136,10 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
     A name no rule matched drops that unit from every number of the seasons it
     appears in - a known kind of gap, so a warning. A season enikk tracks that
     ended more than ``RANKINGS_MAX_DELAY`` ago and still has no rankings is an
-    error: the collection has stopped, and every tier after it is stale. Within
-    the week it is not reported at all - enikk is usually still collecting.
+    error: the collection has stopped, and every tier after it is stale. So is
+    one that has rankings but none from after its end (``ranking_not_final``):
+    the hourly ``nikke due`` stops asking after the same week. Within the week
+    neither is reported - enikk is usually still collecting.
     """
     issues = [
         Issue(
@@ -149,7 +151,18 @@ def ranking_issues(directory: Path, now: datetime) -> list[Issue]:
         )
         for row in _rows(directory / "raid_unresolved_names.csv")
     ]
-    ranked = {row["season"] for row in _rows(directory / "metrics_seasons.csv") if row.get("rankers") not in (None, "", "0")}
+    summary = [row for row in _rows(directory / "metrics_seasons.csv") if row.get("rankers") not in (None, "", "0")]
+    ranked = {row["season"] for row in summary}
+    for row in summary:
+        if not row.get("end_at") or str(row.get("final", "")).lower() in ("true", "1"):
+            continue
+        end = datetime.fromisoformat(row["end_at"])
+        if now - end > RANKINGS_MAX_DELAY:
+            issues.append(
+                Issue("error", "ranking_not_final", f"시즌 {row['season']}",
+                      f"{end.date()} 에 끝났는데 끝난 뒤의 순위가 없다 (마지막 수집 {str(row.get('collected_on', ''))[:10]}) "
+                      "— enikk 가 최종 순위를 안 올렸거나 수집이 멈췄다; 티어는 그 시즌을 잠정으로 센다")
+            )
     for row in _rows(directory / "soloraid_seasons.csv"):
         if not row.get("end_at") or not row.get("enikk_first_seen") or row["season"] in ranked:
             continue

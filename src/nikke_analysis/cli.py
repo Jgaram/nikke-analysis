@@ -11,6 +11,7 @@
     nikke raid                       the newest season: units by usage, with the deck split
     nikke raid 40 크라운             one unit in one season (--server, --exclude, --top narrow it)
     nikke check                      does the timeline need a human? (exit 1 if so)
+    nikke due                        is a ranking refresh due now? (the hourly scheduled check)
 
     nikke collect roster             fetch the roster sources
     nikke collect notices            fetch new/edited official notices (site + Naver lounge, its Solo Raid posts too)
@@ -162,6 +163,23 @@ def cmd_check(args: argparse.Namespace) -> int:
     else:
         print(health.render(issues))
     return 1 if health.has_errors(issues) else 0
+
+
+def cmd_due(args: argparse.Namespace) -> int:
+    """Is a refresh due now? Prints the answer; under GitHub Actions also writes ``due=true|false``
+    to the step output."""
+    import os
+    from datetime import datetime
+
+    from . import due
+    from .util.kdate import KST
+
+    answer = due.check(datetime.now(KST))
+    _emit(answer.to_dict())
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
+            handle.write(f"due={'true' if answer.due else 'false'}\n")
+    return 0
 
 
 def cmd_seasons(args: argparse.Namespace) -> int:
@@ -531,6 +549,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("check", help="does the timeline need a human? (exit 1 if so)")
     p.add_argument("--json", action="store_true")
     p.set_defaults(func=cmd_check)
+
+    p = sub.add_parser("due", help="is a ranking refresh due now? (a live season unread today, or a just-ended one's final ranking)")
+    p.set_defaults(func=cmd_due)
 
     p = sub.add_parser("seasons", help="every Solo Raid season with its real dates")
     p.add_argument("--json", action="store_true")

@@ -71,6 +71,15 @@ export function kst(ms) {
 
 export const day = (ms) => { if (ms == null) return "–"; const t = kst(ms); return `${t.y}-${t.m}-${t.d}`; };
 export const shortDay = (ms) => { if (ms == null) return "–"; const t = kst(ms); return `${t.m}/${t.d}`; };
+// A season whose ranking is not final yet is either still being played or over and waiting for enikk's
+// post-end ranking (usually a few hours, sometimes days); the visitor's clock tells which.
+export const awaitingFinal = (end, now = Date.now()) => end != null && now >= end;
+export const pendingLabel = (end, now = Date.now()) => awaitingFinal(end, now) ? "집계 대기" : "진행 중";
+export function pendingStatus(end, rest = "") {
+  const waiting = awaitingFinal(end);
+  return h("span", { class: ["status", waiting ? "warn" : "live"] },
+    waiting ? null : h("i", { class: "pulse", "aria-hidden": "true" }), `${pendingLabel(end)}${rest}`);
+}
 export const stamp = (ms) => { if (ms == null) return "–"; const t = kst(ms); return `${t.y}-${t.m}-${t.d} ${t.hh}:${t.mm}`; };
 
 // A day as the moment the CLI means by it: noon KST.

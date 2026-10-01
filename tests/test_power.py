@@ -1,0 +1,110 @@
+"""체급 (power.py): weights read back from decks whose damage is a known product of their members."""
+
+import numpy as np
+import pandas as pd
+import pytest
+
+from nikke_analysis import power
+
+UNITS = [f"u{i:02d}" for i in range(18)]
+TRUE = {u: np.exp(0.08 * i) for i, u in enumerate(UNITS)} | {"p0": 1.5, "p1": 1.2}
+CP_EFFECT = 0.25
+
+
+def world(seasons=2, servers=2, players=30, seed=3):
+    """Every player decks 15 of the units in three decks and the other three with the pair p0 + p1,
+    who are never apart. A deck does the player's level x the product of its members' weights x
+    (combat power / 100k) ^ 0.25 per member. "n0" is out but nobody decks it."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for season in range(1, seasons + 1):
+        for s in range(servers):
+            for rank in range(1, players + 1):
+                level = rng.uniform(1, 3)
+                order = list(rng.permutation(UNITS))
+                decks = [order[0:5], order[5:10], order[10:15], ["p0", "p1"] + order[15:18]]
+                for number, deck in enumerate(decks, start=1):
+                    cps = 1e5 * np.exp(rng.normal(0, 0.1, len(deck)))
+                    score = level * 1e9 * np.prod([TRUE[u] for u in deck]) * np.prod((cps / 1e5) ** CP_EFFECT)
+                    for unit, cp in zip(deck, cps):
+                        rows.append({"season": season, "server": f"S{s}", "player": f"p{rank}", "rank": rank,
+                                     "deck": number, "deck_score": score, "unit_id": unit, "unit_cp": cp})
+    entries = pd.DataFrame(rows)
+    table = pd.DataFrame([{"season": season, "unit_id": u, "element_match": False, "treasure": False}
+                          for season in range(1, seasons + 1) for u in UNITS + ["p0", "p1", "n0"]])
+    return entries, table
+
+
+@pytest.fixture(scope="module")
+def solved():
+    entries, table = world()
+    result = power.fit(power.cells(entries, table))
+    exact = result.solve(ridge=1e-6)
+    return entries, table, result, power.weights(result, reference=("u00", "other"), coef=exact).set_index("cell"), exact
+
+
+def test_the_weights_come_back_against_the_reference(solved):
+    _, _, _, table, _ = solved
+    for unit in UNITS:
+        assert table.at[f"{unit}:other", "weight"] == pytest.approx(TRUE[unit] / TRUE["u00"], rel=0.02)
+        assert table.at[f"{unit}:other", "status"] == "ok"
+
+
+def test_better_built_copies_are_taken_out(solved):
+    *_, exact = solved
+    assert exact[-1] == pytest.approx(CP_EFFECT, abs=0.03)
+
+
+def test_two_units_never_apart_are_weighed_only_as_a_pair(solved):
+    _, _, _, table, _ = solved
+    pair = table.loc[["p0:other", "p1:other"]]
+    assert set(pair["status"]) == {"pair"} and set(pair["partner"]) == {"p0:other", "p1:other"}
+    assert pair["together"].min() == 1.0
+    assert pair["pair_weight"].iloc[0] == pytest.approx(TRUE["p0"] * TRUE["p1"] / TRUE["u00"] ** 2, rel=0.03)
+
+
+def test_a_unit_nobody_decked_has_no_weight_rather_than_zero(solved):
+    entries, table_in, _, table, _ = solved
+    assert power.unobserved(entries, table_in) == ["n0"]
+    assert not any(cell.startswith("n0") for cell in table.index)
+
+
+def test_the_check_on_swaps_finds_the_weights_hold():
+    """Decks that differ by one member: with every deck a pure product, the other servers' weights
+    predict the whole difference."""
+    rng = np.random.default_rng(5)
+    rows = []
+    core = ["c1", "c2", "c3", "c4"]
+    weight = {"a": 1.0, "b": 1.6, "c": 0.7} | {c: 1.0 for c in core} | {f"f{i}": np.exp(0.05 * i) for i in range(20)}
+    for server in ("S1", "S2", "S3"):
+        for rank in range(1, 41):
+            fifth = ["a", "b", "c"][rank % 3]
+            fillers = list(rng.permutation([f"f{i}" for i in range(20)]))[:10]
+            decks = [core + [fifth], fillers[:5], fillers[5:]]
+            for number, deck in enumerate(decks, start=1):
+                score = 1e9 * np.prod([weight[u] for u in deck]) * rng.uniform(0.99, 1.01)
+                rows += [{"season": 1, "server": server, "player": f"p{rank}", "rank": rank, "deck": number,
+                          "deck_score": score, "unit_id": u, "unit_cp": 1e5} for u in deck]
+    entries = pd.DataFrame(rows)
+    table = pd.DataFrame({"season": 1, "unit_id": sorted(weight), "element_match": False, "treasure": False})
+    check = power.swap_check(power.fit(power.cells(entries, table)), ridge=1e-6)
+    assert check["slope"] == pytest.approx(1.0, abs=0.1) and check["corr"] > 0.9
+
+
+def test_the_creep_is_the_weight_a_later_release_date_buys():
+    roster = pd.DataFrame({"unit_id": ["a", "b", "c", "d"],
+                           "release_date": ["2022-11-04", "2023-11-04", "2024-11-03", "2025-11-03"]})
+    table = pd.DataFrame({"unit_id": ["a", "b", "c", "d"] * 2, "own": [True] * 4 + [False] * 4,
+                          "treasure": False, "status": "ok",
+                          "log": [0.0, 0.1, 0.2, 0.3] + [0.0, 0.05, 0.1, 0.15]})
+    rates = power.creep(table, roster)
+    assert rates["own"] == pytest.approx(np.exp(0.1), rel=0.01)
+    assert rates["other"] == pytest.approx(np.exp(0.05), rel=0.01)
+
+
+def test_the_field_is_the_strongest_cells_out_that_season():
+    history = pd.DataFrame({"season": [1, 1, 2, 2, 2], "unit_id": ["a", "b", "a", "b", "c"],
+                            "element_match": [True, False, False, False, True], "treasure": False})
+    table = pd.DataFrame({"cell": ["a:own", "b:other", "a:other", "c:own"], "log": [np.log(2), 0.0, 0.0, np.log(4)]})
+    top = power.field_strength(table, history)
+    assert top[1] == pytest.approx(np.sqrt(2)) and top[2] == pytest.approx(4 ** (1 / 3))

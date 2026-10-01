@@ -3,7 +3,7 @@
 
 import { ELEMENTS, DAY_MS, GENERALITY_BANDS, assignTier, unitElements, fielded } from "../model.js";
 import {
-  h, num, pct, int, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, nameLines, unitName, withTip, tierBadge,
+  h, num, pct, int, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, unitName, withTip, tierBadge,
   deckSplit, segmented, toggle, ELEMENT_KO, CLASS_KO, BURSTS, WEAPON_SHORT, WEAPON_KO, MAKER_KO, shortDay,
 } from "../ui.js";
 
@@ -25,7 +25,6 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
   if (!nums) value = null;
   if (!bands) band = null;
   const unit = app.model.units[u];
-  const [first, second] = nameLines(unit);
   const card = h("a", {
     class: ["card", dim && "dim", retired && "retired", pick && "pickable", pick?.on && "picked"],
     href: pick ? pick.href : app.unitHref(unit.id), dataset: { tier: tier || "D" },
@@ -39,7 +38,6 @@ export function unitCard(app, u, { value, tier, provisional, heart, dim, retired
     heart ? h("span", { class: "mark heart", "aria-hidden": "true" }, "♥") : null,
     pick?.on ? h("span", { class: "mark check", "aria-hidden": "true" }, "✓") : null,
     value != null && !Number.isNaN(value) ? h("span", { class: "val" }, num(value)) : null),
-  h("span", { class: "name" }, h("span", null, first), second ? h("span", null, second) : null),
   band ? generalityBar(band, unit.element) : null,
   extra || null);
   if (tip) withTip(card, tip);

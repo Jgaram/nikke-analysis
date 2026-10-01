@@ -501,7 +501,7 @@ a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .fold:hover { border-color: var(--accent); color: var(--ink); }
 
 .card {
-  position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 76px;
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 5px; width: 64px;
   text-decoration: none; color: inherit; border-radius: 10px; outline-offset: 3px;
 }
 .card .face {
@@ -525,10 +525,6 @@ a.schip:hover .schip-boss, .schip.on .schip-boss { transform: scale(1.08); }
 .card .mark.heart { left: 13px; background: var(--heart); color: #fff; font-size: 9px; }
 .card .mark.prov + .mark.heart { left: 13px; }
 .card .face > .mark.heart:first-of-type { left: -6px; }
-.card .name { margin-top: 6px; width: 100%; font-size: 11px; line-height: 1.25; color: var(--ink-2); text-align: center; }
-.card .name span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.card .name span + span { color: var(--ink); font-weight: 600; }
-.card .name span:only-child { color: var(--ink); font-weight: 600; }
 .card .tag { margin-top: -1px; white-space: nowrap; }
 /* the generality band in the colours of the unit's element: 특화 all of it, 속성 우선 half, 범용 grey */
 [data-el="Fire"] { --uc: var(--el-Fire); }
@@ -947,7 +943,6 @@ svg.traj { display: block; overflow: visible; }
   .cards { gap: 12px 6px; padding: 10px 8px; }
   .card { width: 62px; }
   .card .face { width: 54px; height: 54px; }
-  .card .name { font-size: 10.5px; }
   .more { width: 62px; height: 54px; }
   .pick-tier { width: 26px; height: 54px; }
   .pick-bar .picker { flex-basis: 100%; }

@@ -97,13 +97,6 @@ export function todayKst() {
 
 export const unitName = (unit) => unit.ko || unit.en || unit.id;
 
-// "라피 : 레드 후드" -> ["라피", "레드 후드"]: two lines under a face.
-export function nameLines(unit) {
-  const name = unitName(unit);
-  const cut = name.indexOf(" : ");
-  return cut < 0 ? [name] : [name.slice(0, cut), name.slice(cut + 3)];
-}
-
 const slug = (v) => v.trim().toLowerCase().replaceAll(" ", "-");
 
 export function elementIcon(element, size = 18, extra = {}) {

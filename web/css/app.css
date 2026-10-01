@@ -256,6 +256,7 @@ sup { font-size: 11px; margin-left: 1px; }
   border: 1px solid var(--line); max-width: 100%; overflow-x: auto; scrollbar-width: none;
 }
 .seg::-webkit-scrollbar { display: none; }
+.seg.wrap { flex-wrap: wrap; }
 .seg-btn {
   display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 0; border-radius: 8px;
   background: transparent; color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;

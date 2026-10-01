@@ -263,24 +263,73 @@ def years_out(units: pd.Series, roster: pd.DataFrame) -> pd.Series:
     return (released(units, roster) - LAUNCH).dt.days / 365.25
 
 
-def creep(table: pd.DataFrame, roster: pd.DataFrame) -> pd.Series:
+def own_share(history: pd.DataFrame) -> pd.DataFrame:
+    """Per unit, before and after its treasure: the share of all the seasons whose boss was weak to
+    one of its elements (its own, the ones its skill adds and - after the treasure - the treasure's).
+    Without the seasons' weakness, the share of the unit's own seasons that matched."""
+    first = history.drop_duplicates("unit_id")
+    first = first.set_index(first["unit_id"].astype(str))
+    if "weak_element" not in history.columns or "element" not in history.columns:
+        share = tiers.flags(history, "element_match").groupby(history["unit_id"].astype(str)).mean()
+        return pd.DataFrame([{"unit_id": u, "treasure": t, "share": float(v)} for u, v in share.items() for t in (False, True)])
+    weak = history.drop_duplicates("season")["weak_element"].dropna().value_counts(normalize=True)
+    rows = []
+    for unit, info in first.iterrows():
+        mine = {info.get("element")} | set(metrics.listed_elements(info.get("extra_elements")))
+        for treasure in (False, True):
+            elements = mine | (set(metrics.listed_elements(info.get("treasure_elements"))) if treasure else set())
+            rows.append({"unit_id": unit, "treasure": treasure, "share": float(weak.reindex(sorted(e for e in elements if e)).fillna(0).sum())})
+    return pd.DataFrame(rows)
+
+
+def overall(table: pd.DataFrame, history: pd.DataFrame) -> pd.DataFrame:
+    """The 종합 체급 of every unit before and after its treasure: its own-season and other-season
+    weights mixed (in logs) by how often the boss really was weak to it (``own_share``) - what it
+    adds over the seasons as they come. Only with both sides weighed and neither a pair; well weighed
+    (``ok``) when both are, else provisional. ``se`` takes the two sides as independent."""
+    cells = table[table["status"] != "pair"].dropna(subset=["log"])
+    cells = cells.assign(treasure=cells["treasure"].astype(bool), unit_id=cells["unit_id"].astype(str))
+    keys, columns = ["unit_id", "treasure"], ["unit_id", "treasure", "log", "se", "status"]
+    own = cells.loc[cells["own"].astype(bool), columns]
+    other = cells.loc[~cells["own"].astype(bool), columns]
+    out = own.merge(other, on=keys, suffixes=("_own", "_other")).merge(own_share(history), on=keys, how="left")
+    p = out["share"].fillna(0.0)
+    return pd.DataFrame({
+        "unit_id": out["unit_id"], "treasure": out["treasure"], "share": p,
+        "log": p * out["log_own"] + (1 - p) * out["log_other"],
+        "se": np.sqrt((p * out["se_own"]) ** 2 + ((1 - p) * out["se_other"]) ** 2),
+        "status": np.where((out["status_own"] == "ok") & (out["status_other"] == "ok"), "ok", "provisional"),
+    })
+
+
+def creep(table: pd.DataFrame, roster: pd.DataFrame, combined: pd.DataFrame | None = None) -> pd.Series:
     """How much stronger, per year of release date, units came out: the deck multiple a year later
-    buys, by side (``own`` / ``other``). Cells weighed well (``ok``) and without a treasure."""
-    rows = table[(table["status"] == "ok") & ~table["treasure"].astype(bool)]
-    years = years_out(rows["unit_id"], roster)
+    buys, by side (``own`` / ``other``, and ``overall`` given the 종합 체급). Cells weighed well
+    (``ok``) and without a treasure."""
     out = {}
-    for side, own in (("own", True), ("other", False)):
-        pick = rows["own"].astype(bool) == own
-        out[side] = float(np.exp(np.polyfit(years[pick], rows.loc[pick, "log"], 1)[0]))
+    for side, rows in _sides(table, combined):
+        years = years_out(rows["unit_id"], roster)
+        out[side] = float(np.exp(np.polyfit(years, rows["log"], 1)[0]))
     return pd.Series(out)
 
 
-def by_year(table: pd.DataFrame, roster: pd.DataFrame) -> pd.DataFrame:
+def by_year(table: pd.DataFrame, roster: pd.DataFrame, combined: pd.DataFrame | None = None) -> pd.DataFrame:
     """Average weight (geometric) of the cells weighed well, by release year and side."""
-    rows = table[(table["status"] == "ok") & ~table["treasure"].astype(bool)].copy()
-    rows["year"] = released(rows["unit_id"], roster).dt.year
-    rows["side"] = np.where(rows["own"].astype(bool), "own", "other")
+    frames = []
+    for side, rows in _sides(table, combined):
+        frames.append(rows.assign(side=side, year=released(rows["unit_id"], roster).dt.year.to_numpy()))
+    rows = pd.concat(frames, ignore_index=True)
     return rows.groupby(["side", "year"])["log"].agg(["mean", "size"]).assign(weight=lambda f: np.exp(f["mean"]))
+
+
+def _sides(table: pd.DataFrame, combined: pd.DataFrame | None):
+    """The well weighed rows without a treasure, per side: the 종합 first when given."""
+    pick = lambda f: f[(f["status"] == "ok") & ~f["treasure"].astype(bool)]
+    if combined is not None:
+        yield "overall", pick(combined)
+    rows = pick(table)
+    for side, own in (("own", True), ("other", False)):
+        yield side, rows[rows["own"].astype(bool) == own]
 
 
 def field_strength(table: pd.DataFrame, history: pd.DataFrame) -> pd.Series:
@@ -368,13 +417,15 @@ def load(data_dir=None, config=None):
 def payload(entries: pd.DataFrame, history: pd.DataFrame, *, weighting: str = "dcg",
             reference: tuple[str, str] = REFERENCE) -> dict | None:
     """What the site's 메타 변화 · 파워 인플레 view draws: every cell (``log`` weight against ``reference``,
-    ``se``, ``decks``, ``status``, the partner of a pair and the pair's ``pairLog``), the field season
+    ``se``, ``decks``, ``status``, the partner of a pair and the pair's ``pairLog``), the 종합 체급 of every
+    unit before and after its treasure (``overall``: ``log``, ``se``, ``share``, ``status``), the field season
     by season (``TOP`` strongest cells out then, geometric mean) and the season each unit's treasure
     first played. None when the reference never played (no scale to put the weights on)."""
     result = fit(cells(entries, history), weighting=weighting)
     if f"{reference[0]}:{reference[1]}" not in result.cells:
         return None
     table = weights(result, reference=reference)
+    combined = overall(table, history)
     field = field_strength(table, history)
     played = history[tiers.played_with_treasure(history).to_numpy()]
     treasure_from = played.groupby(played["unit_id"].astype(str))["season"].min()
@@ -390,6 +441,9 @@ def payload(entries: pd.DataFrame, history: pd.DataFrame, *, weighting: str = "d
                    "partner": str(r.partner).split(":")[0].rstrip("T") if r.status == "pair" else None,
                    "pairLog": rounded(np.log(r.pair_weight)) if r.status == "pair" else None}
                   for r in table.sort_values("cell").itertuples()],
+        "overall": [{"unit": str(r.unit_id), "treasure": bool(r.treasure), "log": rounded(r.log), "se": rounded(r.se),
+                     "share": rounded(r.share), "status": str(r.status)}
+                    for r in combined.sort_values(["unit_id", "treasure"]).itertuples()],
         "field": [[int(season), rounded(value)] for season, value in field.items()],
         "treasureFrom": {unit: int(season) for unit, season in sorted(treasure_from.items())},
     }
@@ -422,8 +476,17 @@ def report(data_dir=None) -> str:
     lines = [f"시즌 1-{newest} · 덱 {len(result.decks):,}개 · 칸 {len(result.cells)}개 (니케 × 자기/다른 속성 시즌 × 애장품 전/후) · "
              f"체급 = 덱 대미지 배수, 홍련이 자기 속성 시즌에 쓰일 때 = 1", ""]
 
+    combined = overall(table, history)
+    by_unit = combined[~combined["treasure"]].set_index("unit_id")
+    left_combined = {s: overall(left_out[s].reset_index(), history) for s in servers}
     lines.append("1. 비교 (± = 표준오차, [ ] = 서버 하나씩 뺀 여섯 번의 최소-최대)")
     for unit in COMPARE:
+        if unit in by_unit.index:
+            r = by_unit.loc[unit]
+            spread = [np.exp(f.set_index("unit_id").loc[unit, "log"]) for f in (c[~c["treasure"]] for c in left_combined.values())
+                      if unit in set(f["unit_id"])]
+            lines.append(f"   {name(unit + ':own'):<16} 종합 {np.exp(r.log):.2f} ±{r.se * np.exp(r.log):.2f} "
+                         f"[{min(spread):.2f}-{max(spread):.2f}] · 자기 속성 시즌 {r.share:.0%} · {STATUS_KO[r.status]}")
         for side in ("own", "other"):
             cell = f"{unit}:{side}"
             if cell not in by_cell.index:
@@ -436,21 +499,23 @@ def report(data_dir=None) -> str:
 
     lines.append("2. 체급 상위 (잘 잰 칸)")
     good = table[table["status"] == "ok"]
+    top = combined[(combined["status"] == "ok") & ~combined["treasure"]].nlargest(15, "log")
+    lines.append("   종합: " + " · ".join(f"{name(u + ':own')} {np.exp(v):.2f}" for u, v in zip(top["unit_id"], top["log"])))
     for own, size in ((True, 15), (False, 10)):
         top = good[good["own"] == own].nlargest(size, "log")
         lines.append(f"   {'자기' if own else '다른'} 속성 시즌: " + " · ".join(f"{name(c)} {w:.2f}" for c, w in zip(top["cell"], top["weight"])))
     lines.append("")
 
     lines.append("3. 인플레: 출시일이 1년 늦을 때 체급 (잘 잰 칸, 애장품 전)")
-    rates = creep(table, roster)
-    spread = pd.DataFrame({s: creep(left_out[s].reset_index(), roster) for s in servers})
-    for side in ("own", "other"):
-        lines.append(f"   {'자기' if side == 'own' else '다른'} 속성 시즌: x{rates[side]:.3f} "
+    rates = creep(table, roster, combined)
+    spread = pd.DataFrame({s: creep(left_out[s].reset_index(), roster, left_combined[s]) for s in servers})
+    for side in ("overall", "own", "other"):
+        lines.append(f"   {SIDE_KO[side]}: x{rates[side]:.3f} "
                      f"[서버 하나씩 빼면 x{spread.loc[side].min():.3f}-x{spread.loc[side].max():.3f}]")
-    years = by_year(table, roster)
-    for side in ("own", "other"):
+    years = by_year(table, roster, combined)
+    for side in ("overall", "own", "other"):
         part = years.loc[side]
-        lines.append(f"   출시 연도별 평균 ({'자기' if side == 'own' else '다른'}): " + " · ".join(
+        lines.append(f"   출시 연도별 평균 ({SIDE_KO[side]}): " + " · ".join(
             f"{y} {r.weight:.2f} ({int(r['size'])})" for y, r in part.iterrows()))
     field = field_strength(table, history)
     lines.append(f"   시즌마다 쓸 수 있던 상위 {TOP}칸의 평균 체급: " + " · ".join(
@@ -493,6 +558,7 @@ def report(data_dir=None) -> str:
 
 
 STATUS_KO = {"ok": "잘 잼", "provisional": "잠정", "pair": "짝으로만"}
+SIDE_KO = {"overall": "종합", "own": "자기 속성 시즌", "other": "다른 속성 시즌"}
 
 
 if __name__ == "__main__":

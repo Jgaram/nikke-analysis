@@ -1,20 +1,21 @@
 // 메타 변화 · 파워 인플레: every unit's 체급 (power.py, docs/power.md) by release date, and the field
-// season by season. The 체급 is computed once when the site is built (data/power.json, the default
+// season by season - over all seasons (the 종합 체급: own and other seasons mixed by how often the boss
+// was weak to the unit), or for one element (its units in their own seasons, the seasons weak to it). The 체급 is computed once when the site is built (data/power.json, the default
 // parameters): the page's parameters move only the tier filter here, never the weights.
 // It is a deck multiple - a floor under the unit's own damage multiple - and not a role.
 
-import { assignTier, DAY_MS } from "../model.js";
+import { assignTier, DAY_MS, ELEMENTS } from "../model.js";
 import {
-  h, s, num, int, day, elementIcon, unitName, face, showTip, moveTip, hideTip, sortableTable, segmented, infoButton,
+  h, s, num, int, day, elementIcon, unitName, face, showTip, moveTip, hideTip, sortableTable, segmented, infoButton, ELEMENT_KO,
 } from "../ui.js";
 import { lineChart, lineLegend } from "../linechart.js";
 import { metaTabs, paramsNote, PARAM, unitInline, unitSearch } from "./common.js";
 import { seasonTip } from "./meta.js";
 
-const SIDES = {
-  own: { name: "자기 속성 시즌", hint: "보스 약점이 그 니케 속성인 시즌" },
-  other: { name: "다른 속성 시즌", hint: "그 밖의 시즌" },
-};
+// The views: "overall", or an element.
+const viewName = (view) => (view === "overall" ? "종합" : ELEMENT_KO[view]);
+// Every element a unit counts as before its treasure (the scatter's cells are before it).
+const countsAs = (unit, element) => unit.element === element || (unit.extra || []).includes(element);
 const YEAR_MS = 365.25 * DAY_MS;
 const QUANTILES = [0.75, 0.9];
 const TICKS = [0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1, 1.25, 1.5, 2, 2.5, 3, 4];
@@ -80,17 +81,18 @@ function bestTiers(app) {
   return best;
 }
 
-// The cells of one side before the treasure, as points: the unit, its release (years since launch),
-// its log weight, and whether it is in the fits (well weighed and through the filter).
-function points(app, data, side, floor) {
+// The cells of a view before the treasure, as points: the unit, its release (years since launch),
+// its log weight, and whether it is in the fits (well weighed and through the filter). Overall: every
+// unit's 종합 체급; an element: its units' own-season 체급.
+function points(app, data, view, floor, best = bestTiers(app)) {
   const { model } = app;
-  const best = bestTiers(app);
   const out = [];
-  for (const c of data.cells) {
-    if (c.treasure || c.own !== (side === "own") || c.log == null) continue;
+  const cells = view === "overall" ? data.overall || [] : data.cells.filter((c) => c.own);
+  for (const c of cells) {
+    if (c.treasure || c.log == null) continue;
     const u = model.byId.get(c.unit);
     const unit = u != null ? model.units[u] : null;
-    if (!unit || unit.release == null) continue;
+    if (!unit || unit.release == null || (view !== "overall" && !countsAs(unit, view))) continue;
     const passes = floor == null || (best.get(u) ?? Infinity) <= floor;
     out.push({ c, u, unit, x: (unit.release - model.launch) / YEAR_MS, y: c.log, passes,
       fitted: passes && c.status === "ok", best: best.get(u) });
@@ -116,6 +118,9 @@ function powerHelp(app, data) {
     h("p", null, h("b", null, "체급 = 홍련 자리에 이 니케를 넣으면 덱 대미지가 몇 배가 되나"), " (홍련이 자기 속성 시즌에 쓰일 때 = 1). "
       + "같은 랭커의 다섯 덱끼리만 비교해서(계정 육성·실력·보스가 지워진다) 전 시즌 덱을 한 번에 풉니다. 시즌과 무관한 고정 값이고, "
       + "자기 속성 시즌 / 다른 속성 시즌, 애장품 전 / 뒤를 따로 잽니다. 이 그래프는 애장품 전입니다."),
+    h("p", null, h("b", null, "종합"), " = 자기 속성 시즌 체급과 다른 속성 시즌 체급을, 지금까지 시즌 중 보스 약점이 그 니케 속성이었던 비율"
+      + "로 섞은 것(로그로 가중 평균, 비율은 점에 올리면 나옵니다) — 시즌이 오는 대로 넣었을 때 평균 몇 배인가. "
+      + "두 쪽이 다 재진 니케만 있습니다. ", h("b", null, "속성"), "을 고르면 그 속성 니케의 자기 속성 시즌 체급입니다."),
     h("p", null, "점 하나가 니케 하나(색 = 속성), 세로축은 로그 눈금입니다. 선 끝의 숫자는 출시가 1년 늦을 때 체급이 몇 % 높은가 — 이게 파워 인플레입니다. "
       + "평균선과, 그보다 위쪽을 따라가는 상위 25% · 상위 10% 선(분위 회귀)을 그립니다. 위쪽 선은 레이드에 거의 안 쓰인 니케가 아래에 깔려도 덜 흔들립니다."),
     h("p", null, "점을 누르면 아래 시즌별 파워 그래프에 그 니케가 같이 그려집니다."),
@@ -141,8 +146,10 @@ function filterHelp() {
 
 function fieldHelp(data) {
   return help("시즌별 파워",
-    h("p", null, `시즌마다 그 시즌 시작 때 나와 있던 니케의 그 시즌 체급(약점이 맞으면 자기 속성, 애장품이 있으면 애장품 뒤) 중 상위 ${data.top}칸의 평균(기하평균).`),
-    h("p", null, "니케를 고르면 그 니케의 체급을 같이 그립니다. 체급은 고정이라 선이 평평하고, 시즌 파워가 올라가면서 차이가 좁혀집니다 — "
+    h("p", null, `시즌마다 그 시즌 시작 때 나와 있던 니케의 그 시즌 체급(약점이 맞으면 자기 속성, 애장품이 있으면 애장품 뒤) 중 상위 ${data.top}칸의 평균(기하평균).`
+      + " 속성을 고르면 보스 약점이 그 속성인 시즌만 그립니다."),
+    h("p", null, "니케를 고르면 그 니케의 체급을 같이 그립니다 — 종합에서는 종합 체급, 속성에서는 그 시즌들에 쓰일 체급. "
+      + "체급은 고정이라 선이 평평하고, 시즌 파워가 올라가면서 차이가 좁혀집니다 — "
       + "니케가 안 쓰이게 되는 건 체급이 줄어서가 아니라 더 센 니케가 들어와서입니다."),
     h("p", { class: "muted" }, "출시 뒤 경과별로 덱 대미지의 빗나감이 ±1% 안이고 추세가 없어, 체급을 고정으로 둔 것이 데이터로 받쳐집니다(docs/power.md)."));
 }
@@ -174,25 +181,31 @@ export function powerView(app) {
     root.append(h("div", { class: "panel empty" }, "체급 데이터가 없습니다."));
     return root;
   }
-  const side = state.powerSide || "own";
+  const view = state.powerView || "overall";
   const cuts = state.params.cuts;
   const labels = cuts.slice(0, Math.min(4, cuts.length - 1)).map(([l]) => l);
   const floor = state.powerFloor != null && state.powerFloor < labels.length ? state.powerFloor : null;
-  const list = points(app, data, side, floor);
+  const best = bestTiers(app);
+  const list = points(app, data, view, floor, best);
+  // every view's inflation (the mean line) on its button
+  const rate = (v) => perYear((v === view ? fits(list) : fits(points(app, data, v, floor, best))).mean?.b);
 
   root.append(
     caution(),
     h("div", { class: "toolbar" },
-      segmented(Object.entries(SIDES).map(([value, k]) => ({ value, label: k.name, title: k.hint })), side,
-        (v) => { state.powerSide = v; app.rerender(); }, { label: "어느 시즌" }),
+      segmented(["overall", ...ELEMENTS].map((value) => ({
+        value, icon: value === "overall" ? null : elementIcon(value, 15), label: `${viewName(value)} ${rate(value)}`,
+        title: value === "overall" ? "모든 니케의 종합 체급 · 모든 시즌 — 출시 1년당 체급(평균선)"
+          : `${ELEMENT_KO[value]} 니케의 자기 속성 시즌 체급 · ${ELEMENT_KO[value]} 약점 시즌 — 출시 1년당 체급(평균선)`,
+      })), view, (v) => { state.powerView = v; app.rerender(); }, { label: "종합 또는 속성", class: "wrap" }),
       h("span", { class: "head-title" },
         segmented([{ value: null, label: "전체", title: "잘 잰 니케 모두" },
           ...labels.map((l, k) => ({ value: k, label: `${l} 이상`, title: `어느 시즌에서든 시즌 티어 ${l} 이상을 찍은 적 있는 니케만` }))],
         floor, (v) => { state.powerFloor = v; app.rerender(); }, { label: "선에 넣을 니케" }),
         infoButton("선에 넣을 니케", () => filterHelp()))),
-    scatterPanel(app, data, side, list),
-    fieldPanel(app, data),
-    tablePanel(app, data),
+    scatterPanel(app, data, view, list),
+    fieldPanel(app, data, view),
+    tablePanel(app, data, view),
   );
   return root;
 }
@@ -200,15 +213,16 @@ export function powerView(app) {
 // ---------------------------------------------------------------------------
 // the scatter: release date x 체급, one dot per unit, and the fitted lines
 
-function scatterPanel(app, data, side, list) {
+function scatterPanel(app, data, view, list) {
   const { model, state } = app;
   const f = fits(list);
   const host = h("div", { class: "chart-host lc-host", style: { minHeight: "320px" }, role: "img",
-    "aria-label": `니케마다 출시일과 ${SIDES[side].name} 체급` });
+    "aria-label": `니케마다 출시일과 ${view === "overall" ? "종합" : `${ELEMENT_KO[view]} 니케의 자기 속성 시즌`} 체급` });
   const lines = [
     { name: "평균", cls: "mean", fit: f.mean },
     ...f.quantiles.map(({ q, fit }) => ({ name: `상위 ${Math.round((1 - q) * 100)}%`, cls: `q${Math.round(q * 100)}`, fit })),
   ];
+  if (!list.length) return h("section", { class: "panel empty" }, "잰 니케가 없습니다.");
   const ys = list.map((p) => p.y);
   const lo = Math.log(0.8) > Math.min(...ys) ? Math.min(...ys) - 0.05 : Math.log(0.8);
   const hi = Math.max(...ys) + 0.05;
@@ -292,7 +306,7 @@ function scatterPanel(app, data, side, list) {
 
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" },
-      h("span", { class: "head-title" }, h("h3", null, `출시일과 체급 · ${SIDES[side].name}`), infoButton("출시일과 체급", () => powerHelp(app, data)))),
+      h("span", { class: "head-title" }, h("h3", null, `출시일과 체급 · ${view === "overall" ? "종합" : `${ELEMENT_KO[view]} · 자기 속성 시즌`}`), infoButton("출시일과 체급", () => powerHelp(app, data)))),
     h("div", { class: "legend" },
       ...lines.map((l) => h("span", { class: "lg" }, h("i", { class: `sw line fit-sw ${l.cls}` }), l.name)),
       h("span", { class: "lg" }, h("i", { class: "sw dot-sw hollow" }), "잠정")),
@@ -303,20 +317,23 @@ function unitTip(app, data, u, cell, cutList, best) {
   const unit = app.model.units[u];
   const mine = data.cells.filter((c) => c.unit === unit.id);
   const row = (own, treasure) => mine.find((c) => c.own === own && c.treasure === treasure);
+  const whole = (treasure) => overallOf(data, unit.id, treasure);
   const value = (c) => (!c ? "–" : c.status === "pair" ? `${partnerName(app, c)}와 묶어서 ${times(c.pairLog)}배`
     : `${times(c.log)}배${c.status === "provisional" ? " (잠정)" : ""}`);
   const lines = [
     ["출시", day(unit.release)],
+    ["종합", value(whole(false)) + (whole(false) ? ` · 자기 속성 시즌 ${Math.round(whole(false).share * 100)}%` : "")],
     ["자기 속성 시즌", value(row(true, false))],
-    ["다른 속성 시즌", value(row(false, false))],
   ];
-  if (row(true, true) || row(false, true)) {
-    lines.push(["애장품 뒤 자기", value(row(true, true))], ["애장품 뒤 다른", value(row(false, true))]);
-  }
+  if (row(true, true) || whole(true)) lines.push(["애장품 뒤 종합", value(whole(true))], ["애장품 뒤 자기", value(row(true, true))]);
   lines.push(["최고 시즌 티어", best != null ? cutList[best][0] : "–"]);
   return h("div", { class: "tip" },
     h("div", { class: "tip-name" }, face(unit, 28), unitName(unit), elementIcon(unit.element, 14)),
     h("dl", { class: "tip-list" }, lines.flatMap(([k, v]) => [h("dt", null, k), h("dd", null, v)])));
+}
+
+function overallOf(data, id, treasure) {
+  return (data.overall || []).find((c) => c.unit === id && c.treasure === treasure);
 }
 
 function partnerName(app, c) {
@@ -327,28 +344,34 @@ function partnerName(app, c) {
 // ---------------------------------------------------------------------------
 // the field season by season, and one unit's flat line against it
 
-function fieldPanel(app, data) {
+function fieldPanel(app, data, view) {
   const { model, state } = app;
   const pop = app.population();
   const field = new Map(data.field);
-  const seasons = pop.summary.filter((s0) => field.has(s0.season));
+  const seasons = pop.summary.filter((s0) => field.has(s0.season) && (view === "overall" || s0.weak === view));
   const u = state.powerUnit;
   const unit = u != null ? model.units[u] : null;
   const mine = unit ? data.cells.filter((c) => c.unit === unit.id) : [];
   const treasureFrom = unit ? data.treasureFrom[unit.id] ?? null : null;
-  const weightIn = (own, season) => {
-    const treasure = treasureFrom != null && season >= treasureFrom;
-    const c = mine.find((x) => x.own === own && x.treasure === treasure) || mine.find((x) => x.own === own && !x.treasure);
-    return c && c.log != null ? Math.exp(c.status === "pair" ? NaN : c.log) : null;
+  // the unit's 체급 that season: overall its 종합, an element the cell it plays then (own when the
+  // boss is weak to it); after its treasure the treasure's, else the one before
+  const weightIn = (s0) => {
+    const treasure = treasureFrom != null && s0.season >= treasureFrom;
+    let c;
+    if (view === "overall") c = overallOf(data, unit.id, treasure) || overallOf(data, unit.id, false);
+    else {
+      const own = s0.rows.find((r) => r.u === u)?.elementMatch ?? countsAs(unit, view);
+      c = mine.find((x) => x.own === own && x.treasure === treasure) || mine.find((x) => x.own === own && !x.treasure);
+    }
+    return c && c.log != null && c.status !== "pair" ? Math.exp(c.log) : null;
   };
   const out = (s0) => unit && unit.release != null && s0.start != null && unit.release <= s0.start;
   const series = [{ name: "시즌 파워", cls: "field", values: seasons.map((s0) => field.get(s0.season)) }];
   if (unit) {
-    for (const own of [true, false]) {
-      const values = seasons.map((s0) => { const v = out(s0) ? weightIn(own, s0.season) : null; return Number.isNaN(v) ? null : v; });
-      if (values.some((v) => v != null)) series.push({ name: `${own ? "자기" : "다른"} 속성`, cls: own ? "own" : "other", values });
-    }
+    const values = seasons.map((s0) => (out(s0) ? weightIn(s0) : null));
+    if (values.some((v) => v != null)) series.push({ name: view === "overall" ? "종합 체급" : "체급", cls: "own", values });
   }
+  if (!seasons.length) return h("section", { class: "panel empty" }, `${viewName(view)} 약점 시즌이 없습니다.`);
   // not from 0: the field moves by tenths
   const shownValues = series.flatMap((x) => x.values.filter((v) => v != null));
   const max = Math.ceil(Math.max(...shownValues) * 4 + 0.4) / 4;
@@ -362,7 +385,8 @@ function fieldPanel(app, data) {
   });
   return h("section", { class: "panel chart-panel" },
     h("div", { class: "panel-head" },
-      h("span", { class: "head-title" }, h("h3", null, "시즌별 파워"), infoButton("시즌별 파워", () => fieldHelp(data))),
+      h("span", { class: "head-title" }, h("h3", null, view === "overall" ? "시즌별 파워" : `시즌별 파워 · ${ELEMENT_KO[view]} 약점 시즌`),
+        infoButton("시즌별 파워", () => fieldHelp(data))),
       picker,
       unit ? h("span", { class: "power-unit" }, unitInline(app, u, { size: 24 }),
         h("button", { type: "button", class: "btn small ghost", onclick: () => { state.powerUnit = null; app.rerender(); } }, "빼기")) : null,
@@ -375,14 +399,8 @@ function fieldPanel(app, data) {
         const s0 = seasons[i];
         const f = field.get(s0.season);
         const lines = [["시즌 파워", num(f)]];
-        if (unit && out(s0)) {
-          const row = s0.rows.find((r) => r.u === u);
-          const own = row ? row.elementMatch : null;
-          for (const k of [true, false]) {
-            const v = weightIn(k, s0.season);
-            if (v != null && !Number.isNaN(v)) lines.push([`${k ? "자기" : "다른"} 속성${own === k ? " (이 시즌)" : ""}`, `${num(v)} · 시즌 파워의 ${num(v / f)}배`]);
-          }
-        }
+        const v = unit && out(s0) ? weightIn(s0) : null;
+        if (v != null) lines.push([view === "overall" ? "종합 체급" : "이 시즌 체급", `${num(v)} · 시즌 파워의 ${num(v / f)}배`]);
         return seasonTip({ season: s0 }, lines);
       },
     }));
@@ -390,29 +408,32 @@ function fieldPanel(app, data) {
 
 // ---------------------------------------------------------------------------
 
-function tablePanel(app, data) {
+function tablePanel(app, data, view) {
   const { model, state } = app;
   const byUnit = new Map();
-  for (const c of data.cells) {
-    if (!byUnit.has(c.unit)) byUnit.set(c.unit, {});
-    byUnit.get(c.unit)[`${c.own ? "own" : "other"}${c.treasure ? "T" : ""}`] = c;
-  }
-  const rows = [...byUnit.entries()].map(([id, cells]) => ({ u: model.byId.get(id), cells })).filter((r) => r.u != null)
-    .map((r) => ({ ...r, unit: model.units[r.u], decks: Object.values(r.cells).reduce((a, c) => a + c.decks, 0) }));
-  const value = (c) => (c && c.status !== "pair" ? Math.exp(c.log) : null);
+  const add = (id, key, c) => { if (!byUnit.has(id)) byUnit.set(id, {}); byUnit.get(id)[key] = c; };
+  for (const c of data.cells) if (c.own) add(c.unit, `own${c.treasure ? "T" : ""}`, c);
+  for (const c of data.overall || []) add(c.unit, `overall${c.treasure ? "T" : ""}`, c);
+  const decks = new Map();
+  for (const c of data.cells) decks.set(c.unit, (decks.get(c.unit) || 0) + c.decks);
+  const rows = [...byUnit.entries()].map(([id, cells]) => ({ u: model.byId.get(id), cells, decks: decks.get(id) || 0 }))
+    .filter((r) => r.u != null).map((r) => ({ ...r, unit: model.units[r.u] }))
+    .filter((r) => view === "overall" || countsAs(r.unit, view));
+  const value = (c) => (c && c.status !== "pair" && c.log != null ? Math.exp(c.log) : null);
   const shown = (c) => (!c ? h("span", { class: "muted" }, "–") : c.status === "pair" ? h("span", { class: "muted", title: `짝 ${partnerName(app, c)}과 둘이 ${times(c.pairLog)}` }, "짝")
     : h("span", { class: c.status === "provisional" ? "muted" : null }, `${times(c.log)}${c.status === "provisional" ? "?" : ""}`));
-  const sort = state.sort.power || { key: "own", dir: "desc" };
+  const sort = state.sort.power || { key: view === "overall" ? "overall" : "own", dir: "desc" };
   const columns = [
     { key: "name", label: "니케", head: true, sort: (r) => unitName(r.unit), cell: (r) => unitInline(app, r.u, { size: 24 }) },
     { key: "release", label: "출시", num: true, sort: (r) => r.unit.release, cell: (r) => day(r.unit.release) },
-    ...[["own", "자기 속성"], ["other", "다른 속성"], ["ownT", "애장품 뒤 자기"], ["otherT", "애장품 뒤 다른"]].map(([key, label]) => ({
+    ...[["overall", "종합"], ["own", "자기 속성"], ["overallT", "애장품 뒤 종합"], ["ownT", "애장품 뒤 자기"]].map(([key, label]) => ({
       key, label, num: true, sort: (r) => value(r.cells[key]), cell: (r) => shown(r.cells[key]) })),
     { key: "decks", label: "덱", num: true, sort: (r) => r.decks, cell: (r) => int(r.decks) },
   ];
   return h("details", { class: "panel table-panel meta-table" },
-    h("summary", null, h("h3", null, "숫자로 보기")),
-    h("p", { class: "muted small table-note" }, `덱에 들어간 니케 ${rows.length}명 · ? = 잠정 · 짝 = 늘 같이 쓰여 둘을 묶어서만 잼`),
+    h("summary", null, h("h3", null, view === "overall" ? "숫자로 보기" : `숫자로 보기 · ${ELEMENT_KO[view]} 니케`)),
+    h("p", { class: "muted small table-note" }, `덱에 들어간 니케 ${rows.length}명 · ? = 잠정 · 짝 = 늘 같이 쓰여 둘을 묶어서만 잼 · `
+      + "종합 – = 자기·다른 속성 시즌 중 한쪽이 안 재짐"),
     sortableTable(columns, rows, {
       sortKey: sort.key, sortDir: sort.dir, caption: "니케별 체급",
       onSort: (key, dir) => { state.sort.power = { key, dir }; app.rerender(); },

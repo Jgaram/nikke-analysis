@@ -102,6 +102,21 @@ def test_the_creep_is_the_weight_a_later_release_date_buys():
     assert rates["other"] == pytest.approx(np.exp(0.05), rel=0.01)
 
 
+def test_the_overall_mixes_the_sides_by_how_often_the_boss_was_weak_to_the_unit():
+    history = pd.DataFrame({"season": [1, 2, 3, 4] * 2, "unit_id": ["a"] * 4 + ["b"] * 4,
+                            "weak_element": ["Fire", "Water", "Water", "Iron"] * 2,
+                            "element": ["Fire"] * 4 + ["Water"] * 4, "extra_elements": [None] * 4 + ["Iron"] * 4,
+                            "treasure_elements": None})
+    share = power.own_share(history).set_index(["unit_id", "treasure"])["share"]
+    assert share[("a", False)] == pytest.approx(0.25) and share[("b", False)] == pytest.approx(0.75)
+    table = pd.DataFrame({"unit_id": ["a", "a", "b", "b", "c"], "own": [True, False, True, False, True], "treasure": False,
+                          "log": [0.4, 0.0, 0.2, -0.2, 0.3], "se": 0.02, "status": ["ok", "ok", "ok", "provisional", "ok"]})
+    combined = power.overall(table, history).set_index("unit_id")
+    assert combined.at["a", "log"] == pytest.approx(0.1) and combined.at["a", "status"] == "ok"
+    assert combined.at["b", "log"] == pytest.approx(0.1) and combined.at["b", "status"] == "provisional"
+    assert "c" not in combined.index  # never weighed in other seasons: no 종합
+
+
 def test_the_field_is_the_strongest_cells_out_that_season():
     history = pd.DataFrame({"season": [1, 1, 2, 2, 2], "unit_id": ["a", "b", "a", "b", "c"],
                             "element_match": [True, False, False, False, True], "treasure": False})
@@ -122,6 +137,7 @@ def test_the_site_gets_every_cell_and_the_field():
     assert pair["pairLog"] == pytest.approx(np.log(weights.at["p0:other", "pair_weight"]), abs=1e-4)
     assert [season for season, _ in data["field"]] == [1, 2] and all(v > 1 for _, v in data["field"])
     assert data["treasureFrom"] == {}
+    assert data["overall"] == []  # nobody played a season of their own element: no 종합
 
 
 def test_the_site_gets_the_season_a_treasure_first_played():

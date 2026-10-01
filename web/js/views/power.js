@@ -151,7 +151,7 @@ function fieldHelp(data) {
 function caution() {
   return h("div", { class: "caution", role: "note" },
     h("p", null, h("b", null, "실험적인 지표입니다. "), "체급은 랭커들의 덱 대미지에서 거꾸로 추정한 값이라, 계산 방식 때문에 왜곡이 클 수 있습니다. "
-      + "다른 탭의 지표보다 거칠게 읽어 주세요."),
+      + "다른 탭의 지표보다 오차가 클 수 있으니 참고용으로 봐 주세요."),
     h("details", null, h("summary", null, "왜 그런가"),
       h("ul", null,
         h("li", null, "덱 대미지를 다섯 멤버 체급의 곱으로 놓았습니다. 합으로 놓아도 데이터에 똑같이 맞아서, \"몇 배\"의 크기가 이 가정에 걸려 있습니다."),

@@ -1,15 +1,15 @@
 overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,overall,overall_tier,provisional,borrowed,elements_observed,seasons_observed,last_season,treasure,burst,unit_class,rarity,release_date,first_used,run_from,last_used,seasons_used,seasons_out,returns,idle_days,missed_own,retired,generality,generality_band,curve,curve_g_peak,curve_g_low
 1,017,아니스 : 스타,Anis: Star,Electric,,,1.711997,SS,False,False,5,6,41,False,I,Defender,SSR,2026-04-23,36,36,41,6,6,0,1.166667,0,False,1.100353,generalist,unknown,1.100353,1.100353
-2,330,크라운,Crown,Iron,,,0.997181,S,False,False,5,29,41,False,II,Defender,SSR,2024-04-25,13,13,41,29,29,0,1.166667,0,False,0.857955,generalist,general,1.019703,0.833674
-3,170,프리바티,Privaty,Water,,,0.97746,S,False,False,5,8,41,True,III,Attacker,SSR,2022-11-04,1,34,41,31,41,1,1.166667,0,False,1.099249,generalist,narrowed,0.805203,0.005402
-4,513,리틀 머메이드,Little Mermaid,Wind,,,0.943153,S,False,False,5,17,41,False,I,Supporter,SSR,2025-04-24,25,25,41,17,17,0,1.166667,0,False,0.893853,generalist,general,0.908755,0.868431
-5,016,라피 : 레드 후드,Rapi: Red Hood,Fire,Iron,,0.914098,S,False,False,5,21,41,False,III,Attacker,SSR,2025-01-01,21,21,41,21,21,0,1.166667,0,False,0.534189,element_first,general,0.88495,0.453469
-6,354,마스트 : 로망틱 메이드,Mast: Romantic Maid,Water,,,0.87092,S,False,False,5,20,41,False,II,Supporter,SSR,2025-01-30,22,22,41,20,20,0,1.166667,0,False,1.080072,generalist,faded,1.092663,0.999201
+2,330,크라운,Crown,Iron,,,0.997181,SS,False,False,5,29,41,False,II,Defender,SSR,2024-04-25,13,13,41,29,29,0,1.166667,0,False,0.857955,generalist,general,1.019703,0.833674
+3,170,프리바티,Privaty,Water,,,0.97746,SS,False,False,5,8,41,True,III,Attacker,SSR,2022-11-04,1,34,41,31,41,1,1.166667,0,False,1.099249,generalist,narrowed,0.805203,0.005402
+4,513,리틀 머메이드,Little Mermaid,Wind,,,0.943153,SS,False,False,5,17,41,False,I,Supporter,SSR,2025-04-24,25,25,41,17,17,0,1.166667,0,False,0.893853,generalist,general,0.908755,0.868431
+5,016,라피 : 레드 후드,Rapi: Red Hood,Fire,Iron,,0.914098,SS,False,False,5,21,41,False,III,Attacker,SSR,2025-01-01,21,21,41,21,21,0,1.166667,0,False,0.534189,element_first,general,0.88495,0.453469
+6,354,마스트 : 로망틱 메이드,Mast: Romantic Maid,Water,,,0.87092,SS,False,False,5,20,41,False,II,Supporter,SSR,2025-01-30,22,22,41,20,20,0,1.166667,0,False,1.080072,generalist,faded,1.092663,0.999201
 7,471,스노우 화이트 : 헤비암즈,Snow White: Heavy Arms,Water,,,0.813418,S,False,False,5,9,41,False,III,Attacker,SSR,2026-01-01,33,33,41,9,9,0,1.166667,0,False,0.486872,element_first,specialist,0.487838,0.432556
 8,600,민트,Mint,Iron,,,0.735808,S,False,False,4,5,41,False,II,Supporter,SSR,2026-05-14,37,37,41,5,5,0,1.166667,0,False,1.001367,generalist,unknown,1.001367,1.001367
 9,515,신데렐라 : 크리스탈 웨이브,Cinderella: Crystal Wave,Iron,,,0.711772,S,False,False,4,4,41,False,III,Attacker,SSR,2026-07-02,38,38,41,4,4,0,1.166667,0,False,0.33216,element_first,unknown,0.33216,0.33216
-10,223,나유타,Nayuta,Wind,,,0.648239,A,False,False,5,11,41,False,II,Supporter,SSR,2025-10-30,31,31,41,11,11,0,1.166667,0,False,0.756614,generalist,general,0.815649,0.600498
-11,281,목단,Moran,Electric,,,0.640484,A,False,False,5,8,41,True,I,Defender,SSR,2024-01-25,34,34,41,8,32,0,1.166667,0,False,0.823097,generalist,general,0.715631,0.715631
+10,223,나유타,Nayuta,Wind,,,0.648239,S,False,False,5,11,41,False,II,Supporter,SSR,2025-10-30,31,31,41,11,11,0,1.166667,0,False,0.756614,generalist,general,0.815649,0.600498
+11,281,목단,Moran,Electric,,,0.640484,S,False,False,5,8,41,True,I,Defender,SSR,2024-01-25,34,34,41,8,32,0,1.166667,0,False,0.823097,generalist,general,0.715631,0.715631
 12,262,리버렐리오,Liberalio,Wind,,,0.57133,A,False,False,5,11,41,False,III,Attacker,SSR,2025-11-06,31,31,41,8,11,0,1.166667,0,False,0.278963,specialist,specialist,0.404503,0.025512
 13,601,프리카,Prika,Water,,,0.555932,A,False,False,4,5,41,False,II,Supporter,SSR,2026-05-28,37,37,41,5,5,0,1.166667,0,False,1.653532,generalist,faded,1.243478,1.243478
 14,355,앵커 : 이노센트 메이드,Anchor: Innocent Maid,Water,,,0.549692,A,False,False,5,20,41,False,II,Supporter,SSR,2025-02-06,22,22,41,16,20,0,1.166667,0,False,0.93598,generalist,faded,1.092663,0.452241

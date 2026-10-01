@@ -1,5 +1,5 @@
 element,element_rank,unit_id,name_ko,name_en,source,element_lift,element_tier,element_seasons,treasure,overall_tier,overall,overall_rank,provisional
-Fire,1,016,라피 : 레드 후드,Rapi: Red Hood,own,1.302018,S,6,False,S,0.914098,5,False
+Fire,1,016,라피 : 레드 후드,Rapi: Red Hood,own,1.302018,S,6,False,SS,0.914098,5,False
 Fire,2,871,유키코,Yukiko,own,1.229536,S,1,False,B,0.245907,33,True
 Fire,3,870,퀸(마코토),Queen (Makoto),own,1.194663,S,1,False,B,0.238933,34,True
 Fire,4,073,브리드 : 사일런트 트랙,Brid: Silent Track,own,1.128049,S,3,False,B,0.22561,36,False
@@ -43,13 +43,13 @@ Fire,33,550,베이,Bay,own,0.0,F,4,True,F,0.0,170,False
 Water,1,471,스노우 화이트 : 헤비암즈,Snow White: Heavy Arms,own,1.659014,SS,3,False,S,0.813418,7,False
 Water,2,234,도로시 : 세렌디피티,Dorothy: Serendipity,own,1.058206,A,4,False,A,0.370744,22,False
 Water,3,192,토브,Tove,own,1.058206,A,4,True,A,0.514279,15,False
-Water,4,170,프리바티,Privaty,own,0.959117,A,2,True,S,0.97746,3,False
+Water,4,170,프리바티,Privaty,own,0.959117,A,2,True,SS,0.97746,3,False
 Water,5,580,팬텀,Phantom,own,0.792848,B,1,True,C,0.15857,47,True
 Water,6,140,슈가,Sugar,skill,0.792368,B,1,True,C,0.159399,46,True
 Water,7,502,일레그 : 붐 앤 쇼크,Elegg: Boom and Shock,own,0.756717,B,4,False,C,0.151384,49,False
 Water,8,074,솔린 : 프로스트 티켓,Soline: Frost Ticket,own,0.742111,B,3,False,A,0.313289,26,False
 Water,9,404,길티 : 마이티 바니,Guilty: Mighty Bunny,own,0.727348,B,1,False,C,0.14547,51,True
-Water,10,354,마스트 : 로망틱 메이드,Mast: Romantic Maid,own,0.721769,B,6,False,S,0.87092,6,False
+Water,10,354,마스트 : 로망틱 메이드,Mast: Romantic Maid,own,0.721769,B,6,False,SS,0.87092,6,False
 Water,11,352,헬름,Helm,own,0.702405,B,6,True,A,0.449903,20,False
 Water,12,194,루드밀라 : 윈터 오너,Ludmilla: Winter Owner,own,0.674552,B,9,False,B,0.195154,40,False
 Water,13,355,앵커 : 이노센트 메이드,Anchor: Innocent Maid,own,0.663593,B,6,False,A,0.549692,14,False
@@ -86,8 +86,8 @@ Water,40,620,백학,Snow Crane,own,0.0,F,2,False,F,0.0,170,False
 Water,40,836,사쿠라,Sakura,own,0.0,F,5,False,F,0.0,170,False
 Wind,1,262,리버렐리오,Liberalio,own,1.614695,SS,2,False,A,0.57133,12,False
 Wind,2,225,홍련 : 흑영,Scarlet: Black Shadow,own,1.555514,SS,5,False,A,0.341048,24,False
-Wind,3,513,리틀 머메이드,Little Mermaid,own,1.227821,S,2,False,S,0.943153,4,False
-Wind,4,223,나유타,Nayuta,own,0.994329,A,2,False,A,0.648239,10,False
+Wind,3,513,리틀 머메이드,Little Mermaid,own,1.227821,S,2,False,SS,0.943153,4,False
+Wind,4,223,나유타,Nayuta,own,0.994329,A,2,False,S,0.648239,10,False
 Wind,5,835,아스카 : WILLE,Asuka: WILLE,own,0.949708,A,3,False,B,0.195181,39,False
 Wind,6,316,벨벳,Velvet,own,0.916049,A,1,False,B,0.199144,38,False
 Wind,7,834,레이 (가칭),Rei (Tentative Name),own,0.74025,B,3,False,C,0.148264,50,False
@@ -124,8 +124,8 @@ Wind,,103,라플라스 : 얼티밋 히어로,Laplace: Ultimate Hero,own,,,0,Fals
 Wind,,104,드레이크 : 그레이트 빌런,Drake: Great Villain,own,,,0,False,F,0.0,170,True
 Wind,,105,맥스웰 : 오디너리 미케닉,Maxwell: Ordinary Mechanic,own,,,0,False,F,0.0,170,True
 Iron,1,515,신데렐라 : 크리스탈 웨이브,Cinderella: Crystal Wave,own,1.98086,SS,1,False,S,0.711772,9,False
-Iron,2,016,라피 : 레드 후드,Rapi: Red Hood,skill,1.506916,SS,4,False,S,0.914098,5,False
-Iron,3,330,크라운,Crown,own,1.21399,S,6,False,S,0.997181,2,False
+Iron,2,016,라피 : 레드 후드,Rapi: Red Hood,skill,1.506916,SS,4,False,SS,0.914098,5,False
+Iron,3,330,크라운,Crown,own,1.21399,S,6,False,SS,0.997181,2,False
 Iron,4,850,이브,EVE,own,0.84822,A,4,False,B,0.169644,44,False
 Iron,5,600,민트,Mint,own,0.771293,B,1,False,S,0.735808,8,False
 Iron,6,851,레이븐,Raven,own,0.76121,B,4,False,B,0.162217,45,False
@@ -168,7 +168,7 @@ Electric,1,581,아르카나,Arcana,own,2.491753,SS,2,False,A,0.499537,17,False
 Electric,2,511,신데렐라,Cinderella,own,1.873087,SS,4,False,A,0.481934,18,False
 Electric,3,017,아니스 : 스타,Anis: Star,own,1.410621,SS,1,False,SS,1.711997,1,False
 Electric,4,018,네온 : 비전 아이,Neon: Vision Eye,own,1.196947,S,1,False,B,0.290628,29,False
-Electric,5,281,목단,Moran,own,0.906893,A,1,True,A,0.640484,11,False
+Electric,5,281,목단,Moran,own,0.906893,A,1,True,S,0.640484,11,False
 Electric,6,015,아니스 : 스파클링 서머,Anis: Sparkling Summer,own,0.82543,A,7,False,B,0.187231,41,False
 Electric,7,183,메이든 : 아이스 로즈,Maiden: Ice Rose,own,0.814029,A,3,False,B,0.173911,43,False
 Electric,8,840,에이다,Ada,own,0.654177,B,2,False,A,0.304288,28,False

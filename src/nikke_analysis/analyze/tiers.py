@@ -118,10 +118,11 @@ DEFAULT_CUTS: list[tuple[str, float]] = [
 ]
 # The overall tier's cuts: the same labels, lower. An overall is the mean of five slots, so a unit
 # that carries one element and sits out the rest scores a fifth of its element lift there; these
-# cuts put about as many units in each overall tier as the element tiers hold (seasons 16-41).
+# cuts put about as many units in each overall tier as the element tiers hold (seasons 16-41, the decks split
+# by 체급: SS 0.85 and S 0.6 since the split moved more of the element tiers into SS).
 DEFAULT_OVERALL_CUTS: list[tuple[str, float]] = [
-    ("SS", 1.0),
-    ("S", 0.65),
+    ("SS", 0.85),
+    ("S", 0.6),
     ("A", 0.3),
     ("B", 0.16),
     ("C", 0.07),

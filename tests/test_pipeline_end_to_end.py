@@ -360,10 +360,10 @@ def test_another_sample_goes_to_its_own_directory_and_is_reused(processed, tmp_p
     again = pipeline.run_servers(chosen, data_dir=directory, cache_dir=tmp_path)
     assert again["reused"] and again["rankers"] == first["rankers"]
     other = pipeline.run_servers(chosen, data_dir=directory, cache_dir=tmp_path,
-                                 config=tiers.TierConfig(half_life_days=30))
+                                 config=tiers.TierConfig(trend_pull=3.0))
     assert not other["reused"]  # different parameters
     forced = pipeline.run_servers(chosen, data_dir=directory, cache_dir=tmp_path,
-                                  config=tiers.TierConfig(half_life_days=30), reuse=False)
+                                  config=tiers.TierConfig(trend_pull=3.0), reuse=False)
     assert not forced["reused"]
 
 

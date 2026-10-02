@@ -782,6 +782,7 @@ table.grid { width: 100%; border-collapse: separate; border-spacing: 0; font-siz
 }
 .info-btn:hover, .info-btn:focus-visible { color: var(--ink); border-color: var(--accent); }
 .panel-head .info-btn { align-self: center; }
+.hero-title .info-btn { margin-left: 8px; vertical-align: 5px; }
 .tip-help { max-width: 320px; gap: 6px; }
 .tip-help p { margin: 0; font-size: 12px; line-height: 1.55; }
 .gauge-legend { display: flex; gap: 4px; flex-wrap: wrap; font-size: 11.5px; }
@@ -907,6 +908,12 @@ svg.traj { display: block; overflow: visible; }
 .howto summary::-webkit-details-marker { display: none; }
 .howto-body { max-width: 860px; line-height: 1.75; }
 .howto-body a { color: var(--accent); }
+.howto-basics { margin: 10px 0 12px; padding-left: 18px; display: grid; gap: 6px; }
+.howto-basics b { color: var(--ink); font-weight: 600; }
+.howto-more { margin: 4px 0 12px; }
+.howto-more > summary { font-weight: 600; font-size: 12.5px; }
+.howto .howto-more[open] > summary::before { content: "−"; }
+.howto .howto-more:not([open]) > summary::before { content: "+"; }
 
 /* ------------------------------------------------------------------------ small screens */
 
@@ -1131,6 +1138,10 @@ a.cmp-head:hover span { color: var(--accent); }
 .tip-params-head { font-size: 11px; font-weight: 700; color: var(--ink-3); margin-bottom: 3px; }
 .tip-params ul { margin: 0; padding-left: 16px; display: grid; gap: 2px; line-height: 1.45; }
 .tip-params b { color: var(--ink); font-weight: 600; }
+.tip-layer:has(.tip-basics) { max-width: min(460px, calc(100vw - 24px)); }
+.tip-basics ul { margin: 0; padding-left: 16px; display: grid; gap: 5px; font-size: 12px; line-height: 1.55; }
+.tip-basics b { color: var(--ink); font-weight: 600; }
+.tip-basics p { margin: 0; }
 .cohort-item > summary { list-style: none; cursor: pointer; border-radius: 6px; }
 .cohort-item > summary::-webkit-details-marker { display: none; }
 .cohort-item > summary:hover { background: color-mix(in srgb, var(--accent) 6%, transparent); }

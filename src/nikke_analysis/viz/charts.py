@@ -271,11 +271,7 @@ def _boss(meta: Any) -> str:
 
 
 def _recency(config: Any) -> str:
-    weight = ("모든 시즌을 똑같이 침" if config.half_life_days <= 0 else
-              f"최근 시즌일수록 크게 침({config.half_life_days:g}일 지난 시즌은 절반만)")
-    if config.value_half_life_days <= 0:
-        return weight
-    return f"{weight}, 옛 시즌 기여도는 같은 약점 최근 시즌 값으로 환산({config.value_half_life_days:g}일 앞서면 절반)"
+    return "보스 약점마다 시즌 기록의 추세선을 지금 자리에서 읽음(모든 시즌을 똑같이)"
 
 
 def _live_note(seasons: pd.DataFrame) -> str:
@@ -379,7 +375,7 @@ def chart_element_tiers(elements: pd.DataFrame, overall: pd.DataFrame, element: 
                          ticks=[[v] for v in table["overall"]], tick_label="종합 티어 점수", labels=labels,
                          starred=list(_is_true(table["provisional"])), star_label="* 종합이 잠정", note=note)
     _frame(fig, ax, theme, title=[_element_part(icons, element, 17) or _element_ko(element), "니케끼리 비교한 속성 티어"],
-           subtitle=["막대 = 보스 약점이", icon, "인 시즌의 기여도 평균(색 = 속성 티어) · 눈금 = 종합 티어 점수"])
+           subtitle=["막대 = 보스 약점이", icon, "인 시즌의 기여도 추세(색 = 속성 티어) · 눈금 = 종합 티어 점수"])
     fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     return out

@@ -2,12 +2,12 @@
 
 import { OVERALL_MODES, GENERALITY_MAX } from "./model.js";
 import { h, segmented, toggle, num } from "./ui.js";
-import { retiredText } from "./views/common.js";
+import { retiredText, TIER_BASICS } from "./views/common.js";
 
-const OVERALL_KO = { mean: "평균", frequency: "최근 빈도 가중", max: "가장 잘한 칸" };
+const OVERALL_KO = { mean: "평균", frequency: "빈도 가중", max: "가장 잘한 칸" };
 const OVERALL_HINT = {
   mean: "보스 약점 다섯 칸의 평균. 최근 어떤 약점이 몰렸는지에 흔들리지 않는다.",
-  frequency: "최근 보스 약점으로 자주 나온 칸일수록 크게 친 평균.",
+  frequency: "보스 약점으로 자주 나온 칸일수록 크게 친 평균.",
   max: "다섯 칸 중 겪어 본 칸의 가장 큰 값.",
 };
 // The cuts one can move: every tier but the bottom one (F), whose floor is 0.
@@ -29,8 +29,8 @@ export function encodeParams(p, d) {
   if (p.rankWeighting !== d.rankWeighting) q.w = p.rankWeighting;
   if (!same(p.cuts, d.cuts)) q.cuts = p.cuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
   if (!same(p.overallCuts, d.overallCuts)) q.ocuts = p.overallCuts.slice(0, cutLabels(d).length).map(([, v]) => v).join(",");
-  if (p.halfLifeDays !== d.halfLifeDays) q.hl = String(p.halfLifeDays);
-  if (p.valueHalfLifeDays !== d.valueHalfLifeDays) q.vhl = String(p.valueHalfLifeDays);
+  if (!same(p.trendSlope, d.trendSlope)) q.ts = p.trendSlope.join(",");
+  if (p.trendPull !== d.trendPull) q.tp = String(p.trendPull);
   if (p.priorStrength !== d.priorStrength) q.k = String(p.priorStrength);
   if (p.overall !== d.overall) q.ov = p.overall;
   if (p.minElementsObserved !== d.minElementsObserved) q.min = String(p.minElementsObserved);
@@ -67,8 +67,11 @@ export function decodeParams(q, d, model) {
       p[name] = [...labels.map((l, i) => [l, values[i]]), ...d[name].slice(labels.length)];
     }
   }
-  p.halfLifeDays = number(q.get("hl"), 0, 3650) ?? d.halfLifeDays;
-  p.valueHalfLifeDays = number(q.get("vhl"), 0, 3650) ?? d.valueHalfLifeDays;
+  if (q.has("ts")) {
+    const slopes = q.get("ts").split(",").map((v) => number(v, -5, 5));
+    if (slopes.length === 2 && slopes.every((v) => v != null)) p.trendSlope = slopes;
+  }
+  p.trendPull = number(q.get("tp"), 0, 50) ?? d.trendPull;
   p.priorStrength = number(q.get("k"), 0, 50) ?? d.priorStrength;
   if (OVERALL_MODES.includes(q.get("ov"))) p.overall = q.get("ov");
   p.minElementsObserved = Math.round(number(q.get("min"), 1, 5) ?? d.minElementsObserved);
@@ -108,8 +111,8 @@ export function changedParams(p, d) {
   if (p.rankWeighting !== d.rankWeighting) out.push("순위 가중");
   if (!same(p.cuts, d.cuts)) out.push("티어 컷");
   if (!same(p.overallCuts, d.overallCuts)) out.push("종합 티어 컷");
-  if (p.halfLifeDays !== d.halfLifeDays) out.push("반감기");
-  if (p.valueHalfLifeDays !== d.valueHalfLifeDays) out.push("값 반감기");
+  if (!same(p.trendSlope, d.trendSlope)) out.push("평균 기울기");
+  if (p.trendPull !== d.trendPull) out.push("기울기 당김");
   if (p.priorStrength !== d.priorStrength) out.push("축소");
   if (p.overall !== d.overall) out.push("종합 방식");
   if (p.minElementsObserved !== d.minElementsObserved) out.push("잠정 기준");
@@ -123,13 +126,15 @@ export function changedParams(p, d) {
   return out;
 }
 
-// The page's "숫자 읽는 법", where it quotes the parameters in force.
+// The page's foot, "티어는 이렇게 정한다": the plain-words list first, then the rules with the parameters in force.
 export function renderHowto(p) {
   const put = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   put("howto-weight", p.rankWeighting === "uniform" ? "순위와 상관없이 똑같이 쳐서" : "순위가 높을수록 조금 크게 쳐서");
-  put("howto-recent", p.halfLifeDays > 0 ? `최근일수록 크게 친(${p.halfLifeDays}일 지난 시즌은 절반)` : "시즌마다 똑같이 친");
-  put("howto-value", p.valueHalfLifeDays > 0
-    ? `같은 보스 약점의 가장 최근 시즌 값으로 환산해(${p.valueHalfLifeDays}일 앞선 시즌은 절반) ` : "");
+  put("howto-slope", `자기 속성 ${num(p.trendSlope[0], 2)} · 다른 속성 ${num(p.trendSlope[1], 2)}/년`);
+  const basics = document.getElementById("howto-basics");
+  if (basics && !basics.childElementCount) {
+    basics.replaceChildren(...TIER_BASICS.map(([k, v]) => h("li", null, h("b", null, k), ` — ${v}`)));
+  }
   put("howto-used", `${p.minTier} 이상`);
   put("howto-retired", retiredText(p));
 }
@@ -247,19 +252,27 @@ export function buildParams(app, body) {
         + `0 = 아무도 안 씀. 그 아래는 ${floor}(티어표에서 접어 둠).`)),
     h("section", { class: "psec" },
       h("h3", null, "속성·종합 티어", h("small", null, "여러 시즌을 하나로")),
-      field("최근성 반감기", range({
-        min: 0, max: upTo(720, d.halfLifeDays, p.halfLifeDays), step: 30, value: p.halfLifeDays, label: "반감기 (일)",
-        format: (v) => (v > 0 ? `${v}일` : "끔"),
-        onInput: (v) => later({ halfLifeDays: v }), onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ halfLifeDays: v }); },
-      }), "이만큼 지난 시즌은 절반만 칩니다. 끔(0) = 모든 시즌을 똑같이."),
-      field("값 반감기", range({
-        min: 0, max: upTo(1080, d.valueHalfLifeDays, p.valueHalfLifeDays), step: 30, value: p.valueHalfLifeDays,
-        label: "값 반감기 (일)", format: (v) => (v > 0 ? `${v}일` : "끔"),
-        onInput: (v) => later({ valueHalfLifeDays: v }),
-        onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ valueHalfLifeDays: v }); },
-      }), "옛 시즌의 기여도를 같은 보스 약점의 가장 최근 시즌 값으로 환산합니다: 그보다 이만큼 앞선 시즌의 "
-        + "기여도는 절반으로. 니케는 새 니케가 나올수록 밀려서, 덜 믿기만 하면 옛 니케가 부풀려집니다. "
-        + "끔(0) = 그때 값 그대로."),
+      field("평균 기울기 · 자기 속성", range({
+        min: -1.5, max: 0, step: 0.05, value: p.trendSlope[0], label: "자기 속성 칸의 평균 기울기 (1년당 기여도)",
+        format: (v) => `${num(v, 2)}/년`,
+        onInput: (v) => later({ trendSlope: [v, app.state.params.trendSlope[1]] }),
+        onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ trendSlope: [v, app.state.params.trendSlope[1]] }); },
+      })),
+      field("평균 기울기 · 다른 속성", range({
+        min: -1.5, max: 0, step: 0.05, value: p.trendSlope[1], label: "다른 속성 칸의 평균 기울기 (1년당 기여도)",
+        format: (v) => `${num(v, 2)}/년`,
+        onInput: (v) => later({ trendSlope: [app.state.params.trendSlope[0], v] }),
+        onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ trendSlope: [app.state.params.trendSlope[0], v] }); },
+      }), "칸마다 그 니케의 시즌 기록에 추세선을 긋고, 그 약점 보스가 마지막으로 온 자리에서 읽습니다. 니케는 새 니케가 "
+        + "나올수록 밀리는데 그 속도가 니케마다 달라서, 기울기는 그 니케 자신의 것을 씁니다. 시즌이 적어 기울기를 믿기 "
+        + "어려우면 이 평균 기울기 쪽으로 당깁니다(시즌 하나뿐이면 이 기울기로 옮김). 1년 넘은 시즌을 빼고 다시 계산해도 "
+        + "평균이 안 움직이는 값입니다."),
+      field("기울기 당김", range({
+        min: 0, max: upTo(5, d.trendPull, p.trendPull), step: 0.25, value: p.trendPull, label: "평균 기울기를 섞는 세기",
+        format: (v) => (v > 0 ? num(v, 2) : "끔"),
+        onInput: (v) => later({ trendPull: v }), onCommit: (v) => { clearTimeout(populationTimer); app.setParams({ trendPull: v }); },
+      }), "평균 기울기를 1년 떨어진 시즌 한 쌍 몇 개만큼 섞을지. 1 = 한 쌍(시즌 하나의 흔들림과 니케마다 기울기의 퍼짐으로 잰 값). "
+        + "끔 = 그 니케의 기울기만(시즌 하나뿐인 칸은 평균 기울기)."),
       field("종합 티어 방식", segmented(OVERALL_MODES.map((m) => ({ value: m, label: OVERALL_KO[m] })), p.overall,
         (v) => { app.setParams({ overall: v }); buildParams(app, body); }, { label: "종합 티어 방식" }),
       OVERALL_HINT[p.overall]),
@@ -275,8 +288,8 @@ export function buildParams(app, body) {
         "진행 중인 시즌의 순위도 속성·종합 티어와 수명에 잠정으로 넣습니다. 끄면 끝난 시즌만."),
       field("못 겪은 쪽", toggle("지난 시점은 나중 시즌 기록으로 채움", p.fillFromLater, (v) => app.setParams({ fillFromLater: v })),
         "지난 시점에서 아직 못 겪은 쪽(출시 직후 자기 속성 시즌만 겪었으면 다른 속성, 다른 속성만 겪었으면 자기 속성)은 "
-        + "원래 0 으로 칩니다. 켜면 그 니케가 나중에 그쪽을 겪은 시즌들로 채웁니다(그 시점에서 가까운 시즌일수록 크게, "
-        + "반감기는 위 최근성과 같음). 그렇게 채운 종합은 티어 변화 그래프에서 흐린 선으로 보입니다. 지금 시점에는 나중 시즌이 없어 그대로입니다. "
+        + "원래 0 으로 칩니다. 켜면 그 니케가 나중에 그쪽을 겪은 시즌들로 채웁니다(그 시즌들의 추세선을 첫 시즌 자리에서 "
+        + "읽은 값). 그렇게 채운 종합은 티어 변화 그래프에서 흐린 선으로 보입니다. 지금 시점에는 나중 시즌이 없어 그대로입니다. "
         + "끄면 그때 알 수 있던 것만.")),
     h("section", { class: "psec" },
       h("h3", null, "수명", h("small", null, "언제부터 쓰였고 아직 쓰이나 · 시즌 티어로")),

@@ -380,6 +380,28 @@ export function generalityColumn(app, view) {
   };
 }
 
+// How the tiers are made, in plain words and no formula: what they take into account. The page's
+// foot ("티어는 이렇게 정한다") opens with these, and the tier views' "i" shows them; the exact rules
+// are in the foot's "자세히" and docs/metrics.md.
+export const TIER_BASICS = [
+  ["무엇을 재나", "상위 랭커(서버마다 50명)의 대미지를 그 니케가 얼마나 함께 만들었나 — 기여도. 덱의 대미지는 "
+    + "그 덱의 다섯 명이, 넣으면 덱이 얼마나 세지는지에 비례해 나눠 가진다. 1.0 = 평균 몫, 0 = 아무도 안 씀."],
+  ["보스 약점마다 따로", "보스의 약점 속성에 따라 쓰이는 니케가 크게 달라서 약점 다섯 가지를 따로 본다. "
+    + "속성 티어는 자기 속성이 약점인 보스에서, 종합 티어는 다섯 약점의 평균이다."],
+  ["지금 기준으로", "새 니케가 나올수록 옛 니케는 밀리고, 밀리는 속도는 니케마다 다르다. 그래서 그 니케의 시즌 "
+    + "기록에 추세선을 긋고 지금 자리의 값을 읽는다 — 꾸준한 니케는 그대로, 밀려난 니케는 밀린 만큼."],
+  ["한 시즌에 흔들리지 않게", "모든 시즌을 똑같이 쓴다. 어느 시즌을 빼고 다시 계산해도 티어가 거의 같게 하려는 "
+    + "것이다. 기록이 적은 니케는 니케들이 보통 밀리는 속도를 빌린다."],
+  ["못 본 것은 짐작하지 않는다", "아직 못 겪은 약점은 같은 쪽(자기 속성 / 다른 속성) 기록으로만 채우고 잠정(?)으로 "
+    + "표시한다. 애장품이 나오면 애장품을 낀 시즌만으로 다시 매긴다."],
+];
+
+export function tierBasics() {
+  return h("div", { class: ["tip-help", "tip-basics"] },
+    h("ul", null, TIER_BASICS.map(([k, v]) => h("li", null, h("b", null, k), ` — ${v}`))),
+    h("p", { class: "muted small" }, "자세한 규칙은 맨 아래 ‘티어는 이렇게 정한다 → 자세히’."));
+}
+
 // For an "i" explanation: what the parameter drawer can change about it - ``items`` as
 // [where in the drawer, what it does here].
 export function paramsNote(items) {
@@ -393,7 +415,7 @@ export const PARAM = {
   sample: "표본 (서버 · 서버마다 상위 · 순위 가중)",
   cuts: "티어 컷 · 시즌·속성 티어",
   overallCuts: "티어 컷 · 종합 티어",
-  combine: "속성·종합 티어 (최근성 · 환산 · 축소 · 종합 방식 · 채우기)",
+  combine: "속성·종합 티어 (평균 기울기 · 기울기 당김 · 종합 방식 · 축소 · 채우기)",
   live: "속성·종합 티어 · 진행 중 시즌",
   used: "수명 · 쓰인 시즌",
   retire: "수명 · 은퇴 공백 · 놓친 자기 속성 시즌",

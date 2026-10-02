@@ -2,12 +2,26 @@
 
 from dataclasses import replace
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from nikke_analysis.analyze import metrics, tiers
 from nikke_analysis.timeline import parse_element
 from tests.synthetic import make_world
+
+# A flat line: every slot is the plain mean of its seasons (the synthetic units never lose ground).
+FLAT = tiers.TierConfig(trend_slope=(0.0, 0.0), trend_pull=1e12)
+
+
+def line_at_zero(points, slope, pull):
+    """The trend line through ``points`` ([x in years, lift]) read at x = 0, as tiers.trend does."""
+    x = np.array([p[0] for p in points], dtype=float)
+    y = np.array([p[1] for p in points], dtype=float)
+    dx = x - x.mean()
+    den = (dx * dx).sum() + pull
+    b = ((dx * (y - y.mean())).sum() + pull * slope) / den if den > 0 else slope
+    return max(y.mean() - b * x.mean(), 0.0)
 
 
 @pytest.fixture(scope="module")
@@ -86,8 +100,7 @@ def tiny(lifts, *, element="Fire", extra="", live=()):
         rows.append({"season": number, "unit_id": "001", "lift": lift, "element": element, "extra_elements": extra})
     summary = pd.DataFrame(seasons)
     moment = summary["end_at"].max() + pd.Timedelta(days=1)
-    return tiers.standings(pd.DataFrame(rows), summary, moment,
-                           tiers.TierConfig(half_life_days=0, value_half_life_days=0))
+    return tiers.standings(pd.DataFrame(rows), summary, moment, FLAT)
 
 
 def overall_of(standing):
@@ -108,7 +121,7 @@ def test_config_file_round_trip(tmp_path):
     path.write_text(
         "population: {top_n: 20, servers: [KR], rank_weighting: uniform}\n"
         "cuts: [{label: S, min_lift: 1.2}, {label: A, min_lift: 0.6}, {label: B, min_lift: 0}]\n"
-        "element: {half_life_days: 90, value_half_life_days: 200, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
+        "element: {trend_slope: [-0.3, -0.6], trend_pull: 2, prior_strength: 1, overall: frequency, min_elements_observed: 2,\n"
         "          include_live: false}\n"
         "lifespan: {min_tier: A, retire_after_days: 200, retire_after_own_seasons: 2}\n"
         "career: {generality_bands: [0.1, 1.5]}\n",
@@ -117,7 +130,7 @@ def test_config_file_round_trip(tmp_path):
     config = tiers.load_tier_config(path)
     assert config.top_n == 20 and config.servers == ("KR",) and config.rank_weighting == "uniform"
     assert config.tier_order == ["S", "A", "B"]
-    assert config.half_life_days == 90 and config.value_half_life_days == 200
+    assert config.trend_slope == (-0.3, -0.6) and config.trend_pull == 2
     assert config.prior_strength == 1 and config.overall == "frequency"
     assert config.min_elements_observed == 2 and not config.include_live
     assert config.min_tier == "A" and config.retire_after_days == 200 and config.retire_after_own_seasons == 2
@@ -184,8 +197,8 @@ def test_tier_labels_are_monotone_in_lift(built):
 
 
 def test_a_dealer_is_top_of_its_element_and_weak_overall(world, built):
-    # The synthetic units never lose ground, so their old seasons are taken at the value they had.
-    stationary = tiers.TierConfig(value_half_life_days=0)
+    # The synthetic units never lose ground: a flat line through their seasons.
+    stationary = FLAT
     overall = overall_at(built, settled(world, built), stationary)
     for element, unit_id in world.element_dps.items():
         row = element_at(built, settled(world, built), unit_id, element, stationary)
@@ -217,10 +230,16 @@ def test_a_skill_element_puts_a_unit_in_both_element_tables(world, built, skille
     assert mine.loc["Wind", "element_tier"] in ("SS", "S") and mine.loc["Water", "element_lift"] < 0.5
     wind = standing.elements[standing.elements["element"] == "Wind"]
     assert {world.partner, world.element_dps["Wind"]} <= set(wind["unit_id"])
-    assert wind["element_rank"].max() == len(wind)  # ranked among the Wind units, itself included
-    # The overall never looked at the unit's own element, so a skill element leaves it alone.
+    # ranked among the Wind units, itself included (units read at 0 share a rank)
+    assert wind["element_rank"].notna().all() and wind["element_rank"].max() <= len(wind)
+    assert wind.loc[wind["unit_id"] == world.partner, "element_rank"].iloc[0] < len(wind)
+    # The overall's slots follow the boss's weakness, so a skill element leaves every other unit alone; the
+    # unit's own Wind slot takes its own side's mean slope now, and nothing else of it moves.
     plain = overall_at(built, newest(built))["overall"].sort_index()
-    pd.testing.assert_series_equal(standing.overall.set_index("unit_id")["overall"].sort_index(), plain)
+    now = standing.overall.set_index("unit_id")["overall"].sort_index()
+    others = now.index != world.partner
+    pd.testing.assert_series_equal(now[others], plain[others])
+    assert now[world.partner] == pytest.approx(plain[world.partner], abs=0.02)
 
 
 def test_a_skill_element_counts_as_the_units_own(world, skilled):
@@ -338,47 +357,52 @@ def test_an_element_not_met_yet_has_no_tier_and_the_overall_is_provisional(world
     assert pd.isna(row["element_rank"]) and electric["unit_id"].iloc[-1] == world.newcomer  # listed last
 
 
-def test_an_old_season_counts_at_todays_value():
-    """An old season's lift is brought to the value of the latest season of the same boss
-    weakness before it is averaged: a year before it (value half-life 365 days), it is worth
-    half; the latest is taken as it is, however long ago it ended, and seasons of other
-    weaknesses since do not count. Weighing an old season less alone does not do that - a unit
-    seen only in it keeps its lift whatever the half-life, since the mean divides the weight
-    back out."""
+def test_a_slot_is_read_off_a_line_through_its_seasons():
+    """A slot is a straight line through its seasons, read at the latest season of its boss
+    weakness - the calendar's, however long ago it ended, and seasons of other weaknesses since do
+    not count. The line's slope is the unit's own as far as its seasons pin it down and the side's
+    mean slope for the rest: a unit seen once is carried along the mean slope, a unit that held
+    its level is pulled down only a little, and without the pull the line is the seasons' own."""
     latest = pd.Timestamp("2026-01-01T00:00:00Z")
+    year = pd.Timedelta(days=365.25)
     summary = pd.DataFrame([
-        {"season": 1, "weak_element": "Fire", "end_at": latest - pd.Timedelta(days=365), "final": True},
-        {"season": 2, "weak_element": "Fire", "end_at": latest, "final": True},
-        {"season": 3, "weak_element": "Water", "end_at": latest + pd.Timedelta(days=90), "final": True},
+        {"season": 1, "weak_element": "Fire", "end_at": latest - 2 * year, "final": True},
+        {"season": 2, "weak_element": "Fire", "end_at": latest - year, "final": True},
+        {"season": 3, "weak_element": "Fire", "end_at": latest, "final": True},
+        {"season": 4, "weak_element": "Water", "end_at": latest + pd.Timedelta(days=90), "final": True},
     ])
     today = latest + pd.Timedelta(days=100)
-    rows = pd.DataFrame([
-        {"season": 1, "unit_id": "old", "lift": 1.0, "element": "Fire", "extra_elements": ""},
-        {"season": 2, "unit_id": "old", "lift": 1.0, "element": "Fire", "extra_elements": ""},
-        {"season": 1, "unit_id": "gone", "lift": 1.0, "element": "Fire", "extra_elements": ""},
-    ])
+    unit = lambda u, n, lift: {"season": n, "unit_id": u, "lift": lift, "element": "Fire", "extra_elements": ""}
+    rows = pd.DataFrame([unit("held", 1, 1.6), unit("held", 2, 1.6), unit("held", 3, 1.6),
+                         unit("fell", 1, 1.6), unit("fell", 2, 1.0), unit("fell", 3, 0.4),
+                         unit("gone", 2, 1.0)])
 
     def fire(config):
-        elements = tiers.standings(rows, summary, today, config).elements
-        return elements.set_index("unit_id")["element_lift"]
+        return tiers.standings(rows, summary, today, config).elements.set_index("unit_id")["element_lift"]
 
-    valued = fire(tiers.TierConfig(half_life_days=0, value_half_life_days=365))
-    assert valued["old"] == pytest.approx(0.75) and valued["gone"] == pytest.approx(0.5)
-    weighed = fire(tiers.TierConfig(half_life_days=30, value_half_life_days=0))
-    assert weighed["gone"] == pytest.approx(1.0)  # weighed down, still at its old lift
-    assert tiers.TierConfig().value_half_life_days == 300
+    default = tiers.TierConfig()
+    assert default.trend_slope == (-0.4, -0.5) and default.trend_pull == 1.0
+    lifts = fire(default)
+    assert lifts["gone"] == pytest.approx(1.0 - 0.4)  # one season a year back, along the mean slope
+    assert lifts["held"] == pytest.approx(1.6 - 0.4 / 3)  # its own slope 0, a third of the way to the mean
+    assert lifts["held"] == pytest.approx(line_at_zero([[-2, 1.6], [-1, 1.6], [0, 1.6]], -0.4, 1.0))
+    own = fire(replace(default, trend_pull=0.0))
+    assert own["held"] == pytest.approx(1.6) and own["fell"] == pytest.approx(0.4)
+    assert own["gone"] == pytest.approx(0.6)  # one season has no slope of its own
+    assert fire(FLAT)["fell"] == pytest.approx(1.0)  # flat: the plain mean
 
 
 def test_old_seasons_inform_but_do_not_inflate():
-    """Units that lose ground at the rate the value half-life assumes: brought to the latest
-    season's value, their old seasons say what the latest does, so leaving the seasons over a
-    year old out changes nothing. Taken as they were, the old seasons pull every older unit up."""
+    """Units that lose ground each at its own pace: a line through their seasons says where they
+    stand now, so leaving the seasons over a year old out changes nothing (without the pull, which
+    only matters for slots with few seasons, exactly). A plain mean of the seasons pulls every
+    unit with old seasons up, and the more the faster it fell."""
     latest = pd.Timestamp("2026-01-01T00:00:00Z")
     ends = [latest - pd.Timedelta(days=150 * k) for k in range(8)][::-1]  # three years of Fire seasons
     summary = pd.DataFrame({"season": range(1, 9), "weak_element": "Fire", "end_at": ends, "final": True})
     rows = pd.DataFrame([
         {"season": n, "unit_id": f"u{u}", "element": "Fire", "extra_elements": "",
-         "lift": (0.8 + 0.1 * u) * 0.5 ** ((end - ends[u]).days / 300)}
+         "lift": 1.2 + 0.1 * u + (0.1 * u - 0.6) * (end - latest).days / 365.25}
         for u in range(6) for n, end in enumerate(ends, start=1) if end >= ends[u]
     ])
     recent = rows[rows["season"].map(dict(zip(summary["season"], summary["end_at"]))) >= latest - pd.Timedelta(days=365)]
@@ -388,16 +412,17 @@ def test_old_seasons_inform_but_do_not_inflate():
         cut = tiers.standings(recent, summary, latest, config).elements.set_index("unit_id")["element_lift"]
         return whole - cut
 
-    assert gap(tiers.TierConfig(value_half_life_days=300)).abs().max() == pytest.approx(0.0, abs=1e-12)
-    as_they_were = gap(tiers.TierConfig(value_half_life_days=0))
+    assert gap(tiers.TierConfig(trend_pull=0.0)).abs().max() == pytest.approx(0.0, abs=1e-12)
+    assert gap(tiers.TierConfig()).abs().max() < 0.05
+    as_they_were = gap(FLAT)
     assert (as_they_were[["u0", "u1", "u2", "u3", "u4"]] > 0.01).all()  # the units with seasons over a year old
 
 
 def test_a_view_of_the_past_fills_a_side_not_met_yet_from_later_seasons():
     """Seen at the end of its first season, a unit that met only its own element has no other
-    element to go on; the seasons it met them later stand in, weighted as far ahead as recency
-    weighs behind (half-life 180 days) and taken as they were. The same for an own element not
-    met yet. A side met already, or a view with nothing later, is left as it was."""
+    element to go on; the seasons it met them later stand in, through a line read at the first of
+    them - what it did when it first met them, not raised to the view's moment. The same for an
+    own element not met yet. A side met already, or a view with nothing later, is left as it was."""
     start = pd.Timestamp("2025-01-01T00:00:00Z")
     weak = ["Fire", "Water", "Wind", "Water"]
     summary = pd.DataFrame({"season": [1, 2, 3, 4], "weak_element": weak, "final": True,
@@ -405,7 +430,7 @@ def test_a_view_of_the_past_fills_a_side_not_met_yet_from_later_seasons():
     lifts = {"fire": [1.0, 0.8, 0.6, 0.4], "water": [0.5, 0.2, 0.3, 0.9]}
     rows = pd.DataFrame([{"season": n, "unit_id": u, "lift": lift[n - 1], "element": u.title(), "extra_elements": ""}
                          for u, lift in lifts.items() for n in range(1, 5)])
-    config = tiers.TierConfig(value_half_life_days=0)
+    config = tiers.TierConfig()
 
     def at(season, **change):
         moment = summary.loc[season - 1, "end_at"]
@@ -413,35 +438,35 @@ def test_a_view_of_the_past_fills_a_side_not_met_yet_from_later_seasons():
         return standing.overall.set_index("unit_id"), standing.slots.set_index(["unit_id", "element"])
 
     overall, slots = at(1)
-    w = [0.5 ** (30 * k / 180) for k in (1, 2, 3)]
-    other = (0.8 * w[0] + 0.6 * w[1] + 0.4 * w[2]) / sum(w)  # Fire's later Water, Wind, Water
+    years = [30 * k / 365.25 for k in (0, 1, 2)]
+    other = line_at_zero(list(zip(years, [0.8, 0.6, 0.4])), -0.5, 1.0)  # Fire's later Water, Wind, Water
     assert overall.loc["fire", "overall"] == pytest.approx((1.0 + 4 * other) / 5)
     assert bool(overall.loc["fire", "borrowed"]) and bool(overall.loc["fire", "provisional"])
     assert bool(slots.loc[("fire", "Iron"), "borrowed"]) and not bool(slots.loc[("fire", "Fire"), "borrowed"])
-    own = (0.2 * w[0] + 0.9 * w[2]) / (w[0] + w[2])  # Water met its own element later, in 2 and 4
+    own = line_at_zero([[0, 0.2], [years[2], 0.9]], -0.4, 1.0)  # Water met its own element later, in 2 and 4
     assert slots.loc[("water", "Water"), "lift"] == pytest.approx(own)
     assert bool(slots.loc[("water", "Water"), "borrowed"]) and not bool(slots.loc[("water", "Wind"), "borrowed"])
 
     overall, _ = at(1, fill_from_later=False)
     assert overall.loc["fire", "overall"] == pytest.approx(0.2) and not overall["borrowed"].any()
     overall, slots = at(2)  # Fire has met Water now: its other slots come from that, not from later
-    assert overall.loc["fire", "overall"] == pytest.approx((1.0 + 4 * 0.8) / 5)
+    assert overall.loc["fire", "overall"] == pytest.approx((1.0 + 4 * 0.8) / 5)  # read at the Fire season itself
     assert not slots.loc["fire", "borrowed"].any()
     overall, _ = at(4)  # nothing later to borrow from
     assert not overall["borrowed"].any()
 
 
-def test_recent_seasons_weigh_more(world, built):
-    """With a short half-life the latest Fire season dominates; with none, all count alike."""
+def test_a_slot_follows_its_own_trend(world, built):
+    """Without the pull the slot is the least-squares line through its seasons, read at the
+    latest season of its weakness; with a flat line, the plain mean."""
     fire = world.element_dps["Fire"]
-    short = element_at(built, newest(built), fire, "Fire",
-                       tiers.TierConfig(half_life_days=1, value_half_life_days=0))["element_lift"]
-    flat = element_at(built, newest(built), fire, "Fire",
-                      tiers.TierConfig(half_life_days=0, value_half_life_days=0))["element_lift"]
+    own = element_at(built, newest(built), fire, "Fire", tiers.TierConfig(trend_pull=0.0))["element_lift"]
+    flat = element_at(built, newest(built), fire, "Fire", FLAT)["element_lift"]
     table, _ = built
     fire_seasons = table[(table["unit_id"] == fire) & (table["weak_element"] == "Fire") & (table["season"] < world.live_season)]
-    latest = fire_seasons.sort_values("season")["lift"].iloc[-1]
-    assert short == pytest.approx(latest, rel=1e-3)
+    ends = pd.to_datetime(fire_seasons["end_at"], utc=True)
+    x = ((ends - ends.max()).dt.total_seconds() / 86400 / 365.25).to_numpy()
+    assert own == pytest.approx(line_at_zero(list(zip(x, fire_seasons["lift"])), -0.4, 0.0), rel=1e-9)
     assert flat == pytest.approx(fire_seasons["lift"].mean(), rel=1e-6)
 
 

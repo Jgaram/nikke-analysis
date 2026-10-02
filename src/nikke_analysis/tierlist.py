@@ -58,7 +58,7 @@ from .util.text import pad, rjust
 
 TREASURE_MARK = "♥"
 
-OVERALL_KO = {"mean": "보스 약점 다섯 가지 성적의 평균", "frequency": "보스 약점 다섯 가지 성적을 최근 자주 나온 약점일수록 크게 친 평균",
+OVERALL_KO = {"mean": "보스 약점 다섯 가지 성적의 평균", "frequency": "보스 약점 다섯 가지 성적을 자주 나온 약점일수록 크게 친 평균",
               "max": "보스 약점 다섯 가지 중 가장 잘한 것"}
 LIFT_NOTE = ["  숫자 = 기여도. 랭커의 대미지를 덱에 든 니케끼리 나눠 가진 몫이다. 한 사람이 쓰는",
              "  25명(5덱 × 5명)이 똑같이 나누면 모두 1.0 — 1.5 = 그 1.5배, 0 = 아무도 안 씀"]
@@ -192,7 +192,8 @@ class TierView:
         return [s for s in self.final_seasons + self.live_seasons if (self.weak or {}).get(s) == element]
 
     def _parameters(self) -> dict[str, Any]:
-        return {"half_life_days": self.config.half_life_days, "overall": self.config.overall,
+        return {"trend_slope": list(self.config.trend_slope), "trend_pull": self.config.trend_pull,
+                "overall": self.config.overall,
                 "include_live": self.config.include_live, "cuts": dict(self.config.cuts),
                 "overall_cuts": dict(self.config.overall_cuts)}
 
@@ -496,12 +497,9 @@ def _cuts(config: tiering.TierConfig, *, overall: bool = False) -> str:
 
 
 def _recency(config: tiering.TierConfig) -> str:
-    weight = ("속성·종합 티어는 모든 시즌을 똑같이 친다" if config.half_life_days <= 0 else
-              f"속성·종합 티어는 최근 시즌일수록 크게 친다({config.half_life_days:g}일 지난 시즌은 절반만)")
-    if config.value_half_life_days <= 0:
-        return weight
-    return (f"{weight}. 옛 시즌 기여도는 같은 약점의 가장 최근 시즌 값으로 환산한다"
-            f"({config.value_half_life_days:g}일 앞선 시즌은 절반)")
+    own, other = config.trend_slope
+    return ("속성·종합 티어 = 보스 약점마다 시즌 기록의 추세선을 지금 자리에서 읽은 값(모든 시즌을 똑같이, 기록이 적으면 "
+            f"기울기를 평균 자기 속성 {own:g} · 다른 속성 {other:g}/년 쪽으로)")
 
 
 def _header(view: TierView, title: str) -> list[str]:
@@ -574,7 +572,7 @@ def render_element(view: TierView, element: str, *, show_all: bool = False) -> s
     listed = " · ".join(f"{s}(진행 중)" if s in view.live_seasons else str(s) for s in seasons)
     out = _header(view, f"{name} 속성 티어")
     out.append(f"  {name} 속성 티어 = 보스 약점이 {name}이던 시즌" + (f"({listed})" if seasons else "")
-               + "의 기여도 평균 · 괄호 = 종합 티어")
+               + "의 기여도 추세를 지금 자리에서 읽은 값 · 괄호 = 종합 티어")
     rows = view.element(element)
     out += ["", f"■ {name} 니케 {len(rows)}명"]
     if rows.empty:
@@ -628,7 +626,7 @@ def _slot_lines(profile: dict[str, Any], config: tiering.TierConfig) -> list[str
     parts = [f"{'▶' if s['element'] in mine else ''}{_element(s['element'])} "
              + (f"{s['lift']:.2f}" if s["seasons"] else f"({'~' if s.get('borrowed') else ''}{s['lift']:.2f})")
              for s in sorted(own + other, key=lambda s: ELEMENTS.index(s["element"]))]
-    how = {"mean": "의 평균", "frequency": "을 최근 자주 나온 약점일수록 크게 친 평균",
+    how = {"mean": "의 평균", "frequency": "을 자주 나온 약점일수록 크게 친 평균",
            "max": " 중 괄호 없는 가장 큰 값"}.get(config.overall, "")
     lines = [f"  {pad('', 9)}  = 보스 약점별 {' · '.join(parts)}{how}"]
     filled = []

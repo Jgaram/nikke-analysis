@@ -120,7 +120,7 @@ function slotChart(app, slots, overallMode) {
       h("span", { class: "mb-el" }, elementIcon(sl.element, 15), sl.own ? h("b", { class: "own-mark" }, "▶") : null)))),
     h("div", { class: "tile-sub" }, overallMode === "mean" ? `종합 = 다섯 칸의 평균 · 괄호 = 못 겪어서 채운 값${
       slots.some((sl) => sl.borrowed) ? "(반투명 = 나중 시즌 기록으로)" : ""} · ▶ = 자기 속성`
-      : overallMode === "frequency" ? "종합 = 최근 자주 나온 약점일수록 크게 친 평균 · ▶ = 자기 속성"
+      : overallMode === "frequency" ? "종합 = 자주 나온 약점일수록 크게 친 평균 · ▶ = 자기 속성"
         : "종합 = 겪어 본 칸 중 가장 큰 값 · ▶ = 자기 속성"));
 }
 
@@ -154,7 +154,7 @@ function generalityHelp(app, g = null) {
     g ? h("p", null, !Number.isNaN(g.generality)
       ? `이 니케: 2 × ${num(g.otherLevel)} ÷ (${num(g.ownLevel)} + ${num(g.otherLevel)}) → ${num(g.generality)}`
       : "이 니케: 아직 없음 — 자기 속성·다른 속성 시즌 중 한쪽을 아직 못 겪었거나 거의 안 쓰임") : null,
-    h("p", { class: "muted" }, "티어에는 들어가지 않는다. 최근성 반감기처럼 속성·종합 티어의 기억에 관한 인자는 범용도에 영향이 없다."),
+    h("p", { class: "muted" }, "티어에는 들어가지 않는다. 추세선 인자처럼 속성·종합 티어를 만드는 인자는 범용도에 영향이 없다."),
     paramsNote([
       [PARAM.bands, "속성 특화 · 속성 위주 · 범용의 경계"],
       [PARAM.live, "진행 중 시즌을 최근 한 바퀴에 넣을지"],

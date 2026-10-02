@@ -83,9 +83,9 @@ def test_the_config_takes_an_exclusion_list_in_any_spelling(tmp_path):
 
 
 def test_a_command_line_choice_replaces_the_configured_one():
-    config = tiers.TierConfig(servers=("KR",), exclude_servers=("JP",), half_life_days=90)
+    config = tiers.TierConfig(servers=("KR",), exclude_servers=("JP",), trend_pull=2.0)
     other = config.with_servers(ServerFilter.of(exclude="na"))
-    assert (other.servers, other.exclude_servers, other.half_life_days) == ((), ("NA",), 90)
+    assert (other.servers, other.exclude_servers, other.trend_pull) == ((), ("NA",), 2.0)
     assert config.servers == ("KR",)  # the original is left as it was
 
 

@@ -6,8 +6,8 @@
 //
 //   population  servers, ranks 1..topN, rank weighting
 //               -> per season and unit: usage, deck split, lift (기여도)
-//   tiers       cuts (season and element; the overall has its own), recency and an old
-//               season's value today, prior,
+//   tiers       cuts (season and element; the overall has its own), the trend line's mean
+//               slopes and pull, prior,
 //               how the overall is formed, the live season
 //               -> element and overall tiers at any moment, a unit's history
 //   lifespans   the season tier that counts as used, how long idle - and through how
@@ -37,8 +37,8 @@ export function defaultParams(model) {
     rankWeighting: d.rankWeighting,
     cuts: d.cuts.map(([label, value]) => [label, value]),
     overallCuts: (d.overallCuts || d.cuts).map(([label, value]) => [label, value]),
-    halfLifeDays: d.halfLifeDays,
-    valueHalfLifeDays: d.valueHalfLifeDays,
+    trendSlope: d.trendSlope,
+    trendPull: d.trendPull,
     priorStrength: d.priorStrength,
     overall: d.overall,
     minElementsObserved: d.minElementsObserved,
@@ -63,7 +63,9 @@ export function normalizeParams(p) {
   if (!cuts.some(([label]) => label === p.minTier)) throw new Error(`minTier must be one of the cuts' labels`);
   if (!cuts.some(([label]) => label === p.curveMinTier)) throw new Error(`curveMinTier must be one of the cuts' labels`);
   const generalityBands = p.generalityBands.map(Number);
-  return { ...p, cuts, overallCuts, generalityBands, servers: [...p.servers] };
+  const trendSlope = p.trendSlope.map(Number);
+  if (!(Number(p.trendPull) >= 0)) throw new Error("trendPull must be 0 or more");
+  return { ...p, cuts, overallCuts, generalityBands, trendSlope, trendPull: Number(p.trendPull), servers: [...p.servers] };
 }
 
 export function populationKey(p) {
@@ -71,7 +73,7 @@ export function populationKey(p) {
 }
 
 export function tierKey(p) {
-  return JSON.stringify([p.cuts, p.overallCuts, p.halfLifeDays, p.valueHalfLifeDays, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive,
+  return JSON.stringify([p.cuts, p.overallCuts, p.trendSlope, p.trendPull, p.priorStrength, p.overall, p.minElementsObserved, p.includeLive,
     p.fillFromLater]);
 }
 
@@ -137,25 +139,25 @@ function minRanks(values) {
   return ranks;
 }
 
-function decay(ageDays, halfLifeDays) {
-  if (halfLifeDays <= 0) return 1;
-  return Math.pow(0.5, Math.max(ageDays, 0) / halfLifeDays);
-}
+const YEAR_DAYS = 365.25;
 
-// How much a counted season (countedSeasons) weighs in a view at ``moment``: halved every
-// halfLifeDays since it ended (a live one, not yet).
-export function seasonWeight(c, moment, params) {
-  const at = c.end != null && c.end <= moment ? c.end : moment;
-  return decay((moment - at) / DAY_MS, params.halfLifeDays);
-}
+// When a counted season (countedSeasons) stands in a view at ``moment``: its end, or - in
+// progress - the moment.
+const seasonAt = (c, moment) => (c.end != null && c.end <= moment ? c.end : moment);
 
-// What a counted season's lift is worth now: halved every valueHalfLifeDays before ``latest``,
-// the latest counted season of the same boss weakness (as seasonWeight dates them). Units lose
-// ground as newer ones come out, and weighing an old season less does not undo that (a mean
-// divides the weight back out), so its lift is first brought to the value of that season.
-export function seasonValue(c, moment, latest, params) {
-  const at = c.end != null && c.end <= moment ? c.end : moment;
-  return decay((latest - at) / DAY_MS, params.valueHalfLifeDays);
+// A straight line through seasons, read at x = 0 (analyze/tiers.py trend): ``points`` are
+// [x in years, lift], ``slope`` the side's mean slope. The line's slope is
+// (Σ(x−x̄)(y−ȳ) + pull·slope) / (Σ(x−x̄)² + pull) - the points' own as far as they pin it down,
+// the side's mean for the rest. Never below 0.
+export function trendLine(points, slope, pull) {
+  const sx = [0], sxC = [0], sy = [0], syC = [0];
+  for (const [x, y] of points) { kahan(sx, sxC, 0, x); kahan(sy, syC, 0, y); }
+  const xb = sx[0] / points.length, yb = sy[0] / points.length;
+  const sxx = [0], sxxC = [0], sxy = [0], sxyC = [0];
+  for (const [x, y] of points) { const dx = x - xb; kahan(sxx, sxxC, 0, dx * dx); kahan(sxy, sxyC, 0, dx * (y - yb)); }
+  const den = sxx[0] + pull;
+  const b = den > 0 ? (sxy[0] + pull * slope) / den : slope;
+  return Math.max(yb - b * xb, 0);
 }
 
 function nanMean(values) {
@@ -340,81 +342,73 @@ const EMPTY_STANDINGS = (counted) => ({
   counted, overall: [], overallByUnit: new Map(), elements: [], slots: new Map(), turns: new Map(), treasured: new Set(),
 });
 
-// What each unit did after ``moment``, per boss weakness: the seasons counted today that a view
-// at ``moment`` does not count, on the same side of the unit's treasure, each weighted as far
-// ahead of ``moment`` as recency weighs a season behind it, and taken as they were.
-function laterSums(population, counted, moment, params, treasured) {
+// What each unit did after ``moment``: the seasons counted today that a view at ``moment`` does
+// not count, on the same side of the unit's treasure, per boss weakness - [end, lift] - to be
+// read through a line at the first of them (analyze/tiers.py _later_levels).
+function laterSeasons(population, counted, params, treasured) {
   const seen = new Set(counted.map((c) => c.season));
   const later = new Map();
   for (const c of countedSeasons(population.summary, Infinity, params)) {
     const e = ELEMENTS.indexOf(c.weak);
     if (seen.has(c.season) || e < 0) continue;
-    const w = decay((c.end - moment) / DAY_MS, params.halfLifeDays);
     for (const r of population.tables.get(c.season).rows) {
       if (r.treasure !== treasured.has(r.u)) continue;
       let a = later.get(r.u);
-      if (!a) {
-        a = { W: new Float64Array(5), WC: new Float64Array(5), WL: new Float64Array(5), WLC: new Float64Array(5),
-          n: new Int32Array(5) };
-        later.set(r.u, a);
-      }
-      kahan(a.W, a.WC, e, w);
-      kahan(a.WL, a.WLC, e, w * r.lift);
-      a.n[e]++;
+      if (!a) later.set(r.u, (a = ELEMENTS.map(() => [])));
+      a[e].push([c.end, r.lift]);
     }
   }
   return later;
 }
 
+// A side met later, through a line read at its first season.
+function laterLevel(seasons, slope, params) {
+  const first = Math.min(...seasons.map(([end]) => end));
+  return trendLine(seasons.map(([end, y]) => [(end - first) / DAY_MS / YEAR_DAYS, y]), slope, params.trendPull);
+}
+
 export function standings(model, population, moment, params, treasured = null) {
   const counted = countedSeasons(population.summary, moment, params);
   const picked = [];
+  // A slot is read at the latest counted season of its boss weakness.
   const latest = new Map();
   for (const c of counted) {
-    const at = c.end != null && c.end <= moment ? c.end : moment;
+    const at = seasonAt(c, moment);
     if (!latest.has(c.weak) || at > latest.get(c.weak)) latest.set(c.weak, at);
   }
   for (const c of counted) {
     if (!ELEMENTS.includes(c.weak)) continue;
-    const w = seasonWeight(c, moment, params), v = seasonValue(c, moment, latest.get(c.weak), params);
-    for (const r of population.tables.get(c.season).rows) picked.push({ r, e: ELEMENTS.indexOf(c.weak), w, v });
+    const x = (seasonAt(c, moment) - latest.get(c.weak)) / DAY_MS / YEAR_DAYS;
+    for (const r of population.tables.get(c.season).rows) picked.push({ r, e: ELEMENTS.indexOf(c.weak), x });
   }
-  if (treasured == null) treasured = new Set(picked.filter((x) => x.r.treasure).map((x) => x.r.u));
-  const rows = picked.filter((x) => x.r.treasure === treasured.has(x.r.u));
+  if (treasured == null) treasured = new Set(picked.filter((p) => p.r.treasure).map((p) => p.r.u));
+  const rows = picked.filter((p) => p.r.treasure === treasured.has(p.r.u));
   if (!rows.length) return EMPTY_STANDINGS(counted);
-  const later = params.fillFromLater ? laterSums(population, counted, moment, params, treasured) : new Map();
+  const later = params.fillFromLater ? laterSeasons(population, counted, params, treasured) : new Map();
 
-  // per unit: all its seasons, and per boss weakness (slot)
+  // per unit: its seasons per boss weakness (slot), [x, lift]
   const per = new Map();
-  for (const { r, e, w, v } of rows) {
+  for (const { r, e, x } of rows) {
     let a = per.get(r.u);
     if (!a) {
-      a = {
-        W: [0], WC: [0], WL: [0], WLC: [0], seasons: 0, last: -Infinity,
-        sW: new Float64Array(5), sWC: new Float64Array(5), sWL: new Float64Array(5), sWLC: new Float64Array(5),
-        n: new Int32Array(5), rows: [],
-      };
+      a = { seasons: 0, last: -Infinity, points: ELEMENTS.map(() => []), rows: [] };
       per.set(r.u, a);
     }
     a.rows.push({ season: r.season, lift: r.lift, e });
-    kahan(a.W, a.WC, 0, w);
-    kahan(a.WL, a.WLC, 0, w * r.lift * v);
     a.seasons++;
     if (r.season > a.last) a.last = r.season;
-    kahan(a.sW, a.sWC, e, w);
-    kahan(a.sWL, a.sWLC, e, w * r.lift * v);
-    a.n[e]++;
+    a.points[e].push([x, r.lift]);
   }
   const units = [...per.keys()].sort((x, y) => cmpId(model.units[x].id, model.units[y].id));
   const k = params.priorStrength;
+  const [ownSlope, otherSlope] = params.trendSlope;
 
   let freq = null;
-  if (params.overall === "frequency") {
+  if (params.overall === "frequency") {  // each weakness by how often the boss was weak to it
     freq = new Array(5).fill(0);
     for (const c of counted) {
-      const at = c.end != null && c.end <= moment ? c.end : moment;
       const e = ELEMENTS.indexOf(c.weak);
-      if (e >= 0) freq[e] += decay((moment - at) / DAY_MS, params.halfLifeDays);
+      if (e >= 0) freq[e] += 1;
     }
     const total = freq.reduce((s, v) => s + v, 0);
     freq = total > 0 ? freq.map((v) => v / total) : freq.map(() => 1 / 5);
@@ -424,13 +418,20 @@ export function standings(model, population, moment, params, treasured = null) {
   for (const u of units) {
     const a = per.get(u);
     const unit = model.units[u];
-    const prior = a.WL[0] / a.W[0];
-    const observed = ELEMENTS.map((_, e) => a.n[e] > 0);
-    const mean = ELEMENTS.map((_, e) => (observed[e] ? a.sWL[e] / a.sW[e] : NaN));
-    const level = k <= 0 ? mean
-      : ELEMENTS.map((_, e) => (observed[e] ? (a.n[e] * mean[e] + k * prior) / (a.n[e] + k) : NaN));
+    const n = a.points.map((p) => p.length);
+    const observed = n.map((v) => v > 0);
     const members = unitElements(unit, treasured.has(u));
     const own = ELEMENTS.map((e) => members.some((m) => m.element === e));
+    // A slot: a straight line through its seasons, read at the latest season of its weakness.
+    const mean = ELEMENTS.map((_, e) => (observed[e] ? trendLine(a.points[e], own[e] ? ownSlope : otherSlope,
+      params.trendPull) : NaN));
+    let level = mean;
+    if (k > 0) {
+      let num = 0, den = 0;
+      for (let e = 0; e < 5; e++) if (observed[e]) { num += n[e] * mean[e]; den += n[e]; }
+      const prior = num / den;
+      level = ELEMENTS.map((_, e) => (observed[e] ? (n[e] * mean[e] + k * prior) / (n[e] + k) : NaN));
+    }
     // An unseen slot: the mean of the other elements seen for another element (0 with none
     // seen yet), 0 for an element of its own - or, with fillFromLater, a side not met yet
     // from the seasons the unit met it later (analyze/tiers.py _later_levels).
@@ -439,13 +440,13 @@ export function standings(model, population, moment, params, treasured = null) {
     let laterOther = NaN;
     const laterOwn = ELEMENTS.map(() => NaN);
     if (lat) {
-      let W = 0, WL = 0, any = false;
+      const others = [];
       for (let e = 0; e < 5; e++) {
-        if (!lat.n[e]) continue;
-        if (own[e]) laterOwn[e] = lat.WL[e] / lat.W[e];
-        else { W += lat.W[e]; WL += lat.WL[e]; any = true; }
+        if (!lat[e].length) continue;
+        if (own[e]) laterOwn[e] = laterLevel(lat[e], ownSlope, params);
+        else others.push(...lat[e]);
       }
-      if (any) laterOther = WL / W;
+      if (others.length) laterOther = laterLevel(others.sort((x, y) => x[0] - y[0]), otherSlope, params);
     }
     const otherLevel = !Number.isNaN(otherSeen) ? otherSeen : !Number.isNaN(laterOther) ? laterOther : 0;
     const estimate = ELEMENTS.map((_, e) => (observed[e] ? level[e]
@@ -455,7 +456,7 @@ export function standings(model, population, moment, params, treasured = null) {
 
     for (const m of members) {
       const e = ELEMENTS.indexOf(m.element);
-      const seen = a.n[e];
+      const seen = n[e];
       elements.push({ u, id: unit.id, element: m.element, source: m.source, lift: seen > 0 ? estimate[e] : NaN,
         seasons: seen, treasure: treasured.has(u) });
     }
@@ -472,7 +473,7 @@ export function standings(model, population, moment, params, treasured = null) {
       elementsObserved: nObs, seasonsObserved: a.seasons, lastSeason: a.last, treasure: treasured.has(u),
       ownUnseen,
     });
-    slots.set(u, ELEMENTS.map((element, e) => ({ element, lift: estimate[e], seasons: a.n[e], own: own[e],
+    slots.set(u, ELEMENTS.map((element, e) => ({ element, lift: estimate[e], seasons: n[e], own: own[e],
       borrowed: borrowed[e] })));
     turns.set(u, a.rows.sort((x, y) => x.season - y.season).map((x) => ({ season: x.season, lift: x.lift, own: own[x.e] })));
   }

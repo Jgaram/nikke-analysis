@@ -14,11 +14,14 @@ season one deck dominates has five, a season with no dominant deck may have none
 **Element tier** - how much a unit is worth in its own element: its recent lift
 in the seasons whose boss was weak to the unit's element, the seasons that
 element's decks are built for. Solo Raid's meta turns on the boss's weakness,
-and more so every year. Recent seasons count more (``half_life_days``), and an
-old season's lift is first brought to the value of the latest season of the
-same weakness (``value_half_life_days``): units lose ground as newer ones come
-out, so an old season's lift says more than the unit would carry now -
-weighing it less does not undo that, since a mean divides the weight back out.
+and more so every year. Units lose ground as newer ones come out, each at its
+own pace (Crown hardly at all, others by most of their lift in a year), so a
+slot is read off a straight line through its seasons, where the line stands at
+the latest season of that weakness (``trend``). The line's slope is the unit's
+own as far as its seasons pin it down, and the side's mean slope (own element /
+other elements, ``trend_slope``) for the rest (``trend_pull``). Every season
+counts the same: removing some seasons - old ones, recent ones, any - leaves the
+tiers about where they were, which no half-life did (docs/time-review.md 6).
 A unit
 that has not met such a season since its release has no element tier yet. A
 unit whose skill gives it a second element's weakness advantage (우월 코드: the
@@ -119,14 +122,14 @@ DEFAULT_CUTS: list[tuple[str, float]] = [
 # The overall tier's cuts: the same labels, lower. An overall is the mean of five slots, so a unit
 # that carries one element and sits out the rest scores a fifth of its element lift there; these
 # cuts put about as many units in each overall tier as the element tiers hold (seasons 16-41, the decks split
-# by 체급: SS 0.85 and S 0.6 since the split moved more of the element tiers into SS).
+# by 체급, every slot read off its trend line).
 DEFAULT_OVERALL_CUTS: list[tuple[str, float]] = [
     ("SS", 0.85),
-    ("S", 0.6),
-    ("A", 0.3),
-    ("B", 0.16),
+    ("S", 0.55),
+    ("A", 0.25),
+    ("B", 0.14),
     ("C", 0.07),
-    ("D", 0.012),
+    ("D", 0.02),
     ("F", 0.0),
 ]
 OVERALL_MODES = ("mean", "max", "frequency")
@@ -147,11 +150,12 @@ class TierConfig:
     # overall tier (element tiers take ``cuts``). None: the default overall cuts when ``cuts``
     # has the default labels, otherwise ``cuts`` itself.
     overall_cuts: list[tuple[str, float]] | None = None
-    # element and overall tiers
-    half_life_days: float = 180.0
-    # an old season's lift, brought to the value of the latest season of its boss weakness: halved
-    # every this many days before it (0 = as it was)
-    value_half_life_days: float = 300.0
+    # element and overall tiers: a slot is read off a straight line through its seasons (``trend``).
+    # The side's mean slope, lift per year (own element, other elements), and how much of it goes
+    # into each line: as much as a pair of seasons a year apart (years squared; 0 = the slot's own
+    # slope alone).
+    trend_slope: tuple[float, float] = (-0.4, -0.5)
+    trend_pull: float = 1.0
     prior_strength: float = 0.0
     overall: str = "mean"
     min_elements_observed: int = 3
@@ -207,6 +211,11 @@ class TierConfig:
         if int(self.meta_window_days) < 1:
             raise ValueError(f"meta.window_days must be at least 1, not {self.meta_window_days}")
         self.meta_window_days = int(self.meta_window_days)
+        own, other = (float(v) for v in self.trend_slope)
+        self.trend_slope = (own, other)
+        if float(self.trend_pull) < 0:
+            raise ValueError(f"element.trend_pull must be 0 or more, not {self.trend_pull}")
+        self.trend_pull = float(self.trend_pull)
 
     @property
     def server_filter(self) -> ServerFilter:
@@ -248,8 +257,8 @@ def load_tier_config(path: Path | None = None) -> TierConfig:
         rank_weighting=str(population.get("rank_weighting", defaults.rank_weighting)),
         cuts=[(str(c["label"]), float(c["min_lift"])) for c in cuts] if cuts else list(DEFAULT_CUTS),
         overall_cuts=[(str(c["label"]), float(c["min_lift"])) for c in overall_cuts] if overall_cuts else None,
-        half_life_days=float(element.get("half_life_days", defaults.half_life_days)),
-        value_half_life_days=float(element.get("value_half_life_days", defaults.value_half_life_days)),
+        trend_slope=tuple(float(v) for v in element.get("trend_slope", defaults.trend_slope)),
+        trend_pull=float(element.get("trend_pull", defaults.trend_pull)),
         prior_strength=float(element.get("prior_strength", defaults.prior_strength)),
         overall=str(element.get("overall", defaults.overall)),
         min_elements_observed=int(element.get("min_elements_observed", defaults.min_elements_observed)),
@@ -336,10 +345,26 @@ def played_with_treasure(rows: pd.DataFrame) -> pd.Series:
     return flags(rows, "treasure")
 
 
-def _decay(ages_days: pd.Series, half_life_days: float) -> pd.Series:
-    if half_life_days <= 0:
-        return pd.Series(1.0, index=ages_days.index)
-    return 0.5 ** (ages_days.clip(lower=0) / half_life_days)
+YEAR_DAYS = 365.25
+
+
+def trend(rows: pd.DataFrame, keys: list[str], pull: float) -> pd.Series:
+    """Per group of ``rows`` (``keys``), a straight line through its seasons read at ``x`` = 0:
+    ``x`` is each season's place in years, ``lift`` its lift, ``slope`` the side's mean slope.
+    The line's slope is (Σ(x−x̄)(y−ȳ) + pull·mean slope) / (Σ(x−x̄)² + pull) - the group's own
+    slope as far as its seasons pin it down, the side's mean for the rest; a single season is
+    carried along the mean slope. Never below 0."""
+    if rows.empty:
+        return pd.Series(dtype=float)
+    groups = rows.groupby(keys, sort=True)
+    xb = groups["x"].transform("mean")
+    yb = groups["lift"].transform("mean")
+    dx = rows["x"] - xb
+    sums = rows.assign(xb=xb, yb=yb, sxx=dx * dx, sxy=dx * (rows["lift"] - yb)).groupby(keys, sort=True).agg(
+        xb=("xb", "first"), yb=("yb", "first"), sxx=("sxx", "sum"), sxy=("sxy", "sum"), slope=("slope", "first"))
+    den = sums["sxx"] + pull
+    slope = ((sums["sxy"] + pull * sums["slope"]) / den.where(den > 0, 1.0)).where(den > 0, sums["slope"])
+    return (sums["yb"] - slope * sums["xb"]).clip(lower=0.0)
 
 
 def _instant(moment: Any) -> pd.Timestamp:
@@ -424,36 +449,41 @@ def standings(
     # A season counts from its end; the one in progress as of now.
     counted["at"] = counted["end_at"].where(counted["end_at"] <= moment, moment)
     rows = rows.merge(counted[["season", "at"]], on="season")
-    # Weight: how much a season counts. Value: what its lift is worth now - units lose ground as
-    # newer ones come out, and weighing an old season less does not undo that (a mean divides the
-    # weight back out), so its lift is first brought to the value of the latest season of the same
-    # boss weakness. That season is taken as it is, and a slot changes only when a season of its
-    # weakness comes in.
-    rows = rows.assign(w=_decay((moment - rows["at"]).dt.total_seconds() / 86400.0, config.half_life_days))
+    # The elements a unit counts as (its own, and any its skill adds) and the others are two sides.
+    members = unit_elements(table, treasured)
+    units = pd.Index(sorted(rows["unit_id"].unique()), name="unit_id")
+    members = members[members["unit_id"].isin(units)].reset_index(drop=True)
+    own = (pd.crosstab(members["unit_id"], members["element"]).reindex(index=units, columns=list(ELEMENTS))
+           .fillna(0).astype(bool))
+
+    # A slot: a straight line through its seasons, read at the latest season of its boss weakness
+    # (the calendar's, whether or not the unit was out). Units lose ground as newer ones come out,
+    # each at its own pace, so the line takes the unit's own slope as far as its seasons pin it
+    # down and the side's mean slope for the rest; every season counts the same.
     latest = rows["weak_element"].map(counted.groupby("weak_element")["at"].max())
-    value = _decay((latest - rows["at"]).dt.total_seconds() / 86400.0, config.value_half_life_days)
-    rows["wl"] = rows["w"] * rows["lift"] * value
-    unit = rows.groupby("unit_id").agg(W=("w", "sum"), WL=("wl", "sum"), seasons_observed=("season", "size"),
-                                       last_season=("season", "max"))
-    prior = unit["WL"] / unit["W"]
-    slot = rows.groupby(["unit_id", "weak_element"]).agg(W=("w", "sum"), WL=("wl", "sum"), n=("w", "size"))
-    mean = (slot["WL"] / slot["W"]).unstack().reindex(index=unit.index, columns=list(ELEMENTS))
-    count = slot["n"].unstack().reindex(index=unit.index, columns=list(ELEMENTS)).fillna(0).astype(int)
+    is_own = pd.Series(own.stack().reindex(pd.MultiIndex.from_arrays([rows["unit_id"], rows["weak_element"]])).to_numpy(),
+                       index=rows.index).fillna(False).astype(bool)
+    rows = rows.assign(x=(rows["at"] - latest).dt.total_seconds() / 86400.0 / YEAR_DAYS,
+                       slope=np.where(is_own, config.trend_slope[0], config.trend_slope[1]))
+    line = trend(rows, ["unit_id", "weak_element"], config.trend_pull)
+    unit = rows.groupby("unit_id").agg(seasons_observed=("season", "size"), last_season=("season", "max"))
+    count = rows.groupby(["unit_id", "weak_element"]).size()
+    mean = line.unstack().reindex(index=unit.index, columns=list(ELEMENTS))
+    count = count.unstack().reindex(index=unit.index, columns=list(ELEMENTS)).fillna(0).astype(int)
     observed = count > 0
 
-    # One slot per boss weakness, from the seasons of that weakness.
+    # One slot per boss weakness, from the seasons of that weakness - pulled, with a prior, toward
+    # the unit's slots together (each as many times as its seasons).
     k = config.prior_strength
-    level = mean if k <= 0 else ((count * mean.fillna(0)).add(k * prior, axis=0)).div(count + k).where(observed)
+    if k <= 0:
+        level = mean
+    else:
+        prior = (count * mean.fillna(0)).sum(axis=1) / count.sum(axis=1)
+        level = ((count * mean.fillna(0)).add(k * prior, axis=0)).div(count + k).where(observed)
 
-    # The elements a unit counts as (its own, and any its skill adds) and the others are two
-    # sides; a slot not observed since release is filled from the other-element side only. An
-    # other-element slot takes the mean of the other-element slots seen - 0 while the unit has
-    # met no other element yet. An own-element slot is never guessed: 0 until the unit meets a
-    # season of it.
-    members = unit_elements(table, treasured)
-    members = members[members["unit_id"].isin(unit.index)].reset_index(drop=True)
-    own = (pd.crosstab(members["unit_id"], members["element"]).reindex(index=unit.index, columns=list(ELEMENTS))
-           .fillna(0).astype(bool))
+    # A slot not observed since release is filled from its own side only. An other-element slot
+    # takes the mean of the other-element slots seen - 0 while the unit has met no other element
+    # yet. An own-element slot is never guessed: 0 until the unit meets a season of it.
     other_seen = level.where(~own).mean(axis=1)  # NaN: no other element met yet
     later_other = pd.Series(np.nan, index=unit.index)
     later_own = pd.DataFrame(np.nan, index=unit.index, columns=list(ELEMENTS))
@@ -483,9 +513,8 @@ def standings(
         overall["overall"] = estimate.mean(axis=1)
     elif config.overall == "max":
         overall["overall"] = estimate.where(observed).max(axis=1)
-    else:  # frequency: weight each element by how often (recently) the boss was weak to it
-        ages = (moment - counted["at"]).dt.total_seconds() / 86400.0
-        freq = _decay(ages, config.half_life_days).groupby(counted["weak_element"].to_numpy()).sum()
+    else:  # frequency: weight each element by how often the boss was weak to it
+        freq = counted.groupby("weak_element").size().astype(float)
         freq = freq.reindex(list(ELEMENTS)).fillna(0.0)
         freq = freq / freq.sum() if freq.sum() > 0 else pd.Series(1.0 / len(ELEMENTS), index=list(ELEMENTS))
         overall["overall"] = estimate.mul(freq, axis=1).sum(axis=1)
@@ -525,9 +554,9 @@ def _later_levels(
     element's season has no other-element slot, one out in other elements' seasons none of its
     own, and the view counts them 0 - low for a unit that went on to carry both. What the unit
     did later can stand in: the seasons counted today that the view at ``moment`` did not count,
-    on the same side of its treasure, each weighted as far ahead of ``moment`` as recency weighs
-    a season behind it (``half_life_days``), and taken as they were - not raised to the value
-    at ``moment``, so that a later season never lifts a unit above what it went on to do.
+    on the same side of its treasure, through a straight line (``trend``) read at the first of
+    them - what the unit did when it first met that side, not raised to ``moment``, so that a
+    later season never lifts a unit above what it went on to do.
 
     Returns the other-element level per unit (all other elements pooled, as the fill of an
     unseen other slot is one value) and the level per unit and own element; NaN where the unit
@@ -543,13 +572,18 @@ def _later_levels(
     mine = pd.DataFrame(np.nan, index=own.index, columns=list(ELEMENTS))
     if rows.empty:
         return other, mine
-    rows = rows.assign(w=_decay((rows["end_at"] - moment).dt.total_seconds() / 86400.0, config.half_life_days))
-    rows["wl"] = rows["w"] * rows["lift"]
-    sums = rows.groupby(["unit_id", "weak_element"])[["w", "wl"]].sum()
-    w = sums["w"].unstack().reindex(index=own.index, columns=list(ELEMENTS))
-    wl = sums["wl"].unstack().reindex(index=own.index, columns=list(ELEMENTS))
-    other = wl.where(~own).sum(axis=1, min_count=1) / w.where(~own).sum(axis=1, min_count=1)
-    return other, (wl / w).where(own)
+    is_own = pd.Series(own.stack().reindex(pd.MultiIndex.from_arrays([rows["unit_id"], rows["weak_element"]]))
+                       .to_numpy(), index=rows.index).fillna(False).astype(bool)
+    # Other elements pool into one side; each own element is a side of its own.
+    rows = rows.assign(side=np.where(is_own, rows["weak_element"], ""),
+                       slope=np.where(is_own, config.trend_slope[0], config.trend_slope[1]))
+    first = rows.groupby(["unit_id", "side"])["end_at"].transform("min")
+    rows["x"] = (rows["end_at"] - first).dt.total_seconds() / 86400.0 / YEAR_DAYS
+    level = trend(rows, ["unit_id", "side"], config.trend_pull).unstack()
+    if "" in level.columns:
+        other = level[""].reindex(own.index)
+    mine = level.reindex(index=own.index, columns=list(ELEMENTS)).where(own)
+    return other, mine
 
 
 # --------------------------------------------------------------------------

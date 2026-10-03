@@ -1,7 +1,7 @@
 // 티어표 · 종합 / 약점: where every unit stood at the chosen season - overall, or over the
 // seasons whose boss was weak to one element - and how long each has been in use.
 
-import { ELEMENTS, assignTier } from "../model.js";
+import { ELEMENTS, assignTier, slotPlaces, trendWeights } from "../model.js";
 import { h, elementIcon, ELEMENT_KO, shortDay, pendingLabel, pendingStatus, tierBadge, sortableTable, int, kst, infoButton } from "../ui.js";
 import {
   unitCard, tierBoard, filterRow, modeSwitch, standingTip, unitInline, provisionalReason, lifeColumns, retiredText, kindTabs, numsToggle,
@@ -26,7 +26,7 @@ export function dateView(app) {
     root.append(h("div", { class: "panel empty" }, "이때까지 끝난 시즌이 없습니다."));
     return root;
   }
-  root.append(h("div", { class: "toolbar" }, filterRow(app), h("div", { class: "toolbar-end" }, state.mode === "table" ? null : numsToggle(app), modeSwitch(app))));
+  root.append(h("div", { class: "toolbar" }, filterRow(app), h("div", { class: "toolbar-end" }, state.mode === "table" ? null : numsToggle(app, { label: "보정 기여도" }), modeSwitch(app))));
   root.append(element ? elementBody(app, view, element) : overallBody(app, view));
   return root;
 }
@@ -154,7 +154,7 @@ function hero(app, view, element) {
         h("span", { class: "fact" }, h("span", { class: "fact-k" }, "반영"),
           element ? `보스 약점이 ${ELEMENT_KO[element]}인 시즌 ${mine.length}개` : `시즌 ${counted.length}개 (S${first ?? "–"}–S${last ?? "–"})`),
         h("span", { class: "fact" }, h("span", { class: "fact-k" }, "계산"),
-          element ? "그 시즌들의 기여도 추세를 지금 자리에서 읽음" : OVERALL_KO[params.overall])),
+          element ? "보정 기여도 — 그 시즌들의 기여도 추세선을 지금 자리에서 읽음" : OVERALL_KO[params.overall])),
       h("div", { class: "hero-sample muted" }, `표본 ${servers} × 상위 ${params.topN}위 · 니케 ${int(tiered)}명`)),
     h("div", { class: "hero-counts", "aria-label": "티어별 인원" }, cuts.map(([k]) => h("span", { class: "count", dataset: { tier: k } },
       h("b", null, k), h("span", null, counts[k] || 0)))),
@@ -162,20 +162,25 @@ function hero(app, view, element) {
 }
 
 // What each counted season weighs in the tier, for a unit that has met every weakness. Within a
-// weakness every season is one point of the trend line, the same as the others. Overall, times the
-// weakness's part: an equal part each (mean), or how often the boss was weak to it (frequency:
-// that comes to the same part for every season). ``max`` counts one weakness a unit, its best:
-// the shares within each weakness then.
+// weakness: its weight in the slot's line read now (model.js trendWeights) - by when the seasons
+// were, the same for every unit, more for the recent, below 0 far enough back. Overall, times the
+// weakness's part: an equal part each (mean), or how often the boss was weak to it (frequency).
+// ``max`` counts one weakness a unit, its best: the shares within each weakness then.
 function seasonShares(view, params, element) {
   const counted = (element ? view.standing.counted.filter((c) => c.weak === element) : view.standing.counted)
     .filter((c) => ELEMENTS.includes(c.weak));
-  const weights = counted.map(() => 1);
+  const place = slotPlaces(view.standing.counted, view.moment);
   const byWeak = new Map();
-  counted.forEach((c, i) => byWeak.set(c.weak, (byWeak.get(c.weak) || 0) + weights[i]));
-  const all = weights.reduce((a, b) => a + b, 0) || 1;
-  return counted.map((c, i) => {
-    const within = weights[i] / (byWeak.get(c.weak) || 1);
-    const share = element || params.overall === "max" ? within : params.overall === "frequency" ? weights[i] / all : within / byWeak.size;
+  for (const c of counted) byWeak.set(c.weak, [...(byWeak.get(c.weak) || []), c]);
+  const within = new Map();
+  for (const group of byWeak.values()) {
+    const { weights } = trendWeights(group.map((c) => place.get(c.season)), 0, params.trendPull);
+    group.forEach((c, i) => within.set(c.season, weights[i]));
+  }
+  return counted.map((c) => {
+    const w = within.get(c.season);
+    const share = element || params.overall === "max" ? w
+      : params.overall === "frequency" ? (w * byWeak.get(c.weak).length) / counted.length : w / byWeak.size;
     return { c, share };
   });
 }
@@ -185,14 +190,17 @@ function seasonCards(app, view, element) {
   const { params } = app.state;
   const shares = seasonShares(view, params, element);
   if (!shares.length) return h("p", { class: "hero-foot note wi-empty" }, "이때까지 반영된 시즌이 없습니다.");
-  const note = element ? "시즌마다 같은 무게 — 추세선의 점 하나씩"
-    : params.overall === "max" ? "약점마다 따로, 그 안에서 시즌마다 같은 무게"
-      : params.overall === "frequency" ? "시즌마다 같은 무게"
-        : "약점 다섯 가지가 같은 몫, 그 안에서 시즌마다 같은 무게";
-  const top = Math.max(...shares.map((x) => x.share)) || 1;
+  const within = "추세선을 지금 자리에서 읽으니 최근 시즌일수록 크고, 아주 옛 시즌은 0 아래(그때 기여도가 높을수록 선이 가팔라져 지금 값이 내려감)";
+  const note = (element ? within
+    : params.overall === "max" ? `약점마다 따로 · ${within}`
+      : params.overall === "frequency" ? `자주 나온 약점일수록 크게 · ${within}`
+        : `약점 다섯 가지가 같은 몫 · ${within}`) + " · 그 약점 시즌을 모두 겪은 니케 기준, 늦게 나온 니케는 최근 시즌이 더 무겁다";
+  // one scale for every card: 0 sits where the most negative share leaves room for
+  const top = Math.max(0, ...shares.map((x) => x.share)), low = Math.max(0, ...shares.map((x) => -x.share));
+  const span = top + low || 1;
   const card = (s, share, live) => {
     const boss = s.bossKo || s.bossEn || "?";
-    const pct = share < 0.1 ? (share * 100).toFixed(1) : String(Math.round(share * 100));
+    const pct = Math.abs(share) < 0.1 ? (share * 100).toFixed(1) : String(Math.round(share * 100));
     return h("a", { class: ["wb", live && "live"], href: app.link({ view: "raid", season: s.season }), title: `시즌 ${s.season} · ${boss} · 비중 ${pct}%` },
       s.bossImage ? h("img", { class: "wb-img", src: `icons/bosses/${s.bossImage}.webp`, alt: "", width: 44, height: 44, loading: "lazy", decoding: "async" })
         : h("span", { class: "wb-img none", "aria-hidden": "true" }),
@@ -200,8 +208,10 @@ function seasonCards(app, view, element) {
         h("span", { class: "wb-top" }, h("b", null, `S${s.season}`), element ? null : elementIcon(s.weak, 13, { title: `약점 ${ELEMENT_KO[s.weak] || "?"}` }),
           live ? h("span", { class: "pill live" }, pendingLabel(s.end)) : h("span", { class: "wb-when muted" }, shortDay(s.start))),
         h("span", { class: "wb-name" }, boss),
-        h("span", { class: "wb-share", "aria-label": `비중 ${pct}%` },
-          h("i", { style: { width: `${Math.max(3, (share / top) * 70)}%` } }), h("small", null, `${pct}%`))));
+        h("span", { class: ["wb-share", share < 0 && "neg"], "aria-label": `비중 ${pct}%` },
+          h("span", { class: "wb-bar" }, low > 0 ? h("b", { style: { left: `${(low / span) * 100}%` } }) : null,
+            h("i", { style: { left: `${((low + Math.min(share, 0)) / span) * 100}%`, width: `${Math.max(2, (Math.abs(share) / span) * 100)}%` } })),
+          h("small", null, `${pct}%`))));
   };
   return h("div", { class: "hero-foot" },
     h("div", { class: "hero-foot-k" }, h("span", { class: "fact-k" }, "시즌별 비중"), h("span", { class: "muted small" }, note)),
@@ -245,7 +255,7 @@ function elementTable(app, view, rows, element) {
     { key: "rank", label: "#", num: true, sort: (r) => r.rank, firstDir: "asc", cell: (r) => r.rank ?? "–" },
     { key: "unit", label: "니케", head: true, sort: (r) => model.units[r.u].ko, firstDir: "asc",
       cell: (r) => unitInline(app, r.u, { sub: r.slot.own ? `▶ ${ko} 니케` : null }) },
-    { key: "lift", label: `${ko} 약점`, title: `${ko} 약점 시즌들의 기여도 추세를 지금 자리에서 읽은 값`, sort: (r) => (r.slot.seasons ? r.slot.lift : null),
+    { key: "lift", label: `${ko} 약점`, title: `보정 기여도: ${ko} 약점 시즌들의 기여도 추세선을 지금 자리에서 읽은 값`, sort: (r) => (r.slot.seasons ? r.slot.lift : null),
       cell: (r) => (r.slot.seasons ? tierBadge(r.tier, r.slot.lift) : h("span", { class: "muted" }, "미관측")) },
     { key: "seasons", label: "약점 시즌", title: `겪은 ${ko} 약점 시즌 수`, num: true, sort: (r) => r.slot.seasons, cell: (r) => `${r.slot.seasons}번` },
     { key: "overall", label: "종합", sort: (r) => r.o.overall, cell: (r) => h("span", null, tierBadge(r.o.tier, r.o.overall),

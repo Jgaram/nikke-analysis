@@ -498,7 +498,7 @@ def _cuts(config: tiering.TierConfig, *, overall: bool = False) -> str:
 
 def _recency(config: tiering.TierConfig) -> str:
     own, other = config.trend_slope
-    return ("속성·종합 티어 = 보스 약점마다 시즌 기록의 추세선을 지금 자리에서 읽은 값(모든 시즌을 똑같이, 기록이 적으면 "
+    return ("속성·종합 티어 = 보스 약점마다 시즌 기록의 추세선을 지금 자리에서 읽은 값(보정 기여도, 기록이 적으면 "
             f"기울기를 평균 자기 속성 {own:g} · 다른 속성 {other:g}/년 쪽으로)")
 
 

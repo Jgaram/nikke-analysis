@@ -1,6 +1,6 @@
 // 티어 변화 · 니케 한 명: one unit - where it stands now (or on the chosen day), and season by season.
 
-import { assignTier, unitSeasons, ELEMENTS, GENERALITY_MAX } from "../model.js";
+import { assignTier, unitSeasons, trendWeights, ELEMENTS, GENERALITY_MAX } from "../model.js";
 import {
   h, num, pct, face, elementIcon, classIcon, burstIcon, weaponIcon, makerIcon, ELEMENT_KO, CLASS_KO, WEAPON_SHORT,
   WEAPON_KO, MAKER_KO, day, pendingLabel, tierBadge, deckSplit, sortableTable, unitName, segmented, infoButton,
@@ -41,10 +41,12 @@ export function unitView(app) {
   const head = h("div", { class: "panel-head" },
     h("h3", null, "시즌별 기여도와 티어 변화"),
     weakSwitch(app, all, own),
-    h("span", { class: "muted small" }, "막대에 마우스를 올리거나 눌러 보세요 · 선의 값은 그 시즌이 끝났을 때의 티어"));
+    h("span", { class: "muted small" }, `막대에 마우스를 올리거나 눌러 보세요 · 선의 값은 그 시즌이 끝났을 때의 티어${
+      weak ? "" : " · 약점을 고르면 그 약점 보정 기여도가 시즌마다 얼마씩 모여 나왔는지 아래에"}`));
   root.append(h("section", { class: "panel chart-panel" }, head,
     records.length ? trajectoryChart(app, u, records, { own, treasureAt: unit.treasure, at })
       : h("p", { class: "empty-note muted" }, `출시 뒤 ${ELEMENT_KO[weak]} 약점 시즌이 아직 없습니다.`)));
+  if (weak && prof.slots) root.append(slotBreakdown(app, prof.slots.find((sl) => sl.element === weak)));
   // generality is not about one weakness: every season, whatever the switch above says
   if (all.some((r) => r.hist && !Number.isNaN(r.hist.generality))) {
     root.append(h("section", { class: "panel chart-panel" },
@@ -57,6 +59,49 @@ export function unitView(app) {
   if (curve && curve.rotations.length) root.append(turnPanel(app, u, curve));
   if (records.length) root.append(seasonTable(app, u, records));
   return root;
+}
+
+// One weakness's 보정 기여도 season by season: the slot's line read now is Σ weight × lift plus
+// the mean slope's part (model.js trendWeights) - each season's weight by when it was, its part
+// that times the unit's lift there.
+function slotBreakdown(app, slot) {
+  const { model, state } = app;
+  const { params } = state;
+  if (!slot) return null;
+  const ko = ELEMENT_KO[slot.element];
+  const head = (value) => h("div", { class: "panel-head" },
+    h("h3", null, `${ko} 약점 보정 기여도`, value != null ? h("span", { class: "head-num" }, ` ${num(value)}`) : null),
+    h("span", { class: "muted small" }, "추세선을 그 약점의 가장 최근 시즌 자리에서 읽은 값 = 시즌 몫의 합 + 평균 기울기 몫"));
+  if (!slot.seasons) {
+    return h("section", { class: "panel table-panel" }, head(null),
+      h("p", { class: "note" }, slot.borrowed ? `이때 아직 ${ko} 약점 시즌을 못 겪어 나중 시즌 기록으로 채운 값(${num(slot.lift)})이라 시즌별 몫이 없습니다.`
+        : `${ko} 약점 시즌을 아직 못 겪어 채운 값(${num(slot.lift)})이라 시즌별 몫이 없습니다.`));
+  }
+  const { weights, offset } = trendWeights(slot.points.map((p) => p.x), slot.slope, params.trendPull);
+  const rows = slot.points.map((p, i) => ({ ...p, weight: weights[i], part: weights[i] * p.lift }))
+    .sort((a, b) => b.season - a.season);
+  const raw = rows.reduce((t, r) => t + r.part, 0) + offset;
+  const reach = Math.max(...rows.map((r) => Math.abs(r.part)), Math.abs(offset)) || 1;
+  const bar = (v) => h("span", { class: ["part-bar", v < 0 && "neg"] },
+    h("i", { style: { [v < 0 ? "right" : "left"]: "50%", width: `${(Math.abs(v) / reach) * 50}%` } }));
+  const columns = [
+    { key: "season", label: "시즌", num: true, head: true, cell: (r) => h("a", { href: app.seasonHref(r.season), class: "link" }, `S${r.season}`) },
+    { key: "boss", label: "보스", cell: (r) => { const info = model.bySeason.get(r.season); return info?.bossKo || info?.bossEn || "?"; } },
+    { key: "x", label: "언제", num: true, title: "그 약점의 가장 최근 시즌보다 몇 년 앞인가", cell: (r) => (r.x > -0.005 ? "지금" : `${num(-r.x, 1)}년 전`) },
+    { key: "lift", label: "기여도", num: true, title: "그 시즌의 기여도", cell: (r) => num(r.lift) },
+    { key: "weight", label: "비중", num: true, title: "이 시즌 기여도가 보정 기여도에 들어가는 비율 — 시즌이 언제였나로만 정해짐(모든 니케 같음)",
+      cell: (r) => h("span", { class: r.weight < 0 ? "neg-num" : null }, pct(r.weight)) },
+    { key: "part", label: "몫 = 비중 × 기여도", num: true, cell: (r) => h("span", { class: ["part-cell", r.part < 0 && "neg-num"] }, bar(r.part), h("span", null, `${r.part < 0 ? "−" : "+"}${num(Math.abs(r.part))}`)) },
+  ];
+  const sign = (v) => `${v < 0 ? "−" : "+"}${num(Math.abs(v))}`;
+  return h("section", { class: "panel table-panel" }, head(slot.lift),
+    sortableTable(columns, rows, { caption: `${ko} 약점 보정 기여도의 시즌별 몫` }),
+    h("p", { class: "note" },
+      `시즌 몫의 합 ${sign(raw - offset)} · 평균 기울기 몫 ${sign(offset)} (시즌이 적을수록 평균 기울기 ${num(slot.slope, 1)}/년 쪽으로 당긴 만큼) = ${num(raw)}`,
+      raw < 0 ? " → 0 아래라 0" : "",
+      params.priorStrength > 0 ? ` · 그다음 니케 전체 평균 쪽으로 당겨 ${num(slot.lift)}` : "",
+      h("br"),
+      "비중은 시즌이 언제였나로만 정해집니다: 최근 시즌일수록 크고, 아주 옛 시즌은 0 아래입니다. 옛 시즌 기여도가 높을수록 선이 가팔라져 지금 자리의 값이 내려가기 때문입니다."));
 }
 
 // 전체, or one boss weakness: how many of the unit's seasons each has, its own element(s) marked.
@@ -111,7 +156,7 @@ function slotChart(app, slots, overallMode) {
     h("div", { class: "tile-label" }, "보스 약점별"),
     h("div", { class: "mini-bars", role: "img", "aria-label": slots.map((s) => `${ELEMENT_KO[s.element]} ${num(s.lift)}${s.seasons ? "" : "(채운 값)"}`).join(", ") },
       slots.map((sl) => h("a", { class: ["mb", !sl.seasons && "filled", sl.borrowed && "borrowed", sl.own && "own"], href: app.weakHref(sl.element), title: `${sl.seasons
-        ? `${ELEMENT_KO[sl.element]} 약점 시즌 ${sl.seasons}번의 기여도 가중 평균 ${num(sl.lift)}`
+        ? `${ELEMENT_KO[sl.element]} 약점 시즌 ${sl.seasons}번의 보정 기여도(추세선을 지금 자리에서 읽은 값) ${num(sl.lift)}`
         : sl.borrowed ? `${ELEMENT_KO[sl.element]} 약점 시즌을 이때 아직 못 겪어 나중 시즌 기록으로 채운 값 ${num(sl.lift)}`
           : `${ELEMENT_KO[sl.element]} 약점 시즌을 아직 못 겪어 채운 값 ${num(sl.lift)}`} · 누르면 이 약점의 시즌 비교로` },
       h("span", { class: "mb-val" }, sl.seasons ? num(sl.lift) : `(${num(sl.lift)})`),

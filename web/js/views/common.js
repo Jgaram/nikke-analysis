@@ -162,12 +162,13 @@ export function filterRow(app) {
   return h("div", { class: "filters", role: "group", "aria-label": "필터" }, groups, clear);
 }
 
-// Whether the tier board's cards show their number (기여도) and, where they have one, their
+// Whether the tier board's cards show their number (기여도 on a season's board, 보정 기여도 on the
+// element and overall boards) and, where they have one, their
 // generality bar: each hidden by default.
-export function numsToggle(app, { bands = true } = {}) {
+export function numsToggle(app, { bands = true, label = "기여도" } = {}) {
   const { state } = app;
   return [
-    toggle("기여도", state.showNums, (v) => { state.showNums = v; app.rerender(); }),
+    toggle(label, state.showNums, (v) => { state.showNums = v; app.rerender(); }),
     bands ? toggle("범용도", state.showBands, (v) => { state.showBands = v; app.rerender(); }) : null,
   ];
 }
@@ -392,10 +393,12 @@ export const TIER_BASICS = [
     + "몫을 받지 않게."],
   ["보스 약점마다 따로", "보스의 약점 속성에 따라 쓰이는 니케가 크게 달라서 약점 다섯 가지를 따로 본다. "
     + "속성 티어는 자기 속성이 약점인 보스에서, 종합 티어는 다섯 약점의 평균이다."],
-  ["지금 기준으로", "새 니케가 나올수록 옛 니케는 밀리고, 밀리는 속도는 니케마다 다르다. 그래서 그 니케의 시즌 "
-    + "기록에 추세선을 긋고 지금 자리의 값을 읽는다 — 꾸준한 니케는 그대로, 밀려난 니케는 밀린 만큼."],
-  ["한 시즌에 흔들리지 않게", "모든 시즌을 똑같이 쓴다. 어느 시즌을 빼고 다시 계산해도 티어가 거의 같게 하려는 "
-    + "것이다. 기록이 적은 니케는 니케들이 보통 밀리는 속도를 빌린다."],
+  ["지금 기준으로 — 보정 기여도", "새 니케가 나올수록 옛 니케는 밀리고, 밀리는 속도는 니케마다 다르다. 그래서 그 니케의 "
+    + "시즌 기여도에 추세선(직선)을 긋고 지금 자리의 값을 읽는다 — 꾸준한 니케는 그대로, 밀려난 니케는 밀린 만큼. 이 값이 "
+    + "보정 기여도이고, 티어는 여기에 컷을 댄다."],
+  ["한 시즌에 흔들리지 않게", "옛 시즌을 깎지 않고 모든 시즌을 추세선의 점 하나씩으로 쓴다. 어느 시즌을 빼고 다시 계산해도 "
+    + "티어가 거의 같게 하려는 것이다. 다만 선을 지금 자리에서 읽으니 최근 시즌이 더 크게 작용하고, 아주 옛 시즌은 거꾸로 "
+    + "작용한다(그때 높았을수록 더 밀린 것으로 읽힌다). 기록이 적은 니케는 니케들이 보통 밀리는 속도를 빌린다."],
   ["못 본 것은 짐작하지 않는다", "아직 못 겪은 약점은 같은 쪽(자기 속성 / 다른 속성) 기록으로만 채우고 잠정(?)으로 "
     + "표시한다. 애장품이 나오면 애장품을 낀 시즌만으로 다시 매긴다."],
 ];

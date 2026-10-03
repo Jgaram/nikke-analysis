@@ -213,7 +213,7 @@ function weakBody(app, weak, picked, toggle) {
         onclick: () => toggle(r.u),
       }, on.has(r.u) ? "✓" : "+") },
     { key: "slot", label: `${ko} 약점 종합`,
-      title: `고른 시즌 기준, ${ko} 약점 시즌들의 기여도 추세를 그 시점에서 읽은 값 — 종합 티어를 이루는 다섯 칸 중 하나`,
+      title: `보정 기여도: 고른 시즌 기준, ${ko} 약점 시즌들의 기여도 추세선을 그 시점에서 읽은 값 — 종합 티어를 이루는 다섯 칸 중 하나`,
       sort: (r) => r.slot?.lift, cell: (r) => {
         if (!r.slot) return h("span", { class: "muted" }, "–");
         if (!r.slot.seasons) return h("span", { class: "muted", title: "애장품 뒤로는 이 약점 시즌을 아직 못 겪어 채운 값" }, `(${num(r.slot.lift)})`);

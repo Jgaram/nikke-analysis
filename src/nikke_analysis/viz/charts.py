@@ -271,7 +271,7 @@ def _boss(meta: Any) -> str:
 
 
 def _recency(config: Any) -> str:
-    return "보스 약점마다 시즌 기록의 추세선을 지금 자리에서 읽음(모든 시즌을 똑같이)"
+    return "보스 약점마다 시즌 기록의 추세선을 지금 자리에서 읽음(보정 기여도)"
 
 
 def _live_note(seasons: pd.DataFrame) -> str:

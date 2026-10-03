@@ -160,6 +160,20 @@ export function trendLine(points, slope, pull) {
   return Math.max(yb - b * xb, 0);
 }
 
+// How a trend line's reading at x = 0 is made of its points: value = Σ weight·lift + offset, before
+// the floor at 0 (``trendLine``). The weights depend only on where the points sit in time, not on
+// their lifts, and add up to 1: a recent point weighs more than an even share, and one far enough
+// back weighs below 0 - a higher lift there steepens the line, which then reads lower now.
+// ``offset`` is the side's mean slope's part.
+export function trendWeights(xs, slope, pull) {
+  const n = xs.length;
+  if (!n) return { weights: [], offset: 0 };
+  const xb = xs.reduce((s, x) => s + x, 0) / n;
+  const den = xs.reduce((s, x) => s + (x - xb) * (x - xb), 0) + pull;
+  if (!(den > 0)) return { weights: xs.map(() => 1 / n), offset: -xb * slope };
+  return { weights: xs.map((x) => 1 / n - (xb * (x - xb)) / den), offset: (-xb * pull * slope) / den };
+}
+
 function nanMean(values) {
   let sum = 0, n = 0;
   for (const v of values) if (!Number.isNaN(v)) { sum += v; n++; }
@@ -367,18 +381,25 @@ function laterLevel(seasons, slope, params) {
   return trendLine(seasons.map(([end, y]) => [(end - first) / DAY_MS / YEAR_DAYS, y]), slope, params.trendPull);
 }
 
-export function standings(model, population, moment, params, treasured = null) {
-  const counted = countedSeasons(population.summary, moment, params);
-  const picked = [];
-  // A slot is read at the latest counted season of its boss weakness.
+// Each counted season's place on its slot's line, in years: 0 at the latest counted season of
+// its boss weakness, where the slot is read.
+export function slotPlaces(counted, moment) {
   const latest = new Map();
   for (const c of counted) {
     const at = seasonAt(c, moment);
     if (!latest.has(c.weak) || at > latest.get(c.weak)) latest.set(c.weak, at);
   }
+  return new Map(counted.filter((c) => ELEMENTS.includes(c.weak))
+    .map((c) => [c.season, (seasonAt(c, moment) - latest.get(c.weak)) / DAY_MS / YEAR_DAYS]));
+}
+
+export function standings(model, population, moment, params, treasured = null) {
+  const counted = countedSeasons(population.summary, moment, params);
+  const picked = [];
+  const place = slotPlaces(counted, moment);
   for (const c of counted) {
     if (!ELEMENTS.includes(c.weak)) continue;
-    const x = (seasonAt(c, moment) - latest.get(c.weak)) / DAY_MS / YEAR_DAYS;
+    const x = place.get(c.season);
     for (const r of population.tables.get(c.season).rows) picked.push({ r, e: ELEMENTS.indexOf(c.weak), x });
   }
   if (treasured == null) treasured = new Set(picked.filter((p) => p.r.treasure).map((p) => p.r.u));
@@ -391,13 +412,14 @@ export function standings(model, population, moment, params, treasured = null) {
   for (const { r, e, x } of rows) {
     let a = per.get(r.u);
     if (!a) {
-      a = { seasons: 0, last: -Infinity, points: ELEMENTS.map(() => []), rows: [] };
+      a = { seasons: 0, last: -Infinity, points: ELEMENTS.map(() => []), at: ELEMENTS.map(() => []), rows: [] };
       per.set(r.u, a);
     }
     a.rows.push({ season: r.season, lift: r.lift, e });
     a.seasons++;
     if (r.season > a.last) a.last = r.season;
     a.points[e].push([x, r.lift]);
+    a.at[e].push(r.season);
   }
   const units = [...per.keys()].sort((x, y) => cmpId(model.units[x].id, model.units[y].id));
   const k = params.priorStrength;
@@ -473,8 +495,10 @@ export function standings(model, population, moment, params, treasured = null) {
       elementsObserved: nObs, seasonsObserved: a.seasons, lastSeason: a.last, treasure: treasured.has(u),
       ownUnseen,
     });
+    // each slot's line: its seasons as [season, x, lift] and the mean slope it leaned on
     slots.set(u, ELEMENTS.map((element, e) => ({ element, lift: estimate[e], seasons: n[e], own: own[e],
-      borrowed: borrowed[e] })));
+      borrowed: borrowed[e], slope: own[e] ? ownSlope : otherSlope,
+      points: a.points[e].map(([x, y], i) => ({ season: a.at[e][i], x, lift: y })) })));
     turns.set(u, a.rows.sort((x, y) => x.season - y.season).map((x) => ({ season: x.season, lift: x.lift, own: own[x.e] })));
   }
 

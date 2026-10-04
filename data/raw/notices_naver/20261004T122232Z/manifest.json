@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261004T122232Z",
+  "sealed_at": "2026-10-04T12:22:35+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8282889.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8282889",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "aa643be44f65b26054f1e8a3641deaad4d630e0797fcdc878d0871d8a3cf4ce5",
+      "bytes": 16123,
+      "fetched_at": "2026-10-04T12:22:34+00:00",
+      "meta": {
+        "feed_id": "8282889",
+        "title": "부정행위 제재 명단 안내 - 2026년 10월 4일(일)",
+        "created": "20261004003211",
+        "updated": "20261004003211",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

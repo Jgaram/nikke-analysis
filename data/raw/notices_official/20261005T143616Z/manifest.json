@@ -1,0 +1,41 @@
+{
+  "source": "notices_official",
+  "run_id": "20261005T143616Z",
+  "sealed_at": "2026-10-05T14:36:31+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "detail/b67197d4ae491a4b47aa60ea65677b6cd8eb.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=b67197d4ae491a4b47aa60ea65677b6cd8eb",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "b499929e6ea33d1d1c8c2cb0aee344f2778c24b36d8147772af37b43726bbe80",
+      "bytes": 38790,
+      "fetched_at": "2026-10-05T14:36:31+00:00",
+      "meta": {
+        "content_id": "b67197d4ae491a4b47aa60ea65677b6cd8eb",
+        "title": "10월 8일 업데이트 사전 공지",
+        "pub_timestamp": "1791187200",
+        "columns": [
+          "NOTICE"
+        ],
+        "digest": "2d515d29e0d27d61fdfeb695f6555370e822ce61242b7fa9798ecaa0056b0ac1"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 285,
+    "fetched": 15,
+    "written": 1,
+    "full": false,
+    "notes": []
+  }
+}

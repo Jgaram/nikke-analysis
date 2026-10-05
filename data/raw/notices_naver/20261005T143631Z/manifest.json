@@ -1,0 +1,47 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261005T143631Z",
+  "sealed_at": "2026-10-05T14:36:34+00:00",
+  "entry_count": 2,
+  "entries": [
+    {
+      "filename": "feed/8290149.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8290149",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "f1ba8e6badc1953248c90d61e807e64163c556fa39a2be9695b4b92294d1dc54",
+      "bytes": 19300,
+      "fetched_at": "2026-10-05T14:36:33+00:00",
+      "meta": {
+        "feed_id": "8290149",
+        "title": "보상 지급 안내 - Cinderella Special",
+        "created": "20261005180041",
+        "updated": "20261005180041",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8288452.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8288452",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "fd2849da284c494891859c7c322ad731150d000d3e6b43115160c8c8088d5493",
+      "bytes": 10516,
+      "fetched_at": "2026-10-05T14:36:33+00:00",
+      "meta": {
+        "feed_id": "8288452",
+        "title": "4주년 기념 방송 사전 안내",
+        "created": "20261005110113",
+        "updated": "20261005110113",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 2,
+    "full": false
+  }
+}

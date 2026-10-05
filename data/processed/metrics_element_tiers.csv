@@ -182,7 +182,7 @@ Electric,15,841,질,Jill,own,0.050131,D,2,False,F,0.010026,80,False
 Electric,16,222,홍련,Scarlet,own,0.025703,F,8,False,F,0.005141,81,False
 Electric,17,390,츠바이,Zwei,own,0.008678,F,1,True,C,0.104097,61,False
 Electric,18,041,K,K,own,0.0,F,2,False,F,0.0,85,False
-Electric,18,060,벨로타,Belorta,own,0.0,F,8,False,F,0.0,85,False
+Electric,18,060,벨로타,Belorta,own,0.0,F,1,False,F,0.0,85,True
 Electric,18,180,길로틴,Guillotine,own,0.0,F,8,False,F,0.0,85,False
 Electric,18,181,메이든,Maiden,own,0.0,F,8,False,F,0.0,85,False
 Electric,18,203,루피 : 윈터 쇼퍼,Rupee: Winter Shopper,own,0.0,F,8,False,F,0.0,85,False

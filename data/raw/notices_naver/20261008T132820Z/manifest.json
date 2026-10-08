@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261008T132820Z",
+  "sealed_at": "2026-10-08T13:28:23+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8302987.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8302987",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "ffa18709bba1987e4ba0c745ac71d316972c118b0cf30faa4d6daf3917d52778",
+      "bytes": 9259,
+      "fetched_at": "2026-10-08T13:28:22+00:00",
+      "meta": {
+        "feed_id": "8302987",
+        "title": "NIKKE 4주년 정보 사이트 오픈",
+        "created": "20261008191511",
+        "updated": "20261008191511",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

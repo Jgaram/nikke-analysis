@@ -93,7 +93,7 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 85,033,키리,Quiry,Wind,,,0.0,F,False,False,5,35,41,False,III,Supporter,SSR,2023-10-19,,,,0,35,0,,0,False,,,unused,0.0,
 85,040,D,D,Wind,,,0.0,F,False,False,5,41,41,False,III,Attacker,SSR,2023-04-13,1,1,6,2,41,0,1079.166667,5,True,,,unused,0.126246,
 85,041,K,K,Electric,,,0.0,F,False,False,5,16,41,False,III,Attacker,SSR,2025-05-29,,,,0,16,0,,0,False,,,unused,0.0,
-85,060,벨로타,Belorta,Electric,,,0.0,F,True,False,1,1,1,False,II,Attacker,SR,2026-10-08,,,,0,1,0,,0,False,,,unknown,,
+85,060,벨로타,Belorta,Electric,,,0.0,F,False,False,5,41,41,False,II,Attacker,SR,2022-11-04,,,,0,41,0,,0,False,,,unused,0.0,
 85,061,미카,Mica,Wind,,,0.0,F,False,False,5,41,41,False,I,Supporter,SR,2022-11-04,1,1,1,1,41,0,1233.166667,6,True,,,unused,2.0,
 85,062,미카 : 스노우 버디,Mica: Snow Buddy,Iron,,,0.0,F,False,False,5,34,41,False,I,Supporter,SSR,2023-12-14,8,8,12,3,34,0,904.166667,6,True,,,unused,1.932356,
 85,070,브리드,Brid,Water,,,0.0,F,False,False,5,41,41,False,III,Attacker,SSR,2022-11-04,2,2,3,2,41,0,1170.166667,9,True,,,unused,0.016618,0.016618

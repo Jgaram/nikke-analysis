@@ -19,7 +19,7 @@ unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,treasure_ele
 060,Belorta,벨로타,ベロータ,SR,II,Electric,,,Tetra Line,Attacker,Rocket Launcher,The Carronades,0,Belorta,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 061,Mica,미카,ミカ,SR,I,Wind,,,Tetra Line,Supporter,Rocket Launcher,The Carronades,0,Mica,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 062,Mica: Snow Buddy,미카 : 스노우 버디,ミカ：スノーバディ,SSR,I,Iron,,,Tetra Line,Supporter,Sub Machine Gun,The Carronades,1,Mica,,,,2023-12-14,2023-12-14,2023-12-14T05:00:00+09:00,patchnote,high,,1,1,1
-063,Belorta: Pumpkin Witch,벨로타 : 펌킨 위치,ベロータ：パンプキンウィッチ,,,,,,,,,,1,Belorta,,,,,2026-10-08,2026-10-08T00:00:00+09:00,patchnote,high,,1,0,0
+063,Belorta: Pumpkin Witch,벨로타 : 펌킨 위치,ベロータ：パンプキンウィッチ,SSR,II,Water,,,Tetra Line,Supporter,Rocket Launcher,The Carronades,1,Belorta,,,,2026-10-08,2026-10-08,2026-10-08T00:00:00+09:00,patchnote,high,,1,1,1
 070,Brid,브리드,ブリッド,SSR,III,Water,,,Elysion,Attacker,Assault Rifle,Infinity Rail,0,Brid,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 071,Soline,솔린,ソリン,SSR,III,Iron,,,Elysion,Attacker,Sub Machine Gun,Infinity Rail,0,Soline,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 072,Diesel,디젤,ディーゼル,SSR,II,Wind,,,Elysion,Defender,Machine Gun,Infinity Rail,0,Diesel,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1

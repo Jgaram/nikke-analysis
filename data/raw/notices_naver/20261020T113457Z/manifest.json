@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261020T113457Z",
+  "sealed_at": "2026-10-20T11:35:00+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8343876.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8343876",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "b4d9b543cff6eaab6b3ec83192dc6ab16097ea0c2822075646af03a68e8f3a3e",
+      "bytes": 6316,
+      "fetched_at": "2026-10-20T11:34:59+00:00",
+      "meta": {
+        "feed_id": "8343876",
+        "title": "승리의 여신 집결, 카운트다운 D-4",
+        "created": "20261020180035",
+        "updated": "20261020180035",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

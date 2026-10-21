@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261021T114833Z",
+  "sealed_at": "2026-10-21T11:48:35+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8347146.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8347146",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "53b861a194e125c1c7b945d6e41c2ee50eef7d7cd00e2aacfcbd6f7c8fc83c92",
+      "bytes": 6351,
+      "fetched_at": "2026-10-21T11:48:35+00:00",
+      "meta": {
+        "feed_id": "8347146",
+        "title": "승리의 여신 집결, 카운트다운 D-3",
+        "created": "20261021180009",
+        "updated": "20261021180009",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

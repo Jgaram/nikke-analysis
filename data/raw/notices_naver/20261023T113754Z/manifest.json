@@ -1,0 +1,79 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261023T113754Z",
+  "sealed_at": "2026-10-23T11:37:56+00:00",
+  "entry_count": 4,
+  "entries": [
+    {
+      "filename": "feed/8356087.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8356087",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "b5f19026fb630dee13dc5d2c735abd7593de11cc40b4df1c623d2a9b0fa31584",
+      "bytes": 15057,
+      "fetched_at": "2026-10-23T11:37:56+00:00",
+      "meta": {
+        "feed_id": "8356087",
+        "title": "부정행위 제재 명단 안내 - 2026년 10월 23일(금)",
+        "created": "20261023193126",
+        "updated": "20261023193126",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8355705.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8355705",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "02137fb2da29e151ac7a2a5bdf45599035ce71d7f0970d752897fa54bdb2c814",
+      "bytes": 6342,
+      "fetched_at": "2026-10-23T11:37:56+00:00",
+      "meta": {
+        "feed_id": "8355705",
+        "title": "승리의 여신 집결, 카운트다운 D-1",
+        "created": "20261023180043",
+        "updated": "20261023180135",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8354002.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8354002",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "ca4108251fb3b104de89f2d74d26a892be2b8ead80251a8b9676e6b23de8f722",
+      "bytes": 11701,
+      "fetched_at": "2026-10-23T11:37:56+00:00",
+      "meta": {
+        "feed_id": "8354002",
+        "title": "<승리의 여신: 니케> 4주년 특별 방송 - 예고편 공개",
+        "created": "20261023110042",
+        "updated": "20261023110042",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8282889.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8282889",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "99ebc540ca5f7ca4da907e8ce6a34343fb87c82dd1bdc1a6d2400d413fcd5531",
+      "bytes": 16124,
+      "fetched_at": "2026-10-23T11:37:56+00:00",
+      "meta": {
+        "feed_id": "8282889",
+        "title": "부정행위 제재 명단 안내 - 2026년 10월 4일(일)",
+        "created": "20261004003211",
+        "updated": "20261023153520",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 4,
+    "full": false
+  }
+}

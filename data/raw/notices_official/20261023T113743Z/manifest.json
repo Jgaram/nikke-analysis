@@ -1,0 +1,42 @@
+{
+  "source": "notices_official",
+  "run_id": "20261023T113743Z",
+  "sealed_at": "2026-10-23T11:37:54+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "detail/a4013349a73d8a4e74aa1e1a4ab1ce514099.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=a4013349a73d8a4e74aa1e1a4ab1ce514099",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "37bc2d7aa9e15883056d84e6e0a29aa1db4d331cd8baadddd91263b07ef456c2",
+      "bytes": 304839,
+      "fetched_at": "2026-10-23T11:37:54+00:00",
+      "meta": {
+        "content_id": "a4013349a73d8a4e74aa1e1a4ab1ce514099",
+        "title": "부정행위 제재 명단 안내 2026.10.23",
+        "pub_timestamp": "1792751406",
+        "columns": [
+          "NOTICE",
+          "NEWS"
+        ],
+        "digest": "158fa247aa7af8e37d0fc3c8dce37f798f0e6213aabaa184f8e10e8a3a9b9b9c"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 286,
+    "fetched": 11,
+    "written": 1,
+    "full": false,
+    "notes": []
+  }
+}

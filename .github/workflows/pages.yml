@@ -6,10 +6,11 @@ name: pages
 #
 # Pushes made with the workflow token do not start other workflows, and that is
 # how main usually moves: the scheduled refresh commits the new data, and
-# merge-to-main merges session work. So besides a push to main, this runs when
-# either of those finishes (after refresh always - it commits what it collected
-# even when it ends red - after merge-to-main only when it merged).
-#
+# merge-to-main merges session work. merge-to-main is started by a person's
+# push, so workflow_run follows it (only when it merged). refresh mostly runs on
+# its schedule as github-actions[bot], which workflow_run does not follow, so
+# refresh starts this workflow itself (workflow_dispatch) after it pushes data.
+
 # Pages has to be switched on once by hand: Settings -> Pages -> Build and
 # deployment -> Source: GitHub Actions. Until then the site is still built (a
 # broken page shows up here) but not published, and the run says so.
@@ -19,7 +20,7 @@ on:
     branches:
       - main
   workflow_run:
-    workflows: [refresh, merge-to-main]
+    workflows: [merge-to-main]
     types: [completed]
   workflow_dispatch:
 
@@ -37,7 +38,6 @@ jobs:
   build:
     if: >-
       github.event_name != 'workflow_run' ||
-      github.event.workflow_run.name == 'refresh' ||
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15

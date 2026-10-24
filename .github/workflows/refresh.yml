@@ -30,6 +30,8 @@ on:
 
 permissions:
   contents: write
+  # To start the pages workflow after a data push (see the commit step).
+  actions: write
 
 concurrency:
   group: refresh
@@ -111,7 +113,13 @@ jobs:
             # main may have moved since checkout: put the data commit on top.
             git pull --rebase
             git push
+            # Rebuild the site. A scheduled run acts as github-actions[bot], and
+            # GitHub does not start workflow_run chains from such runs, so pages
+            # never heard of these pushes. workflow_dispatch is allowed.
+            gh workflow run pages.yml --ref main
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
 
       - name: Summary
         if: always()

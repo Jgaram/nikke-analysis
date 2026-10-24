@@ -1,0 +1,34 @@
+{
+  "source": "enikk_soloraid",
+  "run_id": "20261024T105824Z",
+  "sealed_at": "2026-10-24T10:58:26+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "season-042.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "b634afcde508b8b5ee3857d1b8a81289fd123465388a85a460b0e770632124e7",
+      "bytes": 434085,
+      "fetched_at": "2026-10-24T10:58:26+00:00",
+      "meta": {
+        "kind": "rankings",
+        "raid": 42,
+        "lastupdated": "2026-10-23T17:01:00.000Z",
+        "rankers": 300
+      }
+    }
+  ],
+  "extra": {
+    "base_url": "https://enikk.app",
+    "query": "query SoloRaidRankings($raid: Float!) { SRRankings(raid: $raid) { rank playerid server damage cp collectionTime firstAppeared teams } }",
+    "listed": 42,
+    "fetched": [
+      42
+    ],
+    "unchanged": [],
+    "no_rankings_yet": [],
+    "failed": {}
+  }
+}

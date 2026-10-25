@@ -1,0 +1,79 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261025T112548Z",
+  "sealed_at": "2026-10-25T11:25:51+00:00",
+  "entry_count": 4,
+  "entries": [
+    {
+      "filename": "feed/8361470.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8361470",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "0e86fb1642b1df4f8bb4d5ea8a83f0c13112695bca5903bc8052f84e84b19308",
+      "bytes": 10101,
+      "fetched_at": "2026-10-25T11:25:50+00:00",
+      "meta": {
+        "feed_id": "8361470",
+        "title": "<승리의 여신: 니케> animate Lo-fi 특집 콜라보 굿즈 정보 공개",
+        "created": "20261024230519",
+        "updated": "20261024230519",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8360877.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8360877",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "94cb2580238f29d6b4e13183ec9a18d1d3dd67accf0e60f82533f0a4376597b4",
+      "bytes": 10706,
+      "fetched_at": "2026-10-25T11:25:50+00:00",
+      "meta": {
+        "feed_id": "8360877",
+        "title": "<승리의 여신: 니케> AGF 2026 참가 안내",
+        "created": "20261024205005",
+        "updated": "20261024205005",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8360850.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8360850",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "e34968e1c3548118b39367677ba43fc9fee1564d0e18fece0b6db69ea60d8d8a",
+      "bytes": 102191,
+      "fetched_at": "2026-10-25T11:25:50+00:00",
+      "meta": {
+        "feed_id": "8360850",
+        "title": "<승리의 여신: 니케> 무신사 콜라보 팝업스토어 사전 안내",
+        "created": "20261024204541",
+        "updated": "20261024204541",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8360823.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8360823",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "e99cf316640dab13c39610a1c5e34494cba044f4423ca05239edc705e92c6697",
+      "bytes": 104860,
+      "fetched_at": "2026-10-25T11:25:50+00:00",
+      "meta": {
+        "feed_id": "8360823",
+        "title": "4주년 기념 특별 옥외 광고 <MARIAN: WHITE & BLACK IN 용산> 사전 안내",
+        "created": "20261024204012",
+        "updated": "20261024204012",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 4,
+    "full": false
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261026T130025Z",
+  "sealed_at": "2026-10-26T13:00:28+00:00",
+  "entry_count": 3,
+  "entries": [
+    {
+      "filename": "feed/8368954.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8368954",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "7208cb8206677a739ca16728cfa6d80a0859e2a462ec3e27d67b54c1622b7c59",
+      "bytes": 10707,
+      "fetched_at": "2026-10-26T13:00:27+00:00",
+      "meta": {
+        "feed_id": "8368954",
+        "title": "4주년 기념 특별 옥외 광고 <MARIAN: WHITE & BLACK IN 용산> 예약 마감 안내",
+        "created": "20261026162629",
+        "updated": "20261026162629",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8367949.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8367949",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "c865c71e801b56c686d63563066c90c7eb4b3ed6b51d3fa8d982cbeb5192002a",
+      "bytes": 9345,
+      "fetched_at": "2026-10-26T13:00:27+00:00",
+      "meta": {
+        "feed_id": "8367949",
+        "title": "4주년 특별 방송 누적 조회수 달성 보상 안내",
+        "created": "20261026115022",
+        "updated": "20261026115022",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8367454.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8367454",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "4c44920b825028552693b9dc913df97ede3d1b2bbf78f65adcc648fc6559475c",
+      "bytes": 18821,
+      "fetched_at": "2026-10-26T13:00:27+00:00",
+      "meta": {
+        "feed_id": "8367454",
+        "title": "4주년 기념 특별 옥외 광고 <MARIAN: WHITE & BLACK IN 용산> 예약 안내",
+        "created": "20261026094509",
+        "updated": "20261026094509",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 3,
+    "full": false
+  }
+}

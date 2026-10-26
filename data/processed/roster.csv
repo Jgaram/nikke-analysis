@@ -74,11 +74,14 @@ unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,treasure_ele
 201,Yan,얀,ヤン,SSR,I,Fire,,,Tetra Line,Supporter,Rocket Launcher,Talentum,0,Yan,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 202,Dolla,도라,ドラー,SSR,II,Wind,,,Tetra Line,Supporter,Sniper Rifle,Talentum,0,Dolla,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 203,Rupee: Winter Shopper,루피 : 윈터 쇼퍼,ルピー：ウィンターショッパー,SSR,I,Electric,,,Tetra Line,Defender,Assault Rifle,Talentum,1,Rupee,,,,2022-12-08,2022-12-08,,datafile,low,,1,1,1
+204,Rapunzel: Sanctuary,,,SSR,II,Fire,,,Pilgrim,Supporter,Rocket Launcher,Goddess,1,Rapunzel,,,,2026-10-29,2026-10-29,,datafile,low,,0,1,0
+205,Marian: Queen,,,SSR,III,Fire,,,Pilgrim,Attacker,Machine Gun,Counters,1,Marian,,,,2026-10-29,2026-10-29,,datafile,low,,0,1,0
+206,Scarlet: Goddeath,,,SSR,III,Fire,,,Pilgrim,Attacker,Assault Rifle,Goddess,1,Scarlet,,,,2026-11-05,2026-11-05,,datafile,low,,0,1,0
 210,Exia,엑시아,エクシア,SSR,I,Electric,,,Tetra Line,Supporter,Sniper Rifle,Protocol,0,Exia,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
 212,Novel,노벨,ノベル,SSR,II,Iron,,,Tetra Line,Defender,Sub Machine Gun,Protocol,0,Novel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 220,Snow White,스노우 화이트,スノーホワイト,SSR,III,Iron,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Snow White,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-221,Rapunzel,라푼젤,ラプンツェル,SSR,I,Iron,,,Pilgrim,Supporter,Rocket Launcher,Pioneer,0,Rapunzel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-222,Scarlet,홍련,紅蓮,SSR,III,Electric,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Scarlet,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+221,Rapunzel,라푼젤,ラプンツェル,SSR,I,Iron,,,Pilgrim,Supporter,Rocket Launcher,Pioneer,0,Rapunzel,,,,2022-04-11,2026-10-29,2026-10-29T00:00:00+09:00,patchnote,high,,1,1,1
+222,Scarlet,홍련,紅蓮,SSR,III,Electric,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Scarlet,,,,2022-04-11,2026-11-05,2026-11-05T05:00:00+09:00,patchnote,high,,1,1,1
 223,Nayuta,나유타,ナユタ,SSR,II,Wind,,,Pilgrim,Supporter,Sub Machine Gun,Pioneer,0,Nayuta,,,,2025-10-30,2025-10-30,2025-10-30T00:00:00+09:00,patchnote,high,,1,1,1
 224,Snow White: Innocent Days,스노우 화이트 : 이노센트 데이즈,スノーホワイト：イノセントデイズ,SSR,III,Iron,,,Pilgrim,Attacker,Assault Rifle,Goddess,1,Snow White,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
 225,Scarlet: Black Shadow,홍련 : 흑영,紅蓮：ブラックシャドウ,SSR,III,Wind,,,Pilgrim,Attacker,Rocket Launcher,Goddess,1,Scarlet,,,,2024-01-01,2024-01-01,2024-01-01T00:00:00+09:00,patchnote,high,,1,1,1

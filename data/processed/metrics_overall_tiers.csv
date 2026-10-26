@@ -132,8 +132,8 @@ overall_rank,unit_id,name_ko,name_en,element,extra_elements,treasure_elements,ov
 83,203,루피 : 윈터 쇼퍼,Rupee: Winter Shopper,Electric,,,0.0,F,False,False,5,42,42,False,I,Defender,SSR,2022-12-08,4,4,4,1,42,0,1164.166667,7,True,,,unused,0.097385,
 83,210,엑시아,Exia,Electric,,,0.0,F,False,False,5,29,42,True,I,Supporter,SSR,2022-11-04,1,16,30,7,42,1,373.166667,2,True,,,specialist,0.268531,0.0
 83,212,노벨,Novel,Iron,,,0.0,F,False,False,5,42,42,False,II,Defender,SSR,2022-11-04,1,1,14,13,42,0,863.166667,4,True,,,faded,1.631027,1.631027
-83,221,라푼젤,Rapunzel,Iron,,,0.0,F,False,False,5,42,42,False,I,Supporter,SSR,2022-11-04,1,1,16,10,42,0,806.166667,4,True,,,specialist,0.022721,0.022721
-83,222,홍련,Scarlet,Electric,,,0.0,F,False,False,5,42,42,False,III,Attacker,SSR,2022-11-04,1,1,36,21,42,0,170.166667,1,True,,,narrowed,0.722563,0.0
+83,221,라푼젤,Rapunzel,Iron,,,0.0,F,False,False,5,20,30,False,I,Supporter,SSR,2026-10-29,1,1,16,10,20,0,806.166667,0,False,0.1159,specialist,specialist,0.041368,0.041368
+83,222,홍련,Scarlet,Electric,,,0.0,F,False,False,5,26,42,False,III,Attacker,SSR,2026-11-05,1,1,36,21,26,0,170.166667,1,True,0.02253,specialist,narrowed,0.722563,0.01233
 83,224,스노우 화이트 : 이노센트 데이즈,Snow White: Innocent Days,Iron,,,0.0,F,False,False,5,36,42,False,III,Attacker,SSR,2023-11-02,,,,0,36,0,,0,False,,,unused,0.03824,
 83,226,라푼젤 : 퓨어 그레이스,Rapunzel: Pure Grace,Iron,,,0.0,F,False,False,5,24,42,False,I,Defender,SSR,2024-10-31,,,,0,24,0,,0,False,,,unused,,
 83,230,하란,Harran,Electric,,,0.0,F,False,False,5,42,42,False,III,Attacker,SSR,2022-11-04,1,1,2,2,42,0,1227.166667,8,True,,,unused,0.494012,0.494012

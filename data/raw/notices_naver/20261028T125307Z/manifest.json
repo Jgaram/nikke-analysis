@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261028T125307Z",
+  "sealed_at": "2026-10-28T12:53:09+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8377113.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8377113",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "ebfdf336acd3d1efcd14974029dd6d0d1daf3517100aafefce0d980ad793cba9",
+      "bytes": 9161,
+      "fetched_at": "2026-10-28T12:53:09+00:00",
+      "meta": {
+        "feed_id": "8377113",
+        "title": "<승리의 여신: 니케> 오케스트라 콘서트 예고",
+        "created": "20261028150013",
+        "updated": "20261028150013",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

@@ -38,6 +38,12 @@ unit_id,alias,language,kind
 018,비전 아이,ko,variant_suffix
 018,ネオン：ビジョン・アイ,ja,full
 018,ビジョン・アイ,ja,variant_suffix
+019,Marian: Queen,en,full
+019,Queen,en,variant_suffix
+019,마리안 : 퀸,ko,full
+019,퀸,ko,variant_suffix
+019,マリアン：クイーン,ja,full
+019,クイーン,ja,variant_suffix
 020,Delta,en,full
 020,델타,ko,full
 020,デルタ,ja,full
@@ -599,6 +605,18 @@ unit_id,alias,language,kind
 471,헤비암즈,ko,variant_suffix
 471,スノーホワイト：ヘビーアームズ,ja,full
 471,ヘビーアームズ,ja,variant_suffix
+472,Scarlet: Goddeath,en,full
+472,Goddeath,en,variant_suffix
+472,홍련 : 신살,ko,full
+472,신살,ko,variant_suffix
+472,紅蓮：神殺,ja,full
+472,神殺,ja,variant_suffix
+473,Rapunzel: Sanctuary,en,full
+473,Sanctuary,en,variant_suffix
+473,라푼젤 : 생츄어리,ko,full
+473,생츄어리,ko,variant_suffix
+473,ラプンツェル：サンクチュアリ,ja,full
+473,サンクチュアリ,ja,variant_suffix
 500,Elegg,en,full
 500,일레그,ko,full
 500,エレグ,ja,full

@@ -7,6 +7,7 @@ unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,treasure_ele
 016,Rapi: Red Hood,라피 : 레드 후드,ラピ：レッドフード,SSR,III,Fire,Iron,,Elysion,Attacker,Machine Gun,Counters,1,Rapi,,,,2025-01-01,2025-01-01,2025-01-01T00:00:00+09:00,patchnote,high,,1,1,1
 017,Anis: Star,아니스 : 스타,アニス：スター,SSR,I,Electric,,,Tetra Line,Defender,Rocket Launcher,Counters,1,Anis,,,,2026-04-23,2026-04-23,2026-04-23T00:00:00+09:00,patchnote,high,,1,1,1
 018,Neon: Vision Eye,네온 : 비전 아이,ネオン：ビジョン・アイ,SSR,III,Electric,,,Missilis Industry,Attacker,Rocket Launcher,Counters,1,Neon,,,,2026-04-30,2026-04-30,2026-04-30T05:00:00+09:00,patchnote,high,,1,1,1
+019,Marian: Queen,마리안 : 퀸,マリアン：クイーン,SSR,III,Fire,,,Pilgrim,Attacker,Machine Gun,Counters,1,Marian,,,,,2026-10-29,2026-10-29T00:00:00+09:00,patchnote,high,,1,0,1
 020,Delta,델타,デルタ,SR,II,Wind,,,Elysion,Defender,Sniper Rifle,The Scouts,0,Delta,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 022,Signal,시그널,シグナル,SSR,II,Fire,,,Elysion,Attacker,Sub Machine Gun,The Scouts,0,Signal,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 023,Delta: Ninja Thief,델타 : 닌자 시프,デルタ：ニンジャシーフ,SSR,II,Water,,,Elysion,Defender,Machine Gun,The Scouts,1,Delta,,,,2025-10-16,2025-10-16,2025-10-16T00:00:00+09:00,patchnote,high,,1,1,1
@@ -80,8 +81,8 @@ unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,treasure_ele
 210,Exia,엑시아,エクシア,SSR,I,Electric,,,Tetra Line,Supporter,Sniper Rifle,Protocol,0,Exia,,,,2022-04-11,2022-11-04,,launch,medium,2024-05-30T00:00:00+09:00,1,1,1
 212,Novel,노벨,ノベル,SSR,II,Iron,,,Tetra Line,Defender,Sub Machine Gun,Protocol,0,Novel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 220,Snow White,스노우 화이트,スノーホワイト,SSR,III,Iron,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Snow White,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
-221,Rapunzel,라푼젤,ラプンツェル,SSR,I,Iron,,,Pilgrim,Supporter,Rocket Launcher,Pioneer,0,Rapunzel,,,,2022-04-11,2026-10-29,2026-10-29T00:00:00+09:00,patchnote,high,,1,1,1
-222,Scarlet,홍련,紅蓮,SSR,III,Electric,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Scarlet,,,,2022-04-11,2026-11-05,2026-11-05T05:00:00+09:00,patchnote,high,,1,1,1
+221,Rapunzel,라푼젤,ラプンツェル,SSR,I,Iron,,,Pilgrim,Supporter,Rocket Launcher,Pioneer,0,Rapunzel,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
+222,Scarlet,홍련,紅蓮,SSR,III,Electric,,,Pilgrim,Attacker,Assault Rifle,Pioneer,0,Scarlet,,,,2022-04-11,2022-11-04,,launch,medium,,1,1,1
 223,Nayuta,나유타,ナユタ,SSR,II,Wind,,,Pilgrim,Supporter,Sub Machine Gun,Pioneer,0,Nayuta,,,,2025-10-30,2025-10-30,2025-10-30T00:00:00+09:00,patchnote,high,,1,1,1
 224,Snow White: Innocent Days,스노우 화이트 : 이노센트 데이즈,スノーホワイト：イノセントデイズ,SSR,III,Iron,,,Pilgrim,Attacker,Assault Rifle,Goddess,1,Snow White,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
 225,Scarlet: Black Shadow,홍련 : 흑영,紅蓮：ブラックシャドウ,SSR,III,Wind,,,Pilgrim,Attacker,Rocket Launcher,Goddess,1,Scarlet,,,,2024-01-01,2024-01-01,2024-01-01T00:00:00+09:00,patchnote,high,,1,1,1
@@ -156,6 +157,8 @@ unit_id,name_en,name_ko,name_ja,rarity,burst,element,extra_elements,treasure_ele
 451,Tia,티아,ティア,SSR,I,Iron,,,Missilis Industry,Defender,Rocket Launcher,Dazzling Pearl,0,Tia,,,,2023-10-12,2023-10-12,2023-10-12T05:00:00+09:00,patchnote,high,,1,1,1
 470,Red Hood,레드 후드,レッドフード,SSR,I-II-III,Iron,,,Pilgrim,Attacker,Sniper Rifle,Goddess,0,Red Hood,,,,2023-11-02,2023-11-02,2023-11-02T00:00:00+09:00,patchnote,high,,1,1,1
 471,Snow White: Heavy Arms,스노우 화이트 : 헤비암즈,スノーホワイト：ヘビーアームズ,SSR,III,Water,,,Pilgrim,Attacker,Sniper Rifle,Goddess,1,Snow White,,,,2025-12-31,2026-01-01,2026-01-01T00:00:00+09:00,patchnote,high,,1,1,1
+472,Scarlet: Goddeath,홍련 : 신살,紅蓮：神殺,SSR,III,Fire,,,Pilgrim,Attacker,Assault Rifle,Goddess,1,Scarlet,,,,,2026-11-05,2026-11-05T05:00:00+09:00,patchnote,high,,1,0,1
+473,Rapunzel: Sanctuary,라푼젤 : 생츄어리,ラプンツェル：サンクチュアリ,SSR,II,Fire,,,Pilgrim,Supporter,Rocket Launcher,Goddess,1,Rapunzel,,,,,2026-10-29,2026-10-29T00:00:00+09:00,patchnote,high,,1,0,1
 500,Elegg,일레그,エレグ,SSR,II,Electric,,,Missilis Industry,Supporter,Machine Gun,Electric Shock,0,Elegg,,,,2024-02-22,2024-02-22,2024-02-22T00:00:00+09:00,patchnote,high,,1,1,1
 501,Trony,트로니,トロニー,SSR,III,Fire,,,Missilis Industry,Attacker,Sniper Rifle,Electric Shock,0,Trony,,,,2024-05-16,2024-05-16,2024-05-16T00:00:00+09:00,patchnote,high,,1,1,1
 502,Elegg: Boom and Shock,일레그 : 붐 앤 쇼크,エレグ：ブーム・アンド・ショック,SSR,III,Water,,,Missilis Industry,Attacker,Machine Gun,Electric Shock,1,Elegg,,,,2025-07-24,2025-07-24,2025-07-24T05:00:00+09:00,patchnote,high,,1,1,1

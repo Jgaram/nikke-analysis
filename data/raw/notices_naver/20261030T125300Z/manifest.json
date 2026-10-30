@@ -1,0 +1,47 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261030T125300Z",
+  "sealed_at": "2026-10-30T12:53:03+00:00",
+  "entry_count": 2,
+  "entries": [
+    {
+      "filename": "feed/8387827.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8387827",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "02204654a079a465adf356f318fc09693f5c0797d1f1fb8303d95b9cc71fb5a6",
+      "bytes": 24872,
+      "fetched_at": "2026-10-30T12:53:02+00:00",
+      "meta": {
+        "feed_id": "8387827",
+        "title": "<승리의 여신: 니케> 4주년 기념 ‘MARIAN: WHITE & BLACK IN 용산' DAY 1 오픈!",
+        "created": "20261030210159",
+        "updated": "20261030210159",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8385414.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8385414",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "2dfb70cf0d82549ee992d08d7e918a5541a9b3c39a918e354bd621c72b973e06",
+      "bytes": 18645,
+      "fetched_at": "2026-10-30T12:53:02+00:00",
+      "meta": {
+        "feed_id": "8385414",
+        "title": "&#x1f4e2; <승리의 여신: 니케> 무신사 콜라보 팝업스토어 코스프레 이벤트 안내",
+        "created": "20261030100058",
+        "updated": "20261030100058",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 2,
+    "full": false
+  }
+}

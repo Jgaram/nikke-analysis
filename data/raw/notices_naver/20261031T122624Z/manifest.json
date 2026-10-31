@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261031T122624Z",
+  "sealed_at": "2026-10-31T12:26:26+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8391869.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8391869",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "5332fe0f2d037a5dabb0f34a6da569354a2b6d2c5c475bc5019e530024670d19",
+      "bytes": 27264,
+      "fetched_at": "2026-10-31T12:26:26+00:00",
+      "meta": {
+        "feed_id": "8391869",
+        "title": "<승리의 여신: 니케> 4주년 기념 ‘MARIAN: WHITE & BLACK IN 용산' DAY 2 오픈! ",
+        "created": "20261031184231",
+        "updated": "20261031184231",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

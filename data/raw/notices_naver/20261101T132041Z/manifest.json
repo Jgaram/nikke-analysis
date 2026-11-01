@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261101T132041Z",
+  "sealed_at": "2026-11-01T13:20:42+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8397665.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8397665",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "8afb5b99f44e38ac4724f7c0c5d6cce2bfd61807c2b5048fa4c4f03bd63bc237",
+      "bytes": 30637,
+      "fetched_at": "2026-11-01T13:20:42+00:00",
+      "meta": {
+        "feed_id": "8397665",
+        "title": "<MARIAN: WHITE & BLACK IN 용산> DAY 3 오픈 및 이벤트 교환 코드 공개!",
+        "created": "20261101204524",
+        "updated": "20261101204524",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

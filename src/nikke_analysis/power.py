@@ -32,7 +32,8 @@ damage per unit, which the rankings do not give - the same wall as the role
 (CLAUDE.md), and the study does not try.
 
 The tiers use one thing from here: ``split_weights``, the 체급 a deck's share is split by among its
-members (season by season, from the decks up to that season). The study itself - the weights against
+members (season by season, from the decks up to that season; units always decked together share theirs
+evenly, ``together``). The study itself - the weights against
 홍련, the creep, the field - feeds no table. The tier site draws it (메타 변화 · 파워 인플레) from ``site``,
 computed once when the site is built: the page's parameters do not move it.
 """
@@ -54,6 +55,8 @@ FREE = 1e-3  # the uncertainty is judged without that pull, so it shows what the
 MIN_DECKS = 30  # a cell from fewer decks is provisional
 MAX_SE = 0.10  # ... and so is one whose log weight is less certain than this (about +-10%)
 TOGETHER = 0.95  # two cells decked together this often, both ways, can only be weighed as a pair
+PAIR_SEASON_DECKS = 10  # for the split: a season counts toward a pair when the two shared this many decks in it
+PAIR_SEASONS = 2  # ... and a pair needs this many such seasons - one season's overlap (a debut) is not a pair
 SPLIT_TOP = 50  # the tiers' split is measured on these ranks of every server, whatever the tiers count
 TOP = 25  # the field: the strongest this many cells available in a season
 LAUNCH = pd.Timestamp("2022-11-04")
@@ -229,7 +232,8 @@ def split_weights(entries: pd.DataFrame, roster: pd.DataFrame, seasons: pd.DataF
     the unit's cell that season, solved on the decks of the seasons up to it - what the decks had shown
     by then, so a past tier never leans on a later season. Measured once on every ranked deck (every
     server, ranks 1-``SPLIT_TOP``, rank weighted): the tiers' parameters choose whose decks count, not
-    how a deck is split. Empty without decks."""
+    how a deck is split. Units always decked together (``together``) share their group's 체급 evenly
+    (``pool``). Empty without decks."""
     entries = metrics.select_population(entries, top_n=SPLIT_TOP)
     if entries.empty:
         return pd.DataFrame(columns=["season", "unit_id", "weight"])
@@ -243,7 +247,78 @@ def split_weights(entries: pd.DataFrame, roster: pd.DataFrame, seasons: pd.DataF
         coef = result.through(int(season))
         frames.append(pd.DataFrame({"season": int(season), "unit_id": rows["unit_id"].to_numpy(),
                                     "weight": coef[rows["cell"].map(index).to_numpy()]}))
-    return pd.concat(frames, ignore_index=True).sort_values(["season", "unit_id"]).reset_index(drop=True)
+    split = pd.concat(frames, ignore_index=True).sort_values(["season", "unit_id"]).reset_index(drop=True)
+    return pool(split, together(result.entries))
+
+
+def together(entries: pd.DataFrame) -> pd.DataFrame:
+    """Per season, the units the decks cannot tell apart: ``season``, ``unit_id``, ``group`` (the group's
+    smallest unit id), for units in a group only. Two units fielded in season s are a pair when, over the
+    seasons from the later of their first decks to s, they shared ``MIN_DECKS`` decks or more and at least
+    ``TOGETHER`` of the decks of each, with ``PAIR_SEASON_DECKS`` shared decks or more in ``PAIR_SEASONS``
+    seasons or more (one season's overlap, such as a debut, is not a pair). Pairs with a unit in common
+    are one group. Judged by unit, whatever the treasure, on the decks up to s only: a pair that later
+    splits is undone from then on, and the seasons before keep theirs."""
+    columns = ["season", "unit_id", "group"]
+    slots = entries[DECK_KEYS + ["unit_id"]].assign(unit_id=entries["unit_id"].astype(str)).drop_duplicates()
+    if slots.empty:
+        return pd.DataFrame(columns=columns)
+    seasons = np.sort(slots["season"].astype(int).unique())
+    units = np.sort(slots["unit_id"].unique())
+    slots = slots.assign(t=np.searchsorted(seasons, slots["season"].astype(int)),
+                         u=np.searchsorted(units, slots["unit_id"]))
+    decks = np.zeros((len(units), len(seasons)))
+    np.add.at(decks, (slots["u"].to_numpy(), slots["t"].to_numpy()), 1.0)
+    both = slots[DECK_KEYS + ["u", "t"]].merge(slots[DECK_KEYS + ["u"]], on=DECK_KEYS, suffixes=("", "_mate"))
+    both = both[both["u"] < both["u_mate"]]
+    shared = both.groupby(["u", "u_mate", "t"]).size().unstack("t", fill_value=0)
+    shared = shared.reindex(columns=range(len(seasons)), fill_value=0)
+    shared = shared[shared.sum(axis=1) >= MIN_DECKS]
+    if shared.empty:
+        return pd.DataFrame(columns=columns)
+    a = shared.index.get_level_values("u").to_numpy()
+    b = shared.index.get_level_values("u_mate").to_numpy()
+    per = shared.to_numpy(dtype=float)
+    n = per.cumsum(axis=1)  # nothing is shared before the later debut, so this sums the window
+    start = np.maximum((decks > 0).argmax(axis=1)[a], (decks > 0).argmax(axis=1)[b])
+    before = np.hstack([np.zeros((len(units), 1)), decks.cumsum(axis=1)])  # decks before each season
+    window = lambda u: before[u, 1:] - before[u, start][:, None]
+    linked = ((n >= MIN_DECKS) & (n >= TOGETHER * window(a)) & (n >= TOGETHER * window(b))
+              & ((per >= PAIR_SEASON_DECKS).cumsum(axis=1) >= PAIR_SEASONS)
+              & (decks[a] > 0) & (decks[b] > 0))  # both fielded that season
+    rows = []
+    for t in np.flatnonzero(linked.any(axis=0)):
+        group = _joined(zip(a[linked[:, t]], b[linked[:, t]]))
+        rows += [(int(seasons[t]), units[u], units[g]) for u, g in sorted(group.items())]
+    return pd.DataFrame(rows, columns=columns)
+
+
+def _joined(pairs) -> dict:
+    """Each member of the pairs -> the smallest member of the group the pairs chain it into."""
+    root: dict = {}
+
+    def find(u):
+        while root.setdefault(u, u) != u:
+            u = root[u]
+        return u
+
+    for x, y in pairs:
+        rx, ry = find(x), find(y)
+        root[max(rx, ry)] = min(rx, ry)
+    return {u: find(u) for u in root}
+
+
+def pool(split: pd.DataFrame, groups: pd.DataFrame) -> pd.DataFrame:
+    """``split`` with every member of a group (``together``) given the group's mean 체급 that season:
+    ``log(mean exp(weight))``. A deck with the whole group gives it the same share as before, split evenly
+    inside it; the other members' shares do not move."""
+    if groups.empty:
+        return split
+    keyed = groups.assign(season=groups["season"].astype(int), unit_id=groups["unit_id"].astype(str))
+    out = split.merge(keyed, on=["season", "unit_id"], how="left")
+    mean = np.exp(out["weight"]).groupby([out["season"], out["group"]]).transform("mean")
+    out["weight"] = np.where(out["group"].notna(), np.log(mean), out["weight"])
+    return out.drop(columns="group")
 
 
 # --------------------------------------------------------------------------

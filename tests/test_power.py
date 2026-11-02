@@ -177,3 +177,87 @@ def test_the_tiers_split_by_the_weights_the_decks_had_shown_by_then():
     early = power.split_weights(entries[entries["season"] == 1], roster, seasons).set_index(["season", "unit_id"])
     assert split.loc[1].to_numpy() == pytest.approx(early["weight"].loc[1].to_numpy())
     assert "n0" not in split.index.get_level_values("unit_id")  # nobody decked it: no weight
+
+
+def _fielded(spec, seed=0):
+    """Decks from ``{season: [(decks, units), ...]}``: that many decks of those units, each the first deck
+    of a player of its own, filled up to five from fifteen fillers drawn at random (no two fillers are a pair)."""
+    rng = np.random.default_rng(seed)
+    rows = []
+    for season, kinds in spec.items():
+        player = 0
+        for count, units in kinds:
+            for _ in range(count):
+                player += 1
+                deck = list(units) + list(rng.permutation([f"f{i:02d}" for i in range(15)]))[:5 - len(units)]
+                rows += [{"season": season, "server": "S0", "player": f"p{player}", "deck": 1, "unit_id": u}
+                         for u in deck]
+    return pd.DataFrame(rows)
+
+
+def _groups(found):
+    return {season: sorted(rows.groupby("group")["unit_id"].apply(tuple)) for season, rows in found.groupby("season")}
+
+
+def test_units_decked_together_since_the_later_one_came_are_a_group():
+    # x is decked without y before y came (season 1), then always with it; p, q, r always together
+    entries = _fielded({1: [(40, ["x"]), (40, ["p", "q", "r"])],
+                        2: [(40, ["x", "y"]), (40, ["p", "q", "r"])],
+                        3: [(40, ["x", "y"])],
+                        4: [(40, ["x"]), (40, ["y"])]})  # they split
+    found = _groups(power.together(entries))
+    assert 1 not in found  # one season together is not a pair yet
+    assert found[2] == [("p", "q", "r")]  # x and y: only y's first season so far
+    assert found[3] == [("x", "y")]  # x's decks before y came do not count against the pair
+    assert 4 not in found  # apart from then on ...
+    early = _groups(power.together(entries[entries["season"] <= 3]))
+    assert {s: found[s] for s in (2, 3)} == early  # ... and the seasons before keep theirs
+
+
+def test_a_pair_needs_two_seasons_with_enough_decks_together():
+    # 35 decks together in y's first season and a handful in the next: enough decks, one real season
+    entries = _fielded({1: [(35, ["x", "y"])], 2: [(5, ["x", "y"])], 3: [(10, ["x", "y"])]})
+    found = _groups(power.together(entries))
+    assert sorted(found) == [3] and found[3] == [("x", "y")]
+
+
+def test_a_group_shares_its_weight_evenly_and_keeps_its_part_of_the_deck():
+    from nikke_analysis.analyze import metrics
+
+    split = pd.DataFrame({"season": [1] * 5 + [2], "unit_id": ["a", "b", "c", "d", "e", "a"],
+                          "weight": [0.9, -0.2, 0.3, 0.0, 0.1, 0.9]})
+    groups = pd.DataFrame({"season": [1, 1], "unit_id": ["a", "b"], "group": ["a", "a"]})
+    pooled = power.pool(split, groups)
+    assert np.exp(pooled["weight"].iloc[:2]).tolist() == pytest.approx([(np.exp(0.9) + np.exp(-0.2)) / 2] * 2)
+    assert pooled["weight"].iloc[2:].tolist() == split["weight"].iloc[2:].tolist()  # nobody else, no other season
+    deck = pd.DataFrame({"season": 1, "server": "S0", "player": "p", "deck": 1, "unit_id": list("abcde"), "size": 5})
+    before, after = metrics.split_fractions(deck, split), metrics.split_fractions(deck, pooled)
+    assert after[0] == pytest.approx(after[1]) and after[0] + after[1] == pytest.approx(before[0] + before[1])
+    assert after[2:] == pytest.approx(before[2:])
+
+
+def test_the_split_pools_a_pair_the_decks_cannot_tell_apart(monkeypatch):
+    """x is weak and decked alone in season 1; from season 2 always with the strong y. The decks put the
+    pair's strength on y; the split shares it once the pair has two seasons."""
+    rng = np.random.default_rng(7)
+    true = {"x": 0.8, "y": 2.0} | {f"f{i:02d}": np.exp(0.04 * i) for i in range(15)}
+    rows = []
+    for season in (1, 2, 3):
+        for server in ("S0", "S1"):
+            for rank in range(1, 31):
+                fillers = list(rng.permutation([f"f{i:02d}" for i in range(15)]))
+                pair = ["x", "y"] if season > 1 else ["x"]
+                for number, deck in enumerate([pair + fillers[:5 - len(pair)], fillers[5:10], fillers[10:15]], start=1):
+                    score = rng.uniform(1, 2) * 1e9 * np.prod([true[u] for u in deck])
+                    rows += [{"season": season, "server": server, "player": f"p{rank}", "rank": rank, "deck": number,
+                              "deck_score": score, "unit_id": u, "unit_cp": 1e5} for u in deck]
+    entries = pd.DataFrame(rows)
+    roster, seasons = _rows(entries)
+    split = power.split_weights(entries, roster, seasons).set_index(["season", "unit_id"])["weight"]
+    assert split[(2, "y")] > split[(2, "x")] + 0.3  # y's first season: not a pair yet
+    assert split[(3, "x")] == pytest.approx(split[(3, "y")])
+    monkeypatch.setattr(power, "together", lambda entries: pd.DataFrame(columns=["season", "unit_id", "group"]))
+    raw = power.split_weights(entries, roster, seasons).set_index(["season", "unit_id"])["weight"]
+    assert 2 * np.exp(split[(3, "x")]) == pytest.approx(np.exp(raw[(3, "x")]) + np.exp(raw[(3, "y")]))
+    others = split.index.get_level_values("unit_id").str.startswith("f")
+    assert split[others].tolist() == raw[others].tolist() and split.loc[[1, 2]].tolist() == raw.loc[[1, 2]].tolist()

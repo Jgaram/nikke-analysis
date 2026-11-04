@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261104T143119Z",
+  "sealed_at": "2026-11-04T14:31:21+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8407974.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8407974",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "196bf911d9b030f310a6b89b8acf7507411b16d28f767b95043fdf2c8d34dcec",
+      "bytes": 10069,
+      "fetched_at": "2026-11-04T14:31:21+00:00",
+      "meta": {
+        "feed_id": "8407974",
+        "title": "PC 런처 이상 상황 안내",
+        "created": "20261104121240",
+        "updated": "20261104121240",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

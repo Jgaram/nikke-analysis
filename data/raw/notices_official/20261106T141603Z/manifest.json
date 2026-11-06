@@ -1,0 +1,78 @@
+{
+  "source": "notices_official",
+  "run_id": "20261106T141603Z",
+  "sealed_at": "2026-11-06T14:16:12+00:00",
+  "entry_count": 3,
+  "entries": [
+    {
+      "filename": "detail/7068a8e1ad7faa49fcabc66ad34406487ee5.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=7068a8e1ad7faa49fcabc66ad34406487ee5",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "d658ec31ed57ef1a21495d299b61c2c850a2d614056da26128f657e763567eb1",
+      "bytes": 10034,
+      "fetched_at": "2026-11-06T14:16:10+00:00",
+      "meta": {
+        "content_id": "7068a8e1ad7faa49fcabc66ad34406487ee5",
+        "title": "PC 런처 보안 사고에 대해 사과드립니다.",
+        "pub_timestamp": "1793833200",
+        "columns": [
+          "NOTICE"
+        ],
+        "digest": "1ba2edeefa5f3c7e9ddc842eff12f1728b3d2ff64bb7d138dd43567c26a5bb19"
+      }
+    },
+    {
+      "filename": "detail/fcf136efa5257a4851aa172a8e6a8c21c1bc.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=fcf136efa5257a4851aa172a8e6a8c21c1bc",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "3ce2f7e5f61412349fcedb5fdd5ca5b3afe1bd1b258ae962802b944f5c545138",
+      "bytes": 25189,
+      "fetched_at": "2026-11-06T14:16:11+00:00",
+      "meta": {
+        "content_id": "fcf136efa5257a4851aa172a8e6a8c21c1bc",
+        "title": "PC 런처 보안 사고 및 후속 조치 안내",
+        "pub_timestamp": "1793833441",
+        "columns": [
+          "NOTICE"
+        ],
+        "digest": "3cff2ae395efd86b2c4c91740c0131a038b6c803007fb6461613caf7a704ed33"
+      }
+    },
+    {
+      "filename": "detail/f5414952a34ada4ab0aa5b3a14eb51c3d62c.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=f5414952a34ada4ab0aa5b3a14eb51c3d62c",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "3bba44630c918067e135c76bb484bdbe351372316ce5e4b69035bb071f03c55e",
+      "bytes": 26549,
+      "fetched_at": "2026-11-06T14:16:12+00:00",
+      "meta": {
+        "content_id": "f5414952a34ada4ab0aa5b3a14eb51c3d62c",
+        "title": "PC 런처 보안 관련 수동 점검 방법 안내",
+        "pub_timestamp": "1793833593",
+        "columns": [
+          "NOTICE",
+          "NEWS"
+        ],
+        "digest": "5487ca8a2230098c7b891cceb81d093fc02d97941a23c834d05ba6cf1f0a3a7f"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 291,
+    "fetched": 9,
+    "written": 3,
+    "full": false,
+    "notes": []
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261106T141612Z",
+  "sealed_at": "2026-11-06T14:16:14+00:00",
+  "entry_count": 3,
+  "entries": [
+    {
+      "filename": "feed/8412547.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8412547",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "738101659b24357374574541ad6280e7846ae64cc51f6212d7e2d36dd9de1a62",
+      "bytes": 38108,
+      "fetched_at": "2026-11-06T14:16:14+00:00",
+      "meta": {
+        "feed_id": "8412547",
+        "title": "PC 런처 보안 관련 수동 점검 방법 안내",
+        "created": "20261105080442",
+        "updated": "20261105080442",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8412545.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8412545",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "352a19589c6fa647daa11cab1e6b55dda4b60efb6acf631b617daeafc59de8c9",
+      "bytes": 39984,
+      "fetched_at": "2026-11-06T14:16:14+00:00",
+      "meta": {
+        "feed_id": "8412545",
+        "title": "PC 런처 보안 사고 및 후속 조치 안내",
+        "created": "20261105080407",
+        "updated": "20261105080504",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8412538.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8412538",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "6ddeb4901bfe15451db36aa7eb75d66cebba3fcb1da93ac41d8c4d58c83c42c1",
+      "bytes": 19483,
+      "fetched_at": "2026-11-06T14:16:14+00:00",
+      "meta": {
+        "feed_id": "8412538",
+        "title": "PC 런처 보안 사고에 대해 사과드립니다.",
+        "created": "20261105080148",
+        "updated": "20261105080148",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 3,
+    "full": false
+  }
+}

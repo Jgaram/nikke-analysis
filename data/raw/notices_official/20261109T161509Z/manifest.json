@@ -1,0 +1,41 @@
+{
+  "source": "notices_official",
+  "run_id": "20261109T161509Z",
+  "sealed_at": "2026-11-09T16:15:17+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "detail/91b1d583a7de0a4d48a9662af74ccf89999d.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=91b1d583a7de0a4d48a9662af74ccf89999d",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "b13b06f96d0ea58ffc64fb5ffbccd89c3d7e883d18bea10ea9c5fd2f17646e5b",
+      "bytes": 7088,
+      "fetched_at": "2026-11-09T16:15:14+00:00",
+      "meta": {
+        "content_id": "91b1d583a7de0a4d48a9662af74ccf89999d",
+        "title": "10월 29일 알려진 이슈 안내(11월 9일 공지 수정)",
+        "pub_timestamp": "1793225618",
+        "columns": [
+          "NOTICE"
+        ],
+        "digest": "8f2273a249e7bc238c8c3c9341ffc01e4833c4ffd5c56bd0f31e1d30f21a1a9d"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 291,
+    "fetched": 8,
+    "written": 1,
+    "full": false,
+    "notes": []
+  }
+}

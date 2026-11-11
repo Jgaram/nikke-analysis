@@ -1,0 +1,79 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261111T142518Z",
+  "sealed_at": "2026-11-11T14:25:19+00:00",
+  "entry_count": 4,
+  "entries": [
+    {
+      "filename": "feed/8446865.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8446865",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "0eb0901d746c7666e05a8dcc25681609f4d488928d1ecc8371ffb1ec472d4fb9",
+      "bytes": 7884,
+      "fetched_at": "2026-11-11T14:25:19+00:00",
+      "meta": {
+        "feed_id": "8446865",
+        "title": "<승리의 여신: 니케> 무신사 콜라보 PV 공개",
+        "created": "20261111201524",
+        "updated": "20261111201524",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8446693.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8446693",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "b1b6c26071fd64fbc888b6fa6e17803b5c798348989a2d1d74903d8aa411cb61",
+      "bytes": 44889,
+      "fetched_at": "2026-11-11T14:25:19+00:00",
+      "meta": {
+        "feed_id": "8446693",
+        "title": "<승리의 여신: 니케> 무신사 콜라보 팝업스토어 진행 관련 상세 안내",
+        "created": "20261111200035",
+        "updated": "20261111200035",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8442084.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8442084",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "e19d5602ead8ab81505df237e2ccba8c9110c246fd67fe530c9a3a237e0919af",
+      "bytes": 43261,
+      "fetched_at": "2026-11-11T14:25:19+00:00",
+      "meta": {
+        "feed_id": "8442084",
+        "title": "PC 런처 보안 사고 추가 안내 및 보안 유의사항",
+        "created": "20261111005055",
+        "updated": "20261111005055",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8412545.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8412545",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "2cc702626b8299418708388dc46530956b5f6e79d264eab559a9c2167b82554d",
+      "bytes": 40679,
+      "fetched_at": "2026-11-11T14:25:19+00:00",
+      "meta": {
+        "feed_id": "8412545",
+        "title": "PC 런처 보안 사고 및 후속 조치 안내(11/11 내용 수정)",
+        "created": "20261105080407",
+        "updated": "20261111010020",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 4,
+    "full": false
+  }
+}

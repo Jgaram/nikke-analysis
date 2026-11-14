@@ -1,0 +1,79 @@
+{
+  "source": "notices_official",
+  "run_id": "20261114T191934Z",
+  "sealed_at": "2026-11-14T19:19:44+00:00",
+  "entry_count": 3,
+  "entries": [
+    {
+      "filename": "detail/91b1d583a7de0a4d48a9662af74ccf89999d.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=91b1d583a7de0a4d48a9662af74ccf89999d",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "8423149fe3beae1895166116b10bdcc6b9d590f30afa8cdbc80e018354f81edb",
+      "bytes": 10065,
+      "fetched_at": "2026-11-14T19:19:39+00:00",
+      "meta": {
+        "content_id": "91b1d583a7de0a4d48a9662af74ccf89999d",
+        "title": "10월 29일 알려진 이슈 안내(11월 12일 공지 수정)",
+        "pub_timestamp": "1793225618",
+        "columns": [
+          "NOTICE"
+        ],
+        "digest": "442387d289caa0acc26b9fba57ef14b3f6d8a5086a20d8c73444404f847815da"
+      }
+    },
+    {
+      "filename": "detail/f5414952a34ada4ab0aa5b3a14eb51c3d62c.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=f5414952a34ada4ab0aa5b3a14eb51c3d62c",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "67460f7ee5fc5ffe8701887c2dd07ac73cefafececc410e0cd047e0a098f14d9",
+      "bytes": 27071,
+      "fetched_at": "2026-11-14T19:19:42+00:00",
+      "meta": {
+        "content_id": "f5414952a34ada4ab0aa5b3a14eb51c3d62c",
+        "title": "PC 런처 보안 관련 수동 점검 방법 안내(11월 12일 공지 수정)",
+        "pub_timestamp": "1793833593",
+        "columns": [
+          "NOTICE",
+          "NEWS"
+        ],
+        "digest": "168f40523028d5b2cfc2e987b95b9881e3359daf29bf73a290a8a3c4946fab18"
+      }
+    },
+    {
+      "filename": "detail/a59473c6a00dfa405ca8279a8bb7e0d2f3e9.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=a59473c6a00dfa405ca8279a8bb7e0d2f3e9",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "baad5ec5ef083df7115c6b4c13827d862dba2447397c4a22d40f43690751bee2",
+      "bytes": 15403,
+      "fetched_at": "2026-11-14T19:19:44+00:00",
+      "meta": {
+        "content_id": "a59473c6a00dfa405ca8279a8bb7e0d2f3e9",
+        "title": "11월 12일 PC 런처 보안 업데이트 안내",
+        "pub_timestamp": "1794483201",
+        "columns": [
+          "NOTICE",
+          "NEWS"
+        ],
+        "digest": "4ac57f744236e10cdf9a4d4a9bd5ef8cc44796a9f9b7420fe94cbfa1242b880d"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 293,
+    "fetched": 10,
+    "written": 3,
+    "full": false,
+    "notes": []
+  }
+}

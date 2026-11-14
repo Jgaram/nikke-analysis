@@ -1,0 +1,47 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261114T191944Z",
+  "sealed_at": "2026-11-14T19:19:46+00:00",
+  "entry_count": 2,
+  "entries": [
+    {
+      "filename": "feed/8453447.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8453447",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "2e5c4457669657af72ca456cc41dce44f9830fab829255955f5cfb8d849cb47c",
+      "bytes": 25828,
+      "fetched_at": "2026-11-14T19:19:45+00:00",
+      "meta": {
+        "feed_id": "8453447",
+        "title": "11월 12일 PC 런처 보안 업데이트 안내",
+        "created": "20261112203705",
+        "updated": "20261112203705",
+        "board_id": 11
+      }
+    },
+    {
+      "filename": "feed/8412547.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8412547",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "a1e9ba484fd018a6f45a9521ecf8c1b04c622fab474c2cbde9e2fcf42424d1fb",
+      "bytes": 39053,
+      "fetched_at": "2026-11-14T19:19:45+00:00",
+      "meta": {
+        "feed_id": "8412547",
+        "title": "PC 런처 보안 관련 수동 점검 방법 안내(11/12 내용 추가)",
+        "created": "20261105080442",
+        "updated": "20261112205534",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 2,
+    "full": false
+  }
+}

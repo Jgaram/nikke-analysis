@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver_raid",
+  "run_id": "20261114T191946Z",
+  "sealed_at": "2026-11-14T19:19:47+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8451244.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8451244",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "6a1e9c75e0aafd29034c1812b5dc2dad5deb842eb055d43bd1bfa950c12fa8ef",
+      "bytes": 9477,
+      "fetched_at": "2026-11-14T19:19:47+00:00",
+      "meta": {
+        "feed_id": "8451244",
+        "title": "솔로 레이드 오픈 안내",
+        "created": "20261112120036",
+        "updated": "20261112120036",
+        "board_id": 56
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 56,
+    "listed": 3,
+    "written": 1,
+    "full": false
+  }
+}

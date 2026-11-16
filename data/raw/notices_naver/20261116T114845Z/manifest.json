@@ -1,0 +1,31 @@
+{
+  "source": "notices_naver",
+  "run_id": "20261116T114845Z",
+  "sealed_at": "2026-11-16T11:48:47+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "feed/8469903.json",
+      "url": "https://game.naver.com/lounge/nikke/board/detail/8469903",
+      "status": 200,
+      "content_type": "application/json",
+      "sha256": "0b18554b57e581031052f037941f9b68d8ee96a74604dc557cc29e0ce34fdc17",
+      "bytes": 10759,
+      "fetched_at": "2026-11-16T11:48:47+00:00",
+      "meta": {
+        "feed_id": "8469903",
+        "title": "3차 지상 탈환전 특별 이벤트 - 특별 보상",
+        "created": "20261116110213",
+        "updated": "20261116110213",
+        "board_id": 11
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://comm-api.game.naver.com/nng_main/v1/community/lounge/nikke/feed",
+    "board_id": 11,
+    "listed": 50,
+    "written": 1,
+    "full": false
+  }
+}

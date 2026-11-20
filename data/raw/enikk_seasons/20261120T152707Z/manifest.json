@@ -1,0 +1,59 @@
+{
+  "source": "enikk_seasons",
+  "run_id": "20261120T152707Z",
+  "sealed_at": "2026-11-20T15:27:09+00:00",
+  "entry_count": 3,
+  "entries": [
+    {
+      "filename": "summaries.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "068184a3c01c4df0a30fe22d4b922f6108b7734f165cc009080c11fbbeed8d6f",
+      "bytes": 15911,
+      "fetched_at": "2026-11-20T15:27:07+00:00",
+      "meta": {
+        "kind": "summaries",
+        "digest": "068184a3c01c4df0a30fe22d4b922f6108b7734f165cc009080c11fbbeed8d6f",
+        "seasons": 43
+      }
+    },
+    {
+      "filename": "season-043.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "e978b5d29e0f695de263b11f86b5ab8af8565ba031f70529d8fbe4a00675538c",
+      "bytes": 32445,
+      "fetched_at": "2026-11-20T15:27:09+00:00",
+      "meta": {
+        "kind": "season",
+        "raid": 43,
+        "lastupdated": "2026-11-20T04:44:00.000Z"
+      }
+    },
+    {
+      "filename": "damage-chart-043.json",
+      "url": "https://enikk.app/api/graphql",
+      "status": 200,
+      "content_type": "application/json; charset=utf-8",
+      "sha256": "626bb24ba5a92078c7bada0dce4f7a8f7e8b2c99cf92a139860ebaec7fc89535",
+      "bytes": 90388,
+      "fetched_at": "2026-11-20T15:27:09+00:00",
+      "meta": {
+        "kind": "damage_chart",
+        "raid": 43,
+        "lastupdated": "2026-11-20T04:44:00.000Z"
+      }
+    }
+  ],
+  "extra": {
+    "base_url": "https://enikk.app",
+    "full": false,
+    "seasons": 43,
+    "refreshed": [
+      43
+    ],
+    "failed": {}
+  }
+}

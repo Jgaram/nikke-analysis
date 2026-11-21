@@ -303,9 +303,14 @@ def test_the_lounge_raid_posts_name_each_seasons_boss(tmp_path):
             ✅ 진행 기간
             - 9/16(화) 12:00 ~ 9/23(화) 4:59
         """),
+        lounge("솔로 레이드 오픈 안내", at(2026, 11, 12, 12), """
+            솔로 레이드 시즌 43이 오픈되었습니다!
+            이번 시즌에 등장하는 보스는
+            「승리의 여신」입니다.
+        """),
     ]
     named = soloraid.announced_bosses(posts)
-    assert named == {8: "토커티브", 26: "프로비던스", 29: "마더 웨일"}
+    assert named == {8: "토커티브", 26: "프로비던스", 29: "마더 웨일", 43: "승리의 여신"}
 
     enikk = {
         1: EnikkSeason(1, boss_en="Mother Whale"),
@@ -313,7 +318,7 @@ def test_the_lounge_raid_posts_name_each_seasons_boss(tmp_path):
         8: EnikkSeason(8, boss_en="Chatterbox"),
         29: EnikkSeason(29, boss_en="Mother Whale"),
     }
-    soloraid.build([], enikk, bosses={n: b for n, b in named.items() if n != 26}, out_dir=tmp_path)
+    soloraid.build([], enikk, bosses={n: b for n, b in named.items() if n not in (26, 43)}, out_dir=tmp_path)
     with (tmp_path / soloraid.SEASONS_CSV).open(encoding="utf-8") as handle:
         rows = {int(r["season"]): r["boss_ko"] for r in csv.DictReader(handle)}
     assert rows == {1: "마더 웨일", 5: "", 8: "토커티브", 29: "마더 웨일"}

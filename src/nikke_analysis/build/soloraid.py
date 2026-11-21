@@ -35,7 +35,8 @@ The boss's Korean name comes from the lounge - enikk has English names only,
 and the update notices leave the boss to a picture. Every season since the
 second has a post on the lounge's in-game event board that names it ("이번에
 등장할 예정인 랩쳐는 「리버렐리오 바디」입니다"); a notice about the season
-names it now and then too. A boss named for one season is named for every
+names it now and then too. Since season 43 the post says
+"이번 시즌에 등장하는 보스는 「승리의 여신」입니다" instead of 랩쳐. A boss named for one season is named for every
 other season with the same enikk name (the first season's post names no boss;
 29, the same Mother Whale, does). The rest keep ``boss_ko`` empty and show the
 English name: season 5, whose post gives the boss as a number puzzle.
@@ -95,7 +96,8 @@ FIELD_RE = re.compile(r"^(?P<label>.{1,60}?[^\d\s])\s*[:：]\s+(?P<value>.+)$")
 BOSS_INLINE_RE = re.compile(r"솔로\s*레이드\s*(?:시즌\s*\d{1,3}\s*)?-\s*(?P<boss>[^\s,.()（）]+(?:\s[^\s,.()（）0-9]+){0,2})")
 # A season's lounge post: "... 랩쳐는\n「리버렐리오 바디」입니다", at times a phrase between, or
 # "이번 시즌은 스텔라 블레이드 콜라보 한정 보스,\n「프로비던스」가 등장합니다".
-ANNOUNCED_BOSS_RE = re.compile(r"(?:랩쳐는|이번 시즌은)[^「」]{0,80}「(?P<boss>[^「」]{1,30})」")
+# "랩쳐는" · "이번 시즌은" · (시즌 43부터) "보스는"
+ANNOUNCED_BOSS_RE = re.compile(r"(?:랩[쳐처]는|보스는|이번 시즌은)[^「」]{0,80}「(?P<boss>[^「」]{1,30})」")
 HANGUL_RE = re.compile(r"[가-힣]")
 BOSS_PARTICLES = ("에서", "와", "과", "가", "이", "을", "를", "은", "는", "의", "에", "로")
 # Words that follow a boss name without a particle: "애니힐리오 재오픈 기간은".

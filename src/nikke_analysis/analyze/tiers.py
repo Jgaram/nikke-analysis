@@ -518,6 +518,9 @@ def standings(
         freq = freq.reindex(list(ELEMENTS)).fillna(0.0)
         freq = freq / freq.sum() if freq.sum() > 0 else pd.Series(1.0 / len(ELEMENTS), index=list(ELEMENTS))
         overall["overall"] = estimate.mul(freq, axis=1).sum(axis=1)
+    # 9 decimals (model.js does the same): units with the same score - a pair - stay tied in order and
+    # rank instead of splitting on the last bits of a sum, which differ between machines and languages
+    overall["overall"] = np.floor(overall["overall"] * 1e9 + 0.5) / 1e9
     overall["overall_tier"] = overall["overall"].map(lambda v: assign_tier(v, config, overall=True))
     overall["overall_rank"] = overall["overall"].rank(method="min", ascending=False).astype("Int64")
     n_obs = observed.sum(axis=1).astype(int)

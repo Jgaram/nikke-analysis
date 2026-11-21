@@ -127,6 +127,9 @@ function median(values) {
   return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
 }
 
+// The overall score kept to 9 decimals, as tiers.py does: tied scores (a pair's) stay tied on any machine.
+const roundScore = (v) => Math.floor(v * 1e9 + 0.5) / 1e9;
+
 // Ranks, best first, ties sharing the lowest (pandas rank(method="min", ascending=False)); NaN -> null.
 function minRanks(values) {
   const order = values.map((v, i) => i).filter((i) => !Number.isNaN(values[i]));
@@ -487,6 +490,8 @@ export function standings(model, population, moment, params, treasured = null) {
     if (params.overall === "mean") value = nanMean(estimate);
     else if (params.overall === "max") value = Math.max(...estimate.filter((_, e) => observed[e]));
     else value = estimate.reduce((s, v, e) => (Number.isNaN(v) ? s : s + v * freq[e]), 0);
+    // 9 decimals, as tiers.py (roundScore)
+    value = roundScore(value);
     const nObs = observed.filter(Boolean).length;
     const ownUnseen = own.some(Boolean) && !own.some((o, e) => o && observed[e]);
     overall.push({

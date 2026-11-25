@@ -1,0 +1,60 @@
+{
+  "source": "notices_official",
+  "run_id": "20261125T171234Z",
+  "sealed_at": "2026-11-25T17:12:47+00:00",
+  "entry_count": 2,
+  "entries": [
+    {
+      "filename": "detail/57e20ebaa44aba4164a8348ae90de7e66167.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=57e20ebaa44aba4164a8348ae90de7e66167",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "aca7c30fe7453363eaeb0dafb3d4a6525bcdde70ff11f10e1edb6d240461a4dd",
+      "bytes": 7833,
+      "fetched_at": "2026-11-25T17:12:44+00:00",
+      "meta": {
+        "content_id": "57e20ebaa44aba4164a8348ae90de7e66167",
+        "title": "11월 19일 알려진 이슈 안내(11월 25일 공지 수정)\u0005",
+        "pub_timestamp": "1795068116",
+        "columns": [
+          "NOTICE"
+        ],
+        "digest": "3aff421cc482db4f4b7fae6d1c11cb97855e2f229204827055f3a0c27bcfdd2e"
+      }
+    },
+    {
+      "filename": "detail/f56ce6e5a98f8a4575aa6b9a4dc7b716116f.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=f56ce6e5a98f8a4575aa6b9a4dc7b716116f",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "a29da91a1e67fd18b85adf3041acc0014a5e0082807189b2164cb9d9f639190d",
+      "bytes": 26097,
+      "fetched_at": "2026-11-25T17:12:47+00:00",
+      "meta": {
+        "content_id": "f56ce6e5a98f8a4575aa6b9a4dc7b716116f",
+        "title": "11월 25일 PC 런처 보안 강화 업데이트 및 후속 조치 안내",
+        "pub_timestamp": "1795605009",
+        "columns": [
+          "NOTICE",
+          "NEWS"
+        ],
+        "digest": "0e210af288e60e3c59a178514e94ada9ef67faf1d279374143659509a1d7dd01"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 298,
+    "fetched": 13,
+    "written": 2,
+    "full": false,
+    "notes": []
+  }
+}

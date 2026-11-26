@@ -1,0 +1,42 @@
+{
+  "source": "notices_official",
+  "run_id": "20261126T165326Z",
+  "sealed_at": "2026-11-26T16:53:40+00:00",
+  "entry_count": 1,
+  "entries": [
+    {
+      "filename": "detail/b4330a04aaf89a4f85a8163ad3bdd3b3d6a4.json",
+      "url": "https://www.nikke-kr.com/newsdetail.html?content_id=b4330a04aaf89a4f85a8163ad3bdd3b3d6a4",
+      "status": 200,
+      "content_type": "application/json;charset=utf-8",
+      "sha256": "50a29f66f022a6abea69e81a4da2432df8dcc886947e320738d96eaa7169cf05",
+      "bytes": 11811,
+      "fetched_at": "2026-11-26T16:53:40+00:00",
+      "meta": {
+        "content_id": "b4330a04aaf89a4f85a8163ad3bdd3b3d6a4",
+        "title": "11월 26일 PC 런처 업데이트 안내",
+        "pub_timestamp": "1795693472",
+        "columns": [
+          "NOTICE",
+          "NEWS"
+        ],
+        "digest": "6c6a4670648320a8fd0eeb8364966647c2be5647b03495d979a8bcf8c06c0d98"
+      }
+    }
+  ],
+  "extra": {
+    "api": "https://na-community.playerinfinite.com/api/gpts.information_feeds_svr.InformationFeedsSvr",
+    "game_id": "16",
+    "language": "ko",
+    "primary_label_id": 309,
+    "secondary_label_ids": {
+      "NOTICE": 892,
+      "NEWS": 496
+    },
+    "listed": 299,
+    "fetched": 14,
+    "written": 1,
+    "full": false,
+    "notes": []
+  }
+}
